@@ -20,6 +20,11 @@ Wearable Distributor is a Windows desktop tool for Skyrim Special Edition. It sc
 ### Generated files
 ![Patch output and installation overview](docs/images/WearableDistributor-04-output-and-install.png)
 
+## Planned features/ideas
+ability to have multiple outfits distributed to one single distribution like female bandit archer or farmer, necromancer etc and create a patch for that
+
+## How NPC targeting is represented
+
 ## Features in this preview
 
 - Scans `.esp`, `.esm`, and `.esl` files under a selected Skyrim `Data` folder using Mutagen.
