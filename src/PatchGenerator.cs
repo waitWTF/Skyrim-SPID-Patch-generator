@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.IO;
 using System.Text;
+using System.Security.Cryptography;
 using Mutagen.Bethesda;
 using Mutagen.Bethesda.Plugins;
 using Mutagen.Bethesda.Plugins.Binary.Translations;
@@ -27,7 +28,9 @@ public static class PatchGenerator
             {
                 Configuration = configuration,
                 Pieces = configuration.Pieces.Where(piece => piece.Include).ToList(),
-                Targets = configuration.Keywords.ToList(),
+                Rules = configuration.TargetRules.Count > 0
+                    ? configuration.TargetRules.Select(rule => rule.Filters).ToList()
+                    : configuration.Keywords.Count > 0 ? [configuration.Keywords] : [],
                 Chance = ParseChance(configuration.Chance)
             })
             .Where(item => item.Pieces.Count > 0)
@@ -36,7 +39,7 @@ public static class PatchGenerator
 
         foreach (var item in outfits)
         {
-            if (item.Targets.Count == 0) throw new InvalidOperationException($"{item.Configuration.Source.Plugin} has no NPC target. Add at least one NPC group.");
+            if (item.Rules.Count == 0 || item.Rules.Any(rule => rule.Count == 0)) throw new InvalidOperationException($"{item.Configuration.Source.Plugin} has an audience with no NPC target. Choose at least one group.");
             if (useSkyPatcher && item.Chance != 100)
                 throw new InvalidOperationException("SkyPatcher's NPC outfit rules do not support a per-NPC chance. Choose 100% for a full outfit assignment, or select SPID in Preferences to use the configured chance.");
         }
@@ -54,7 +57,7 @@ public static class PatchGenerator
 
         try
         {
-            var masters = outfits.SelectMany(item => item.Pieces)
+            var selectedMasters = outfits.SelectMany(item => item.Pieces)
                 .Select(piece => ModKey.FromFileName(piece.Plugin))
                 .Where(key => !string.Equals(key.FileName, OutputPluginName, StringComparison.OrdinalIgnoreCase))
                 .Distinct()
@@ -62,11 +65,14 @@ public static class PatchGenerator
                 .ToList();
 
             var outputModKey = ModKey.FromFileName(OutputPluginName);
-            var outputMod = new SkyrimMod(outputModKey, SkyrimRelease.SkyrimSE);
+            var outputMod = File.Exists(outputPlugin)
+                ? SkyrimMod.CreateFromBinary(new ModPath(new Noggog.FilePath(outputPlugin)), SkyrimRelease.SkyrimSE)
+                : new SkyrimMod(outputModKey, SkyrimRelease.SkyrimSE);
             outputMod.ModHeader.Author = "Wearable Distributor";
             outputMod.ModHeader.Description = "Generated NPC outfits. Keep enabled with WearableDistributor_DISTR.ini.";
-            foreach (var master in masters)
-                outputMod.ModHeader.MasterReferences.Add(new MasterReference { Master = master });
+            foreach (var master in selectedMasters)
+                if (!outputMod.ModHeader.MasterReferences.Any(reference => reference.Master == master))
+                    outputMod.ModHeader.MasterReferences.Add(new MasterReference { Master = master });
 
             Directory.CreateDirectory(Path.GetDirectoryName(tempIni)!);
             var lines = new List<string>
@@ -78,15 +84,22 @@ public static class PatchGenerator
                 "; Group choices from separate categories are combined as required filters.",
                 ""
             };
+            var replacingPlugins = outfits.Select(item => item.Configuration.Source.Plugin).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var outfitIndex = 0;
             var distributionCount = 0;
             foreach (var item in outfits)
             {
                 outfitIndex++;
                 var pluginLabel = Path.GetFileNameWithoutExtension(item.Configuration.Source.Plugin);
-                var editorId = $"WD_{outfitIndex:D4}_{SanitizeEditorId(pluginLabel)}";
-                var outfit = outputMod.Outfits.AddNew(editorId) ?? throw new InvalidOperationException("Mutagen could not allocate an outfit record.");
-                var outfitItems = outfit.Items ?? throw new InvalidOperationException("Mutagen did not initialize the outfit item list.");
+                var editorId = StableEditorId(item.Configuration.Source.Plugin);
+                var outfit = outputMod.Outfits.FirstOrDefault(existing => string.Equals(existing.EditorID, editorId, StringComparison.OrdinalIgnoreCase));
+                if (outfit is null)
+                {
+                    outfit = new Outfit(outputMod, editorId);
+                    outputMod.Outfits.Add(outfit);
+                }
+                outfit.Items = new Noggog.ExtendedList<IFormLinkGetter<IOutfitTargetGetter>>();
+                var outfitItems = outfit.Items;
                 foreach (var piece in item.Pieces)
                 {
                     var sourceKey = new FormKey(ModKey.FromFileName(piece.Plugin), piece.LocalId);
@@ -94,13 +107,15 @@ public static class PatchGenerator
                 }
 
                 lines.Add($"; {item.Configuration.Source.Plugin} — {item.Pieces.Count} piece(s)");
-                var keywordGroups = item.Targets.Where(target => target.TargetKind.Equals("Keyword", StringComparison.OrdinalIgnoreCase))
+                foreach (var targets in item.Rules)
+                {
+                var keywordGroups = targets.Where(target => target.TargetKind.Equals("Keyword", StringComparison.OrdinalIgnoreCase))
                     .GroupBy(target => target.Category, StringComparer.OrdinalIgnoreCase).ToList();
-                var formGroups = item.Targets.Where(target => !target.TargetKind.Equals("Keyword", StringComparison.OrdinalIgnoreCase))
+                var formGroups = targets.Where(target => !target.TargetKind.Equals("Keyword", StringComparison.OrdinalIgnoreCase))
                     .GroupBy(target => target.Category, StringComparer.OrdinalIgnoreCase).ToList();
                 var keywordCombos = ExpandGroups(keywordGroups.Select(group => group.Select(target => target.EditorId).Distinct(StringComparer.OrdinalIgnoreCase).ToList()).ToList());
                 var formCombos = ExpandGroups(formGroups.Select(group => group.Select(target => FormatFormId(target.LocalId, target.Plugin)).Distinct(StringComparer.OrdinalIgnoreCase).ToList()).ToList());
-                var skyPatcherTargetCombos = ExpandGroups(item.Targets
+                var skyPatcherTargetCombos = ExpandGroups(targets
                     .GroupBy(target => target.Category, StringComparer.OrdinalIgnoreCase)
                     .Select(group => group.DistinctBy(target => target.FormId, StringComparer.OrdinalIgnoreCase).ToList()).ToList());
                 var outfitId = FormatFormId(outfit.FormKey.ID, OutputPluginName);
@@ -132,18 +147,30 @@ public static class PatchGenerator
                         distributionCount++;
                     }
                 }
+                }
                 lines.Add("");
             }
 
+            var legacyPrefixes = replacingPlugins.Select(plugin => $"WD_").ToList();
+            foreach (var legacyOutfit in outputMod.Outfits.Where(existing => replacingPlugins.Any(plugin =>
+                         existing.EditorID?.StartsWith("WD_", StringComparison.OrdinalIgnoreCase) == true &&
+                         existing.EditorID.Contains(SanitizeEditorId(Path.GetFileNameWithoutExtension(plugin)), StringComparison.OrdinalIgnoreCase) &&
+                         !string.Equals(existing.EditorID, StableEditorId(plugin), StringComparison.OrdinalIgnoreCase))).ToList())
+                outputMod.Outfits.Remove(legacyOutfit);
+
+            var existingIniLines = File.Exists(outputIni) ? File.ReadAllLines(outputIni).ToList() : [];
+            var mergedLines = MergeIni(existingIniLines, lines, replacingPlugins);
+            var mergedDistributionCount = mergedLines.Count(line => line.StartsWith("Outfit = ", StringComparison.Ordinal) || line.Contains("outfitDefault=", StringComparison.Ordinal));
+
             outputMod.BeginWrite.ToPath(tempPlugin).WithNoLoadOrder().Write();
-            File.WriteAllText(tempIni, string.Join(Environment.NewLine, lines), new UTF8Encoding(false));
-            ValidateGeneratedPlugin(tempPlugin, outfitIndex, masters);
-            ValidateGeneratedIni(tempIni, distributionCount, useSkyPatcher);
+            File.WriteAllText(tempIni, string.Join(Environment.NewLine, mergedLines), new UTF8Encoding(false));
+            ValidateGeneratedPlugin(tempPlugin, outputMod.Outfits.Count, selectedMasters);
+            ValidateGeneratedIni(tempIni, mergedDistributionCount, useSkyPatcher);
 
             File.Copy(tempPlugin, outputPlugin, true);
             Directory.CreateDirectory(Path.GetDirectoryName(outputIni)!);
             File.Copy(tempIni, outputIni, true);
-            return new PatchGenerationResult(outputPlugin, outputIni, outfitIndex, distributionCount, masters.Select(key => key.FileName.ToString()).ToList(), useSkyPatcher ? "SkyPatcher" : "SPID");
+            return new PatchGenerationResult(outputPlugin, outputIni, outputMod.Outfits.Count, mergedDistributionCount, outputMod.ModHeader.MasterReferences.Select(reference => reference.Master.FileName.ToString()).ToList(), useSkyPatcher ? "SkyPatcher" : "SPID");
         }
         finally
         {
@@ -172,6 +199,39 @@ public static class PatchGenerator
     {
         var safe = new string(source.Select(character => char.IsAsciiLetterOrDigit(character) || character == '_' ? character : '_').ToArray());
         return string.IsNullOrWhiteSpace(safe) ? "Outfit" : safe.Length > 48 ? safe[..48] : safe;
+    }
+
+    private static string StableEditorId(string sourcePlugin)
+    {
+        var label = Path.GetFileNameWithoutExtension(sourcePlugin);
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(sourcePlugin.ToUpperInvariant())))[..8];
+        return $"WD_{SanitizeEditorId(label)}_{hash}";
+    }
+
+    private static List<string> MergeIni(IReadOnlyList<string> existing, IReadOnlyList<string> generated, IReadOnlySet<string> replacingPlugins)
+    {
+        if (existing.Count == 0) return generated.ToList();
+        var kept = new List<string>();
+        for (var i = 0; i < existing.Count;)
+        {
+            var line = existing[i];
+            var marker = line.StartsWith("; ", StringComparison.Ordinal) ? line[2..] : "";
+            var separator = marker.IndexOf(" — ", StringComparison.Ordinal);
+            var isPluginSection = separator > 0 && marker.EndsWith(" piece(s)", StringComparison.Ordinal);
+            if (isPluginSection && replacingPlugins.Contains(marker[..separator]))
+            {
+                i++;
+                while (i < existing.Count && !string.IsNullOrWhiteSpace(existing[i])) i++;
+                while (i < existing.Count && string.IsNullOrWhiteSpace(existing[i])) i++;
+                continue;
+            }
+            kept.Add(line);
+            i++;
+        }
+        while (kept.Count > 0 && string.IsNullOrWhiteSpace(kept[^1])) kept.RemoveAt(kept.Count - 1);
+        kept.Add("");
+        kept.AddRange(generated.Skip(4));
+        return kept;
     }
 
     private static List<List<T>> ExpandGroups<T>(IReadOnlyList<List<T>> groups)

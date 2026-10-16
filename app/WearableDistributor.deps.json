@@ -7,7 +7,7 @@
   "targets": {
     ".NETCoreApp,Version=v10.0": {},
     ".NETCoreApp,Version=v10.0/win-x64": {
-      "WearableDistributor/0.1.1": {
+      "WearableDistributor/0.2.4": {
         "dependencies": {
           "Mutagen.Bethesda.Skyrim": "0.54.4"
         },
@@ -347,7 +347,7 @@
     }
   },
   "libraries": {
-    "WearableDistributor/0.1.1": {
+    "WearableDistributor/0.2.4": {
       "type": "project",
       "serviceable": false,
       "sha512": ""

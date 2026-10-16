@@ -56,6 +56,7 @@ public sealed class KeywordChoice
     public uint LocalId { get; set; }
     public string FormId => $"0x{LocalId:X6}~{Plugin}";
     public bool Selected { get; set; }
+    public string SuggestionReason { get; set; } = "";
 }
 
 public sealed class PluginPatchOptions
@@ -67,6 +68,14 @@ public sealed class PluginPatchOptions
     public string Gender { get; set; } = "Any";
     public List<WearableRecord> Pieces { get; set; } = [];
     public List<KeywordChoice> Keywords { get; set; } = [];
+    public List<DistributionTargetRule> TargetRules { get; set; } = [];
+}
+
+public sealed class DistributionTargetRule
+{
+    public string Collection { get; set; } = "Skyrim + official DLC";
+    public string Group { get; set; } = "";
+    public List<KeywordChoice> Filters { get; set; } = [];
 }
 
 public sealed class AppPreferences
@@ -79,4 +88,29 @@ public sealed class AppPreferences
     public HashSet<string> IgnoredPlugins { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public HashSet<string> IncludedPlugins { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public List<string> AdditionalExclusions { get; set; } = [];
+    public Dictionary<string, SavedDistributionOptions> DistributionSettings { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+}
+
+public sealed class SavedDistributionOptions
+{
+    public string Chance { get; set; } = "25";
+    public string Gender { get; set; } = "Any";
+    public List<string> ExcludedPieceFormIds { get; set; } = [];
+    public List<SavedDistributionTargetRule> TargetRules { get; set; } = [];
+}
+
+public sealed class SavedDistributionTargetRule
+{
+    public string Collection { get; set; } = "Skyrim + official DLC";
+    public string Group { get; set; } = "";
+    public List<SavedTargetChoice> Filters { get; set; } = [];
+}
+
+public sealed class SavedTargetChoice
+{
+    public string EditorId { get; set; } = "";
+    public string Plugin { get; set; } = "";
+    public string Category { get; set; } = "Other";
+    public string TargetKind { get; set; } = "Keyword";
+    public uint LocalId { get; set; }
 }

@@ -1,7 +1,7 @@
-# 0.1.1 preview — 2026-10-16
+# 0.2.5 preview — 2026-10-16
 
-- Removed the duplicate prototype project that only saved `generation-draft.json`; the repository now has one authoritative build path under `src/`.
-- Rebuilt the Windows x64 app from `src/WearableDistributor.csproj`.
-- Generate Patch writes `WearableDistributor.esp` and the selected SPID or SkyPatcher distribution file.
-- Existing smart scan, per-plugin setup wizard, and structural read-back validation remain included.
-- Live Skyrim validation across different load orders is still needed.
+- Merges newly generated outfits and distribution rules into the existing patch instead of overwriting previous selections.
+- Repatching a source plugin updates its generated outfit and rules while keeping other plugins intact.
+- Preserves existing plugin masters and adds masters needed by newly selected outfit pieces.
+- Uses stable outfit IDs so merged rules continue referencing the right outfit records.
+- Clarifies the merge behavior in the confirmation dialog.

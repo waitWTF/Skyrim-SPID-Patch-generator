@@ -49,6 +49,7 @@ public partial class MainWindow : Window
                 preferences = JsonSerializer.Deserialize<AppPreferences>(File.ReadAllText(preferencesFile)) ?? new AppPreferences();
             preferences.IgnoredPlugins = new HashSet<string>(preferences.IgnoredPlugins ?? [], StringComparer.OrdinalIgnoreCase);
             preferences.IncludedPlugins = new HashSet<string>(preferences.IncludedPlugins ?? [], StringComparer.OrdinalIgnoreCase);
+            preferences.DistributionSettings = new Dictionary<string, SavedDistributionOptions>(preferences.DistributionSettings ?? new(), StringComparer.OrdinalIgnoreCase);
         }
         catch { preferences = new AppPreferences(); }
     }
@@ -73,7 +74,7 @@ public partial class MainWindow : Window
 
     private void BrowseData_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new OpenFolderDialog { Title = "Choose Skyrim Special Edition Data folder" };
+        var dialog = new OpenFolderDialog { Title = "Choose Skyrim Data or Vortex staging folder" };
         if (dialog.ShowDialog() != true) return;
         DataPathBox.Text = dialog.FolderName;
     }
@@ -111,6 +112,8 @@ public partial class MainWindow : Window
         availableKeywords.Clear();
         visiblePlugins.Clear();
         var files = EnumeratePluginFiles(dataPath).ToList();
+        var usedTargetForms = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var targetRecordCandidates = new List<KeywordChoice>();
         ActionProgress.Visibility = Visibility.Visible;
         ActionProgress.IsIndeterminate = false;
         ActionProgress.Value = 0;
@@ -125,17 +128,24 @@ public partial class MainWindow : Window
             try
             {
                 using var mod = SkyrimMod.CreateFromBinaryOverlay(new Noggog.FilePath(path), SkyrimRelease.SkyrimSE);
-                foreach (var keyword in mod.Keywords)
+                foreach (var npc in mod.Npcs)
                 {
-                    var editorId = keyword.EditorID;
-                    AddTargetChoice(editorId, keyword.FormKey.ModKey.FileName, keyword.FormKey.ID, "Keyword", KeywordCategory(editorId));
+                    foreach (var faction in npc.Factions ?? [])
+                        if (!faction.Faction.IsNull) usedTargetForms.Add($"0x{faction.Faction.FormKey.ID:X6}~{faction.Faction.FormKey.ModKey.FileName}");
+                    if (npc.CrimeFaction is { IsNull: false } crimeFaction) usedTargetForms.Add($"0x{crimeFaction.FormKey.ID:X6}~{crimeFaction.FormKey.ModKey.FileName}");
+                    if (!npc.Class.IsNull) usedTargetForms.Add($"0x{npc.Class.FormKey.ID:X6}~{npc.Class.FormKey.ModKey.FileName}");
+                    if (!npc.Race.IsNull) usedTargetForms.Add($"0x{npc.Race.FormKey.ID:X6}~{npc.Race.FormKey.ModKey.FileName}");
+                    foreach (var keyword in npc.Keywords ?? [])
+                        if (!keyword.IsNull) usedTargetForms.Add($"0x{keyword.FormKey.ID:X6}~{keyword.FormKey.ModKey.FileName}");
                 }
+                foreach (var keyword in mod.Keywords)
+                    RememberTargetCandidate(targetRecordCandidates, keyword.EditorID, keyword.FormKey.ModKey.FileName, keyword.FormKey.ID, "Keyword", KeywordCategory(keyword.EditorID));
                 foreach (var faction in mod.Factions)
-                    AddTargetChoice(faction.EditorID, faction.FormKey.ModKey.FileName, faction.FormKey.ID, "Faction", "Faction");
+                    RememberTargetCandidate(targetRecordCandidates, faction.EditorID, faction.FormKey.ModKey.FileName, faction.FormKey.ID, "Faction", "Faction");
                 foreach (var actorClass in mod.Classes)
-                    AddTargetChoice(actorClass.EditorID, actorClass.FormKey.ModKey.FileName, actorClass.FormKey.ID, "Class", "Occupation / class");
+                    RememberTargetCandidate(targetRecordCandidates, actorClass.EditorID, actorClass.FormKey.ModKey.FileName, actorClass.FormKey.ID, "Class", "Occupation / class");
                 foreach (var race in mod.Races)
-                    AddTargetChoice(race.EditorID, race.FormKey.ModKey.FileName, race.FormKey.ID, "Race", "Race");
+                    RememberTargetCandidate(targetRecordCandidates, race.EditorID, race.FormKey.ModKey.FileName, race.FormKey.ID, "Race", "Race");
                 var pieces = mod.Armors.Select(armor =>
                 {
                     var recordName = armor.Name?.String ?? armor.EditorID ?? "Unnamed armor";
@@ -166,11 +176,21 @@ public partial class MainWindow : Window
             await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.Background);
         }
         ActionProgress.Visibility = Visibility.Collapsed;
+        foreach (var candidate in targetRecordCandidates.Where(item => usedTargetForms.Contains(item.FormId)))
+            AddTargetChoice(candidate.EditorId, candidate.Plugin, candidate.LocalId, candidate.TargetKind, candidate.Category);
         availableKeywords.Sort((left, right) => StringComparer.OrdinalIgnoreCase.Compare(left.EditorId, right.EditorId));
         scannedPlugins.Sort((left, right) => StringComparer.OrdinalIgnoreCase.Compare(left.Plugin, right.Plugin));
         RefreshPluginList();
+        var officialOnly = scannedPlugins.Count > 0 && scannedPlugins.All(item =>
+        {
+            var firstReason = item.FilterReason.Split(';', 2)[0].Trim();
+            return firstReason is "Base game" or "Official update" or "DLC" or "Creation Club";
+        });
+        var scanHint = officialOnly
+            ? " Only Skyrim/DLC/CC wearable records were found. If your mods are managed by Vortex, scan its staging folder containing the mod subfolders instead of the game's Data folder."
+            : "";
         StatusText.Text = $"Found {scannedPlugins.Count} wearable plugin candidates; {scannedPlugins.Count(item => item.IsFiltered)} were held back by smart filters. Read {availableKeywords.Count} Skyrim and mod-added keywords." +
-            (errors.Count > 0 ? $" {errors.Count} unreadable; first: {errors[0]}" : "");
+            (errors.Count > 0 ? $" {errors.Count} unreadable; first: {errors[0]}" : "") + scanHint;
     }
 
     private void AddTargetChoice(string? editorId, string plugin, uint localId, string targetKind, string category)
@@ -179,6 +199,13 @@ public partial class MainWindow : Window
         var formId = $"0x{localId:X6}~{plugin}";
         if (availableKeywords.Any(item => item.TargetKind == targetKind && item.FormId.Equals(formId, StringComparison.OrdinalIgnoreCase))) return;
         availableKeywords.Add(new KeywordChoice { EditorId = editorId, Plugin = plugin, LocalId = localId, TargetKind = targetKind, Category = category });
+    }
+
+    private static void RememberTargetCandidate(List<KeywordChoice> candidates, string? editorId, string plugin, uint localId, string targetKind, string category)
+    {
+        if (string.IsNullOrWhiteSpace(editorId)) return;
+        var choice = new KeywordChoice { EditorId = editorId, Plugin = plugin, LocalId = localId, TargetKind = targetKind, Category = category };
+        if (!candidates.Any(item => item.TargetKind == targetKind && item.FormId.Equals(choice.FormId, StringComparison.OrdinalIgnoreCase))) candidates.Add(choice);
     }
 
     private static string GetFilterReason(string path, IEnumerable<string> additional, List<(string Path, string Text)> distributions)
@@ -365,7 +392,11 @@ public partial class MainWindow : Window
         var selected = scannedPlugins.Where(plugin => plugin.Selected && !preferences.IgnoredPlugins.Contains(plugin.Plugin) &&
             (!plugin.IsFiltered || preferences.IncludedPlugins.Contains(plugin.Plugin))).ToList();
         if (selected.Count == 0) { MessageBox.Show("Select at least one plugin to patch.", "No plugins selected"); return; }
-        var dialog = new PatchOptionsWindow(selected, availableKeywords, preferences.DefaultChance, preferences.Framework) { Owner = this };
+        var dialog = new PatchOptionsWindow(selected, availableKeywords, preferences.DefaultChance, preferences.Framework, preferences.DistributionSettings, (plugin, settings) =>
+        {
+            preferences.DistributionSettings[plugin] = settings;
+            SavePreferences();
+        }) { Owner = this };
         if (dialog.ShowDialog() != true) return;
 
         var outputPicker = new OpenFolderDialog
@@ -382,7 +413,7 @@ public partial class MainWindow : Window
         var outputPluginPath = Path.Combine(outputDirectory, PatchGenerator.OutputPluginName);
         var outputDistributionPath = Path.Combine(outputDirectory, distributionRelativePath);
         if ((File.Exists(outputPluginPath) || File.Exists(outputDistributionPath)) &&
-            MessageBox.Show("A generated patch already exists in this folder. Replace its plugin and distribution file?", "Replace existing patch", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            MessageBox.Show("A generated patch already exists in this folder. Merge this run into it? Existing entries for the plugins you selected will be updated; all other outfits and distribution rules will be kept.", "Merge existing patch", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
             return;
 
         try
