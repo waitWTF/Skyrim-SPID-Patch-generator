@@ -1,10 +1,12 @@
 # Wearable Distributor
 
-**Preview release: 0.1.0 · Windows x64 · 16 October 2026**
+**Preview release: 0.1.1 · Windows x64 · 16 October 2026**
 
 Wearable Distributor is a Windows desktop tool for Skyrim Special Edition. It scans installed Skyrim plugin files for wearable armor records, groups them by plugin, and guides you through selecting outfit pieces and the NPC groups that should receive them. It generates a patch ESP and a matching SPID or SkyPatcher configuration.
 
 > This is an early preview. The generated plugin and distribution file are checked for basic structure by reading them back with Mutagen. The output has not yet been verified in a live Skyrim game across different load orders. Test it in a separate mod-manager profile and report issues before relying on it in a main save.
+
+> **Build instructions:** use only `src/WearableDistributor.csproj`. A duplicate prototype project that saved `generation-draft.json` instead of creating patch files has been removed. The current Generate Patch action writes `WearableDistributor.esp` and the selected SPID or SkyPatcher configuration.
 
 ## Screenshots
 
@@ -78,7 +80,7 @@ dotnet build src/WearableDistributor.csproj -c Release
 dotnet run --project src/WearableDistributor.csproj
 ```
 
-The `src` folder contains the WPF app source. `Mutagen.Bethesda.Skyrim` is referenced from NuGet. The `app` folder is a framework-dependent published build, not a self-contained single-file executable. It requires the .NET 10 Desktop Runtime x64.
+The `src` folder contains the authoritative WPF app source. `Mutagen.Bethesda.Skyrim` is referenced from NuGet. The `app` folder is a framework-dependent published build, not a self-contained single-file executable. It requires the .NET 10 Desktop Runtime x64. Do not build from an older checkout or a copied prototype folder.
 
 ## Repository and contributions
 
@@ -92,7 +94,7 @@ AI tools assisted with architecture, implementation, interface iteration, docume
 
 ## License
 
-No license file is included in this preview package because the project owner has not selected a license yet. Add a license before inviting reuse or redistribution under specific terms.
+This project is distributed under the MIT License; see [`LICENSE`](LICENSE).
 
 ## Credits
 

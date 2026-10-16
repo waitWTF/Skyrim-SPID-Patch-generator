@@ -1,8 +1,7 @@
-# 0.1.0 preview — 2026-10-16
+# 0.1.1 preview — 2026-10-16
 
-- First Windows x64 preview package with app executable and companion runtime files.
-- Smart scan and plugin selection controls.
-- Per-plugin distribution wizard for NPC groups, chance, sex, and outfit pieces.
-- SPID and SkyPatcher patch file generation.
-- Structural read-back checks for generated plugin and distribution files.
+- Removed the duplicate prototype project that only saved `generation-draft.json`; the repository now has one authoritative build path under `src/`.
+- Rebuilt the Windows x64 app from `src/WearableDistributor.csproj`.
+- Generate Patch writes `WearableDistributor.esp` and the selected SPID or SkyPatcher distribution file.
+- Existing smart scan, per-plugin setup wizard, and structural read-back validation remain included.
 - Live Skyrim validation across different load orders is still needed.
