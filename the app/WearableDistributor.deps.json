@@ -1,13 +1,12 @@
 {
   "runtimeTarget": {
-    "name": ".NETCoreApp,Version=v10.0/win-x64",
+    "name": ".NETCoreApp,Version=v10.0",
     "signature": ""
   },
   "compilationOptions": {},
   "targets": {
-    ".NETCoreApp,Version=v10.0": {},
-    ".NETCoreApp,Version=v10.0/win-x64": {
-      "WearableDistributor/0.2.4": {
+    ".NETCoreApp,Version=v10.0": {
+      "WearableDistributor/1.0.0": {
         "dependencies": {
           "Mutagen.Bethesda.Skyrim": "0.54.4"
         },
@@ -347,7 +346,7 @@
     }
   },
   "libraries": {
-    "WearableDistributor/0.2.4": {
+    "WearableDistributor/1.0.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""

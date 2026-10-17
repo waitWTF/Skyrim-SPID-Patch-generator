@@ -1,7 +1,30 @@
-# 0.2.5 preview — 2026-10-16
+# 0.4.0 development preview — 2026-10-17
 
-- Merges newly generated outfits and distribution rules into the existing patch instead of overwriting previous selections.
-- Repatching a source plugin updates its generated outfit and rules while keeping other plugins intact.
-- Preserves existing plugin masters and adds masters needed by newly selected outfit pieces.
-- Uses stable outfit IDs so merged rules continue referencing the right outfit records.
-- Clarifies the merge behavior in the confirmation dialog.
+- Added Skip outfit beside Back/Next. Skipped outfits bypass validation and generation, can be included again from the sidebar, and remain skipped when returning from review. Existing generated versions are preserved, including skipped variants of a repatched plugin. Skipping all outfits exits without writing a patch.
+- Redesigned the app with a dark teal interface, a focused outfit library, patch inventory, and scrollable settings.
+- Rebuilt distribution setup around FOMOD-style outfit steps, fixed navigation, natural nested scrolling, one-click parts, live audience counts, readable roles/races and inline validation.
+- Added compatible-part assistance, color choices and headwear exclusion; preserved saved choices and added clearer repair for stale saved audiences.
+- Made scanning responsive and cancelable, with one discovery pass, profile order, effective overrides, template inheritance, installed implicit Creation Club/resource listings, diagnostics and missing-master guards.
+- Corrected mod-added Wenches detection and excluded negative evidence such as BardAudienceExcludedFaction from bard classification.
+- Corrected SkyPatcher identifiers and NPC targeting, and prevented overlapping SPID audience selections from multiplying outfit chance rolls. Added runtime child exclusion.
+- Unified generation/removal/recovery around staged validation, file locks, checksummed backups and rollback. Complete ESP/INI/manifest sets are validated together.
+- Fixed generating after removing the final outfit, retained allocation history and protected stable generated FormIDs.
+- Added patch-health statuses and a verified installable mod ZIP export for Vortex/MO2.
+- Added atomic settings backups, startup/operation diagnostics, an expanded integration suite, small-window UI checks and reproducible release packaging/checksums.
+- Read-only installed-mod audit: 948 plugins, 192 wearable candidates, 7,013 eligible NPC base records in about 22 seconds. Recipient counts remain estimates; no live Skyrim distribution test is claimed.
+
+# 0.3.0 preview — 2026-10-16
+
+- Added a Patch overview listing generated source plugins and named outfits with pieces, audience filters, chance, NPC sex, framework, distribution rows, timestamps, and required masters.
+- Added a generated patch manifest and legacy INI migration so earlier patches appear in the overview after the next generation.
+- Added edit/repatch and remove actions for selected generated outfits; multiple named outfits from one source plugin can be managed separately.
+- Added per-outfit variants for collections containing several sets or color variants.
+- Added a pre-generation review with scanned NPC coverage estimates, overlaps with other selected audiences and scanned distribution INIs, and possible slot conflicts.
+- Added backup and restore for generated plugin, distribution files, and manifest. Backups are kept under the user's Local AppData rather than in the mod output.
+- Added reusable audience presets and settings/preset import and export.
+- Added optional filtering by a profile `plugins.txt` or `loadorder.txt`, expanded Steam library detection, and a Find Skyrim control.
+- Improved the plugin list with patch status and an at-a-glance scan summary; clarified output warnings and beginner guidance.
+- Validates outfit records, item links, masters, SPID rule shape and chance, and SkyPatcher rule shape before committing output.
+- Added automated Windows integration checks for merging, repatching, named variants, removal, restore, legacy migration, SPID, and SkyPatcher.
+- Attempted an SKSE launch check; the launcher exited without a Skyrim game process, so live-game behavior remains unverified.
+

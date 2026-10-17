@@ -1,4 +1,6 @@
-Wearable Distributor 0.2.5-preview
+Wearable Distributor 0.4.0-preview
 Windows x64 framework-dependent build
-Package date: 2026-10-16
-Requires: .NET 10 Desktop Runtime x64
+Package date: 2026-10-17
+Requires Microsoft .NET 10 Desktop Runtime x64
+Development preview. Read README before installing generated patches.
+

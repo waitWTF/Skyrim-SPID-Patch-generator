@@ -1,84 +1,169 @@
+<p align="center">
+  <img src="docs/images/v040-banner.png" alt="Wearable Distributor: choose outfit mods, choose NPC audiences, generate a SPID or SkyPatcher patch" width="100%">
+</p>
+
 # Wearable Distributor
 
-**Preview release: 0.2.5 · Windows x64 · 16 October 2026**
+**Give your installed outfit mods a place in Skyrim.**
 
-Wearable Distributor is a Windows desktop tool for Skyrim Special Edition. It scans installed Skyrim plugin files for wearable armor records, groups them by plugin, and guides you through selecting outfit pieces and the NPC groups that should receive them. It generates a patch ESP and a matching SPID or SkyPatcher configuration.
+Wearable Distributor is a Windows desktop app for Skyrim Special Edition / Anniversary Edition. It scans installed plugins for wearable armor, clothing and accessories, groups them by source plugin, and guides you through choosing **who wears what**. It generates an outfit ESP and the matching **SPID or SkyPatcher INI** without making you write distribution rules yourself.
 
-> This is an early preview. The generated plugin and distribution file are checked for basic structure by reading them back with Mutagen. The output has not yet been verified in a live Skyrim game across different load orders. Test it in a separate mod-manager profile and report issues before relying on it in a main save.
+**0.4.0 development preview** · Windows x64 · .NET 10 Desktop Runtime · MIT license
 
-> **Build instructions:** use only `src/WearableDistributor.csproj`. A duplicate prototype project that saved `generation-draft.json` instead of creating patch files has been removed. The current Generate Patch action merges into `WearableDistributor.esp` and the selected SPID or SkyPatcher configuration, retaining earlier outfits and rules. When a selected source plugin is patched again, its generated outfit and rules are updated.
+[Downloads](https://github.com/waitWTF/Skyrim-SPID-Patch-generator/releases) · [Issues and ideas](https://github.com/waitWTF/Skyrim-SPID-Patch-generator/issues) · [Changelog](RELEASE_NOTES.md) · [Source code](https://github.com/waitWTF/Skyrim-SPID-Patch-generator)
 
-## App icon
+> **Preview status:** generated files have validation checks, but successful outfit distribution has not yet been confirmed in a live Skyrim session. Use a separate test profile before relying on the output in a main playthrough. Images below use synthetic demo records; they are not in-game results or a list of bundled outfit mods.
 
-![Wearable Distributor app icon](docs/images/WearableDistributor-Icon.png)
+## The workflow
 
-## Screenshots
+**Scan → Choose outfits → Configure → Review → Generate → Install**
 
-### Workflow
-![Workflow overview](docs/images/WearableDistributor-01-workflow.png)
+1. **Choose outfit plugins.** Scan your installed mods, search the list, and tick the outfits you want to distribute.
+2. **Choose who wears them.** Pick an NPC collection, a group such as Bandits or Farmers, and optional roles or races. Add that audience to the outfit.
+3. **Choose parts and chance.** Leave out hoods, wigs or other pieces, select a suitable color/set, and set the chance supported by your engine.
+4. **Skip mistakes.** Press **Skip outfit** to leave an accidentally selected outfit out of this patch session.
+5. **Review and generate.** Check recipient estimates and warnings, then build into a separate output mod folder.
+6. **Install.** Export an installable ZIP from **My patch**, install it in Vortex/MO2, and enable the mod and its ESP.
 
-### Outfit setup
-![Per-plugin outfit setup wizard](docs/images/WearableDistributor-02-outfit-wizard.png)
+Generation is manual. The app does not watch folders continuously or change your load order automatically.
 
-### Smart scan
-![Smart scan and plugin selection](docs/images/WearableDistributor-03-smart-scan.png)
+## A closer look
 
-### Generated files
-![Patch output and installation overview](docs/images/WearableDistributor-04-output-and-install.png)
+### Outfit library
 
-## How NPC targeting is represented
+Outfits are grouped by source plugin. Search, select all/none, invert selection, reveal filtered candidates, or remember exclusions.
 
-## Features in this preview
+![Outfit library with synthetic example plugins](docs/images/v040-library.png)
 
-- Scans `.esp`, `.esm`, and `.esl` files under a selected Skyrim `Data` folder using Mutagen.
-- Finds armor records with wearable slots and groups them by source plugin.
-- Uses plugin-name and record-name heuristics to hold back common false positives such as base game and DLC plugins, Creation Club, replacers, hair, tattoos, body mods, magic, follower, quest, and framework plugins.
-- Lets you reveal filtered candidates, include candidates manually, save exclusions, or restore saved exclusions.
-- Includes search, select all, select none, invert selection, enable selected, and disable selected controls.
-- Provides a per-plugin, installer-style wizard with back and next navigation and progress indication.
-- Uses a guided audience picker: choose a collection, a familiar group such as Bandits, Forsworn, Guards, Mages, Wenches, or Farmers, then optionally narrow by archetype and race with multi-select checkboxes.
-- Keeps each added audience as its own rule so filters from different groups stay separate; plugin-title matches can preselect common audiences.
-- Discovers mod-added NPC groups such as wenches when those targets are assigned to scanned NPC records. Farmers resolve dynamically to NPC-used farm groups while excluding animal-only factions.
-- Preselects matching installed NPC keywords, factions, classes, and races when the plugin title includes recognizable roles such as mage, warrior, adventurer, necromancer, bandit, archer, or farmer. The wizard labels each suggestion and lets you edit it.
-- Shows only keywords, factions, classes, and races assigned to scanned NPC records. It discovers recognizable mod-added groups (such as wenches) across plugins, including cross-plugin assignments.
-- Creates a `WearableDistributor.esp` with one outfit record per configured source plugin.
-- Creates a SPID `_DISTR.ini` or the SkyPatcher NPC INI in its expected subfolder.
-- Reads the generated ESP back with Mutagen and checks expected outfit records and master references; checks the distribution row count.
-- Remembers the selected Data folder and user preferences locally.
-- Saves per-plugin distribution audiences, chance, NPC sex, and included outfit pieces between patch sessions. Saved targets are matched against the current scan so missing records are ignored.
+### Guided distribution setup
 
-The smart scan is heuristic. Review the candidates and piece checkboxes before generating a patch. The app scans the folder you select; it does not currently read the active MO2 or Vortex profile load order or resolve their virtual file systems automatically.
+An installer-style sidebar keeps your outfit steps within reach. Choose a collection and group, then narrow the audience with optional role and race selections. Live counts help identify audiences that are too broad or match nobody.
 
-## Download and run
+![Current distribution wizard with audience controls and Skip outfit](docs/images/v040-wizard.png)
 
-The `app` folder in this repository package contains the Windows x64 application and its companion files. Keep all files in that folder together.
+**Selected the wrong outfit?** Press **Skip outfit** beside Back/Next. Its saved choices and any previously generated version are kept. Select it in the sidebar and press **Include outfit** to undo. Skips remain in effect when returning from review, but reset for a new patch session. Skipping every outfit closes setup without generating anything.
 
-1. Install the **.NET 10 Desktop Runtime (x64)** if it is not already installed.
-2. Download this repository package or the `WearableDistributor-v0.2.2-win-x64.zip` release asset.
-3. Extract the files. Do not run the EXE from inside the ZIP.
-4. Start `app/WearableDistributor.exe`.
-5. In **Preferences**, choose the folder that actually contains your mod plugins. Use Skyrim's `Data` folder if your mods are deployed there. For Vortex, choose its staging folder containing the installed mod folders; the app recursively scans those folders, including mods that may be disabled. The app may find a common Steam or GOG game `Data` folder automatically, but that folder may contain only official plugins.
-6. Select the wearable plugins to configure, press **Generate Patch**, choose the distribution options for each plugin, and select an output folder.
+The page scrolls while navigation stays visible. Further down, choose pieces, color variants, audience presets or separately named outfits for the same plugin. **Choose compatible parts** uses slots and color names to help select a set; it cannot inspect how meshes fit together.
+
+<details>
+<summary>See outfit parts and color controls</summary>
+
+![Outfit-part checkboxes, color grouping and compatible-parts controls](docs/images/v040-parts.png)
+
+</details>
+
+### Review before writing
+
+Inspect audiences, included parts, chance and possible overlaps. **Back to setup** lets you make changes before generating.
+
+![Review page showing a synthetic example of competing outfit warnings](docs/images/v040-review.png)
+
+### My patch
+
+See which outfits have already been patched, their engine, chance, audience and file-health status. Inspect details, edit/remove outfits, restore a backup, or export an installable mod ZIP.
+
+![Patch overview with synthetic example inventory and details](docs/images/v040-patch-library.png)
+
+## Main features
+
+| Feature | What it does |
+| --- | --- |
+| Wearable discovery | Reads `.esp`, `.esm` and `.esl` with Mutagen and groups new wearable records by source plugin. |
+| Smart filtering | Holds back likely official content, replacers, bodies/hair/tattoos, followers, quests, frameworks and already distributed candidates. Reveal and manually include missed outfits. |
+| Installed NPC audiences | Uses effective factions, classes, keywords, races and resolvable templates, including NPC records added by mods. |
+| Readable targeting | Collection → group → optional roles/races. Choices come from that group's scanned population. |
+| Saved setups | Remembers parts, audiences, sex and chance; supports reusable audience presets and named outfit variants. |
+| Incremental patching | Add another source plugin while retaining previous plugins' outfits. Repatching preserves stable generated outfit IDs. |
+| Progress and diagnostics | Background scans, cancellation, progress indicators, missing-master checks and exportable scan reports. |
+| Recovery and packaging | Output validation, checksummed backups, patch-health information and generated mod ZIP export. |
+
+Smart filtering is a convenience, not a perfect classifier. Reveal filtered candidates if an outfit is missing. Manual inclusion cannot bypass missing/inactive master requirements.
+
+## Requirements
+
+| Purpose | Requirement |
+| --- | --- |
+| Run the app | Windows x64 and [Microsoft .NET 10 Desktop Runtime x64](https://dotnet.microsoft.com/download/dotnet/10.0). Choose **Desktop Runtime**, not only the base runtime. |
+| Scan | Installed Skyrim SE/AE plugins exposed through deployed `Data`, MO2 virtual `Data`, or a mod staging folder. |
+| Use the patch | Source outfit mods, required NPC/target plugins, and the selected engine with its own listed dependencies. |
+| SPID output | [Spell Perk Item Distributor](https://github.com/powerof3/Spell-Perk-Item-Distributor) and its requirements for your Skyrim/SKSE runtime. |
+| SkyPatcher output | [SkyPatcher](https://github.com/Zzyxz/SkyPatcher) and its requirements for your Skyrim runtime. |
+| Build source | Windows, .NET 10 SDK and NuGet access for dependency restoration. |
+
+Skyrim does not need to be running while you use the app. Legendary Edition and VR support are not established by this preview.
+
+## Download and first setup
+
+1. Download the Windows app ZIP from [Releases](https://github.com/waitWTF/Skyrim-SPID-Patch-generator/releases) when an asset is available. Source-and-app bundles contain the EXE in `app/`. If no compiled asset has been uploaded, build from source below.
+2. **Extract the entire ZIP** into a normal folder. Keep the EXE, DLLs and JSON files together. Do not run inside the archive or copy only the EXE.
+3. Start `WearableDistributor.exe`.
+4. In **Settings**, choose the scan folder, distribution engine, default chance and a separate output mod folder.
+5. Supply your active profile's `plugins.txt` when available. It identifies enabled plugins and order. `loadorder.txt` supplies order but cannot identify disabled plugins.
+6. Scan and follow the workflow above.
+
+<details>
+<summary>See Settings with example folder paths</summary>
+
+![Settings with synthetic scan, profile and output paths](docs/images/v040-settings.png)
+
+</details>
 
 ### Mod Organizer 2
 
-You can add `WearableDistributor.exe` as an MO2 executable/tool. Set its **Start in** folder to the `app` folder if needed. Launch it through MO2 and select a scan folder that exposes the plugins you want the scanner to see. MO2's active profile load order is not automatically discovered by this preview, so staged disabled mods may also appear.
+Add the EXE to MO2's executable list; set **Start in** to its containing folder. Launch through MO2 to expose virtual `Data`. Choose that folder and the active profile's plugin list in Settings.
 
-To install the generated patch, use a new MO2 mod folder as the output location where possible, then enable the generated patch, the source armor plugins, and SPID or SkyPatcher. If you generate into Skyrim's actual `Data` folder, use your mod manager to enable the generated ESP.
+Export **My patch → Installable ZIP**, install through MO2's archive installer, and enable the new mod and `WearableDistributor.esp`.
 
-## Patch output details
+### Vortex
 
-The output folder contains:
+Deploy first. Scan deployed Skyrim `Data` for the closest view of what the game sees. A staging folder also works, but duplicate plugin copies may be ambiguous. You can add the app as an executable tool in Vortex.
 
-- `WearableDistributor.esp` — generated outfit records. It declares the source armor plugins as masters, so those source plugins must remain installed and enabled.
-- `WearableDistributor_DISTR.ini` — generated when SPID is selected.
-- `SKSE/Plugins/SkyPatcher/npc/WearableDistributor/WearableDistributor.ini` — generated when SkyPatcher is selected.
+Export **My patch → Installable ZIP**, drop it onto Vortex's Mods page or use **Install From File**, enable it, and deploy. Enable `WearableDistributor.esp` in **Plugins**. A generated folder on disk is not automatically registered as a managed Vortex mod.
 
-SPID supports the configured chance percentage. SkyPatcher's NPC outfit rules do not support the same per-NPC random chance option, so the app requires **100%** when SkyPatcher is selected. The patch assigns the default outfit to every NPC matching its filters.
+The app does not directly manage either manager's profiles, deployment or plugin activation.
 
-## Build from source
+## SPID or SkyPatcher?
 
-Requirements: Windows, the .NET 10 SDK, and access to NuGet for restoring the Mutagen dependency.
+| | SPID | SkyPatcher |
+| --- | --- | --- |
+| Chance | Configurable 1–100% per named outfit | 100% assignment in this app |
+| Rule file | `WearableDistributor_DISTR.ini` | `SKSE/Plugins/SkyPatcher/npc/WearableDistributor/WearableDistributor.ini` |
+| Shared output | `WearableDistributor.esp` and `WearableDistributor.patch.json` | Same |
+| Behavior | Overlapping audiences for one outfit are combined before writing its chance rule. Different outfits can still compete. | Default outfit assignment for matching NPCs; does not give exclusive control over other mods. |
+
+**Bandits + Archers + 25%** means a per-NPC chance for the resolved bandit archer audience, not exactly one quarter of every encounter. Multiple selected roles/races are alternatives within their category; different categories narrow the audience together.
+
+**100% does not replace an outfit mod everywhere.** It applies to the configured audience. Outfit distribution replaces the affected NPC's outfit, so include a suitable complete set if you want them fully dressed.
+
+## Add more outfits later
+
+Use the **same output folder**. Later generations merge new source plugins into the existing ESP, rules and inventory. You do not need to select every previous plugin again.
+
+Repatching a source plugin replaces its configured variants and removes obsolete variants for that plugin. Explicitly skipped outfits are preserved, including an existing variant when another variant of that plugin is updated. To delete an existing outfit, use **My patch → Remove outfit**.
+
+Keep the ESP, selected engine's INI and manifest together. The installable ZIP includes generated files and instructions; it does **not** bundle third-party meshes, textures or source plugins.
+
+**Use one engine per output folder. Enable only one Wearable Distributor output mod at a time:** all output folders use `WearableDistributor.esp`.
+
+## Limits and troubleshooting
+
+- **No outfits found:** check that the folder exposes installed plugins. Launch through MO2 when applicable, check the profile list, reveal filtered candidates, and read **Settings → Scan diagnostics**.
+- **An audience is missing:** only usable scanned targets are offered. Missing masters, unreadable plugins, unresolved templates or insufficient encounter evidence can exclude candidates. Farmers use occupation/faction/package evidence, not an NPC name containing “farm.”
+- **Counts differ in game:** counts describe candidate NPC base records, not spawned actors. SPID can also match template/original bases. Static records cannot fully establish quest activation, script-only spawning or runtime changes.
+- **Changed NPC mods/profile?** Rescan and repatch. Recipient lists are a scan snapshot, not a live monitor.
+- **Outfits look wrong:** check source mods, BodySlide/body/skeleton requirements and selected pieces. There is no 3D mesh preview; slot/color assistance cannot prove visual compatibility.
+- **Other outfits take priority:** other distributors and game behavior can compete. Template-inherited inventory, especially with SkyPatcher, still needs in-game verification.
+- **Output is damaged:** inspect patch-health details and backup recovery. Old backups without checksum metadata cannot be restored automatically by this preview.
+
+Settings/logs are under `%LOCALAPPDATA%\WearableDistributor`; generated-output backups use its `Backups` folder. Reports may contain paths/mod names: review before sharing.
+
+## For modders and contributors
+
+Corrections, improvements, forks and alternative implementations are welcome. [Open an issue](https://github.com/waitWTF/Skyrim-SPID-Patch-generator/issues) with ideas or problems. Include app version, game runtime, manager, scan-folder type, profile-list use and a redacted error/report. Do not attach another author's plugin/assets without permission.
+
+Useful contribution areas: NPC/template resolution, wearable classification, runtime verification, accessibility, manager integration and UI usability.
+
+### Build
 
 ```powershell
 dotnet restore src/WearableDistributor.csproj
@@ -86,22 +171,22 @@ dotnet build src/WearableDistributor.csproj -c Release
 dotnet run --project src/WearableDistributor.csproj
 ```
 
-The `src` folder contains the authoritative WPF app source. `Mutagen.Bethesda.Skyrim` is referenced from NuGet. The `app` folder is a framework-dependent published build, not a self-contained single-file executable. It requires the .NET 10 Desktop Runtime x64. Do not build from an older checkout or a copied prototype folder.
+**`src/` is the authoritative WPF application.** Older prototype folders are not the current build target. Published apps are framework-dependent, not self-contained single-file EXEs.
 
-## Repository and contributions
+| Location | Contents |
+| --- | --- |
+| `src/` | UI, scanner, targeting, rule compiler, patch generation, inventory, recovery and settings services |
+| `tests/` | Synthetic integration checks for generation, merging, targeting, backups and packaging |
+| `tools/UiPreview/` | Isolated UI preview/documentation renderer and layout checks |
+| `tools/Publish-Release.ps1` | Windows/source ZIP packaging and SHA256 checksums |
+| `docs/` | Architecture, verification guidance, review notes and images |
 
-Source repository: [github.com/waitWTF/Skyrim-SPID-Patch-generator](https://github.com/waitWTF/Skyrim-SPID-Patch-generator)
+See [architecture](docs/ARCHITECTURE.md), [verification guidance](docs/TESTING.md), [development review](docs/REVIEW-0.4.0.md) and [project context](PROJECT.md). Automated checks and static scans do not establish in-game behavior; live-game testing remains outstanding.
 
-Contributions and issue reports are welcome. Particularly useful help includes checking output in game, load-order and MO2/Vortex integration, improving wearable classification and exclusions, and testing against varied mod lists. When reporting a problem, include the app version, Skyrim runtime, mod manager, selected scan folder type, relevant plugin names, and a redacted error message. Do not upload other mod authors' assets or plugin files without permission.
+## AI assistance, credits and license
 
-## AI assistance
+**This project was developed with substantial AI assistance**, including architecture, implementation, UI iteration, documentation and verification tooling. Human review, testing and contributions remain essential. Please judge and improve the code on its actual behavior.
 
-AI tools assisted with architecture, implementation, interface iteration, documentation, and release preparation. The project owner remains responsible for reviewing and maintaining the project. Human testing, corrections, and contributions are welcome.
+Thanks to the authors/contributors of [Mutagen](https://github.com/Mutagen-Modding/Mutagen), [SPID](https://github.com/powerof3/Spell-Perk-Item-Distributor), [SkyPatcher](https://github.com/Zzyxz/SkyPatcher), MO2, Vortex and the Skyrim modding community. MO2/Vortex installer workflows inspired the interface. This independent project is not affiliated with those tools or Bethesda.
 
-## License
-
-This project is distributed under the MIT License; see [`LICENSE`](LICENSE).
-
-## Credits
-
-Thanks to the Skyrim modding community and the authors of Mutagen, SPID, and SkyPatcher, whose tools and formats make this kind of workflow possible. This project is an independent community tool and is not affiliated with those projects or Bethesda.
+Licensed under [MIT](LICENSE). Dependency licenses remain applicable. Outfit mods/assets belong to their authors and are not redistributed by this tool.
