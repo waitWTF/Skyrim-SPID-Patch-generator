@@ -1,0 +1,14 @@
+Skyrim SPID Patch Generator - Windows x64 preview
+
+Extract this entire ZIP into a normal folder. Keep the EXE, DLLs, and JSON files together.
+Requires Microsoft .NET 10 Desktop Runtime x64: https://dotnet.microsoft.com/download/dotnet/10.0
+Start SkyrimSPIDPatchGenerator.exe. The program can be added as an executable tool in MO2 or Vortex.
+For MO2, launch it through MO2 and scan virtual Data. For Vortex, scan deployed Data or staging.
+Use a separate output mod folder. Enable the generated ESP, its required source plugins, and your chosen distribution engine.
+Rescan/repatch after changing your NPC mods or profile. Generated recipient lists are a scan snapshot.
+Do not put SPID and SkyPatcher output for this app in the same output folder.
+Optional merchandise requires SkyPatcher even when NPC outfits use SPID; keep its generated container INI installed.
+Enable SkyPatcher container patching (iEnableContainerPatching=1 in your installed SkyPatcher.ini) to use merchandise.
+Existing WearableDistributor.esp/INI/settings names are retained for compatibility. Do not rename generated records/files by hand.
+Source and documentation: https://github.com/waitWTF/Skyrim-SPID-Patch-generator
+This follow-up was built and UI-rendered. The repository includes verification checks; the new merchandise feature has not been verified in Skyrim.

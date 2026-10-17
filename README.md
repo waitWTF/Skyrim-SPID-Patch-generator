@@ -1,14 +1,16 @@
 <p align="center">
-  <img src="docs/images/v040-banner.png" alt="Wearable Distributor: choose outfit mods, choose NPC audiences, generate a SPID or SkyPatcher patch" width="100%">
+  <img src="docs/images/v041-banner.png" alt="Skyrim SPID Patch Generator: choose outfit mods, choose NPC audiences, generate a SPID or SkyPatcher patch" width="100%">
 </p>
 
-# Wearable Distributor
+# Skyrim SPID Patch Generator
 
 **Give your installed outfit mods a place in Skyrim.**
 
-Wearable Distributor is a Windows desktop app for Skyrim Special Edition / Anniversary Edition. It scans installed plugins for wearable armor, clothing and accessories, groups them by source plugin, and guides you through choosing **who wears what**. It generates an outfit ESP and the matching **SPID or SkyPatcher INI** without making you write distribution rules yourself.
+Skyrim SPID Patch Generator is a Windows desktop app for Skyrim Special Edition / Anniversary Edition. It scans installed plugins for wearable armor, clothing and accessories, groups them by source plugin, and guides you through choosing **who wears what**. It generates an outfit ESP and the matching **SPID or SkyPatcher INI** without making you write distribution rules yourself.
 
-**0.4.0 development preview** · Windows x64 · .NET 10 Desktop Runtime · MIT license
+**0.4.1 development preview** · Windows x64 · .NET 10 Desktop Runtime · MIT license
+
+Previously called **Wearable Distributor**. Start `SkyrimSPIDPatchGenerator.exe`. Existing settings, backups and generated `WearableDistributor.*` patch filenames are retained for compatibility; they do not need renaming.
 
 [Downloads](https://github.com/waitWTF/Skyrim-SPID-Patch-generator/releases) · [Issues and ideas](https://github.com/waitWTF/Skyrim-SPID-Patch-generator/issues) · [Changelog](RELEASE_NOTES.md) · [Source code](https://github.com/waitWTF/Skyrim-SPID-Patch-generator)
 
@@ -33,13 +35,13 @@ Generation is manual. The app does not watch folders continuously or change your
 
 Outfits are grouped by source plugin. Search, select all/none, invert selection, reveal filtered candidates, or remember exclusions.
 
-![Outfit library with synthetic example plugins](docs/images/v040-library.png)
+![Outfit library with synthetic example plugins](docs/images/v041-library.png)
 
 ### Guided distribution setup
 
 An installer-style sidebar keeps your outfit steps within reach. Choose a collection and group, then narrow the audience with optional role and race selections. Live counts help identify audiences that are too broad or match nobody.
 
-![Current distribution wizard with audience controls and Skip outfit](docs/images/v040-wizard.png)
+![Current distribution wizard with audience controls and Skip outfit](docs/images/v041-wizard.png)
 
 **Selected the wrong outfit?** Press **Skip outfit** beside Back/Next. Its saved choices and any previously generated version are kept. Select it in the sidebar and press **Include outfit** to undo. Skips remain in effect when returning from review, but reset for a new patch session. Skipping every outfit closes setup without generating anything.
 
@@ -48,7 +50,7 @@ The page scrolls while navigation stays visible. Further down, choose pieces, co
 <details>
 <summary>See outfit parts and color controls</summary>
 
-![Outfit-part checkboxes, color grouping and compatible-parts controls](docs/images/v040-parts.png)
+![Outfit-part checkboxes, color grouping and compatible-parts controls](docs/images/v041-parts.png)
 
 </details>
 
@@ -56,13 +58,13 @@ The page scrolls while navigation stays visible. Further down, choose pieces, co
 
 Inspect audiences, included parts, chance and possible overlaps. **Back to setup** lets you make changes before generating.
 
-![Review page showing a synthetic example of competing outfit warnings](docs/images/v040-review.png)
+![Review page showing a synthetic example of competing outfit warnings](docs/images/v041-review.png)
 
 ### My patch
 
 See which outfits have already been patched, their engine, chance, audience and file-health status. Inspect details, edit/remove outfits, restore a backup, or export an installable mod ZIP.
 
-![Patch overview with synthetic example inventory and details](docs/images/v040-patch-library.png)
+![Patch overview with synthetic example inventory and details](docs/images/v041-patch-library.png)
 
 ## Main features
 
@@ -78,6 +80,24 @@ See which outfits have already been patched, their engine, chance, audience and 
 | Recovery and packaging | Output validation, checksummed backups, patch-health information and generated mod ZIP export. |
 
 Smart filtering is a convenience, not a perfect classifier. Reveal filtered candidates if an outfit is missing. Manual inclusion cannot bypass missing/inactive master requirements.
+
+## Optional trader merchandise
+
+Tick **Also sell selected outfit parts through traders** in each outfit's Distribution section. Then tick the trader types you want:
+
+- **Blacksmiths**
+- **General goods**
+- **Clothing traders**
+
+Selected outfit pieces are added as merchandise. If the outfit plugin also contains playable weapons, **Include weapons from this plugin** makes them available through blacksmith/general goods stock. **Only weapons are excluded from clothing traders**: the clothing and armor pieces still go to clothing traders when selected. A shared stock container also used by a clothing trader is kept free of these weapon additions.
+
+Merchant stock targets are derived from encountered NPCs' vendor factions and linked container records in the scan. Unknown trader types and containers also used by non-vendor placements are held back. This does not automatically make every mod-added trader supported.
+
+**Merchandise requires SkyPatcher, including when NPC outfit distribution uses SPID.** Enable its container patching option (`iEnableContainerPatching=1` in your installed `SkyPatcher.ini`). The app writes a separate container file at `SKSE/Plugins/SkyPatcher/container/WearableDistributor/WearableDistributor_Merchandise.ini`. Keep it installed with the patch. The selected NPC chance does not affect shop stock; new stock entries add one copy of each item if it is not already stocked. Existing saves may need a normal merchant restock.
+
+This checkbox adds merchandise alongside the outfit's NPC distribution. Choices are remembered, included in merge/removal/backup handling, and packaged by **Installable ZIP**. Shop visibility, vendor buy/sell rules and other mods can still affect results; live-game verification remains outstanding.
+
+![Trader merchandise checkboxes with synthetic demo containers](docs/images/v041-merchandise.png)
 
 ## Requirements
 
@@ -96,7 +116,7 @@ Skyrim does not need to be running while you use the app. Legendary Edition and 
 
 1. Download the Windows app ZIP from [Releases](https://github.com/waitWTF/Skyrim-SPID-Patch-generator/releases) when an asset is available. Source-and-app bundles contain the EXE in `app/`. If no compiled asset has been uploaded, build from source below.
 2. **Extract the entire ZIP** into a normal folder. Keep the EXE, DLLs and JSON files together. Do not run inside the archive or copy only the EXE.
-3. Start `WearableDistributor.exe`.
+3. Start `SkyrimSPIDPatchGenerator.exe`.
 4. In **Settings**, choose the scan folder, distribution engine, default chance and a separate output mod folder.
 5. Supply your active profile's `plugins.txt` when available. It identifies enabled plugins and order. `loadorder.txt` supplies order but cannot identify disabled plugins.
 6. Scan and follow the workflow above.
@@ -104,7 +124,7 @@ Skyrim does not need to be running while you use the app. Legendary Edition and 
 <details>
 <summary>See Settings with example folder paths</summary>
 
-![Settings with synthetic scan, profile and output paths](docs/images/v040-settings.png)
+![Settings with synthetic scan, profile and output paths](docs/images/v041-settings.png)
 
 </details>
 
@@ -143,7 +163,7 @@ Repatching a source plugin replaces its configured variants and removes obsolete
 
 Keep the ESP, selected engine's INI and manifest together. The installable ZIP includes generated files and instructions; it does **not** bundle third-party meshes, textures or source plugins.
 
-**Use one engine per output folder. Enable only one Wearable Distributor output mod at a time:** all output folders use `WearableDistributor.esp`.
+**Use one engine per output folder. Enable only one Skyrim SPID Patch Generator output mod at a time:** all output folders use `WearableDistributor.esp`.
 
 ## Limits and troubleshooting
 
@@ -181,7 +201,7 @@ dotnet run --project src/WearableDistributor.csproj
 | `tools/Publish-Release.ps1` | Windows/source ZIP packaging and SHA256 checksums |
 | `docs/` | Architecture, verification guidance, review notes and images |
 
-See [architecture](docs/ARCHITECTURE.md), [verification guidance](docs/TESTING.md), [development review](docs/REVIEW-0.4.0.md) and [project context](PROJECT.md). Automated checks and static scans do not establish in-game behavior; live-game testing remains outstanding.
+See [architecture](docs/ARCHITECTURE.md), [verification guidance](docs/TESTING.md), [development review](docs/REVIEW-0.4.1.md) and [project context](PROJECT.md). Automated checks and static scans do not establish in-game behavior; live-game testing remains outstanding.
 
 ## AI assistance, credits and license
 

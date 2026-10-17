@@ -1,3 +1,13 @@
+# 0.4.1 development preview — 2026-10-17
+
+- Renamed the application, executable, assembly, visible titles, version metadata, documentation and release packages to Skyrim SPID Patch Generator (`SkyrimSPIDPatchGenerator.exe`). Existing patch filenames and saved settings/backups remain compatible.
+- Added an opt-in merchandise checkbox for each outfit, with Blacksmiths, General goods and Clothing traders selections.
+- Scans actual vendor factions, linked merchant references and container bases; unrecognized categories and known non-vendor shared bases are excluded.
+- Scans playable weapons from outfit plugins separately. Optional weapon stock goes to blacksmiths/general goods; clothing traders keep the outfit's selected clothing/armor but receive no weapons.
+- Generates an additional SkyPatcher container INI. Merchandise requires SkyPatcher even if SPID distributes the NPC outfits. NPC chance does not affect stock.
+- Merchandise selections persist per outfit/variant and participate in merging, removal, recovery, file-health validation and installable ZIP export. Merchandise manifests/settings use schema 3 to prevent older apps silently dropping this metadata.
+- Updated images and README for the new name and trader controls. Build/UI rendering completed; no new test-suite run or live-game distribution verification is claimed for this follow-up.
+
 # 0.4.0 development preview — 2026-10-17
 
 - Added Skip outfit beside Back/Next. Skipped outfits bypass validation and generation, can be included again from the sidebar, and remain skipped when returning from review. Existing generated versions are preserved, including skipped variants of a repatched plugin. Skipping all outfits exits without writing a patch.

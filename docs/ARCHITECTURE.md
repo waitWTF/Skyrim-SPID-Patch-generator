@@ -1,5 +1,15 @@
 # Architecture and implementation notes
 
+## 0.4.1 branding and merchandise
+
+Public application name: Skyrim SPID Patch Generator; AssemblyName: SkyrimSPIDPatchGenerator. The source project/namespace and legacy saved/output filenames remain compatible with older versions. Project-reference assets must be restored after the AssemblyName change.
+
+The scanner stages vendor factions, form-list identifiers, container records and placed-container links with the rest of each effective plugin snapshot. Eligible NPC faction membership establishes a used vendor faction. Its merchant reference resolves to a CONT base, classified from faction/buy-sell-list/container EditorIDs. Unrecognized categories, fences marked only-buy-stolen and known bases shared with non-vendor references are excluded. This is static inference, not a guarantee of a working shop in game.
+
+Source-owned playable WEAP records are separate from ARMO pieces. MerchantStockService builds per-entry stock metadata; clothing traders never receive weapons, while their outfit pieces remain included. A known shared clothing stock base also excludes weapon additions. The NPC outfit compiler never sees weapon pieces.
+
+The manifest stores merchant/container/item IDs and categories, enabling complete regeneration across merged sessions and removal. Deterministic addOnceToContainers rules target container bases in a separate SkyPatcher container INI, with one copy for new entries and deduplication across outfit variants. This optional feature requires SkyPatcher even when the NPC engine is SPID. Its output is included in managed-path validation, transactions, backups, older-snapshot restoration cleanup, health and ZIP packaging. Merchandise settings/manifests require schema 3; older consumers refuse them.
+
 ## Entry and interface
 
 `src/WearableDistributor.csproj` is the only app project. WPF runs on .NET 10 Windows. `App` loads `UiTheme.xaml` and records startup/exception diagnostics. `MainWindow.xaml` defines the library, generated-patch inventory and settings shell. `PatchOptionsWindow` implements a scrollable FOMOD-style wizard; `PatchReviewWindow` summarizes target estimates, conflicts and slots before writing. `UiTheme.EnableScrollChaining` lets nested lists/grids hand wheel events to the containing page at their edges.
