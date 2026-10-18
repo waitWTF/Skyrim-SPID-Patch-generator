@@ -123,7 +123,7 @@ internal static class Program
         var content = new Grid { Margin = new Thickness(65, 45, 65, 40) };
         content.ColumnDefinitions.Add(new ColumnDefinition()); content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(265) });
         var copy = new StackPanel();
-        copy.Children.Add(new TextBlock { Text = "SKYRIM SE / AE     ·     WINDOWS DESKTOP APP     ·     0.4.1 PREVIEW", FontSize = 18, FontWeight = FontWeights.SemiBold, Foreground = (Brush)Application.Current.FindResource("AccentBrush") });
+        copy.Children.Add(new TextBlock { Text = "SKYRIM SE / AE     ·     WINDOWS DESKTOP APP     ·     0.4.2 PREVIEW", FontSize = 18, FontWeight = FontWeights.SemiBold, Foreground = (Brush)Application.Current.FindResource("AccentBrush") });
         copy.Children.Add(new TextBlock { Text = "Skyrim SPID Patch Generator", FontSize = 66, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 15, 0, 4), Foreground = Brushes.White });
         copy.Children.Add(new TextBlock { Text = "Your outfit mods. Your NPCs. One guided patch.", FontSize = 26, Foreground = new SolidColorBrush(Color.FromRgb(189, 207, 211)), Margin = new Thickness(0, 0, 0, 30) });
         var steps = new WrapPanel();
@@ -278,3 +278,4 @@ internal static class Program
         return (plugins, choices, profiles);
     }
 }
+

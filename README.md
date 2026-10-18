@@ -8,7 +8,7 @@
 
 Skyrim SPID Patch Generator is a Windows desktop app for Skyrim Special Edition / Anniversary Edition. It scans installed plugins for wearable armor, clothing and accessories, groups them by source plugin, and guides you through choosing **who wears what**. It generates an outfit ESP and the matching **SPID or SkyPatcher INI** without making you write distribution rules yourself.
 
-**0.4.1 development preview** · Windows x64 · .NET 10 Desktop Runtime · MIT license
+**0.4.2 development preview** · Windows x64 · .NET 10 Desktop Runtime · MIT license
 
 Previously called **Wearable Distributor**. Start `SkyrimSPIDPatchGenerator.exe`. Existing settings, backups and generated `WearableDistributor.*` patch filenames are retained for compatibility; they do not need renaming.
 
@@ -210,3 +210,7 @@ See [architecture](docs/ARCHITECTURE.md), [verification guidance](docs/TESTING.m
 Thanks to the authors/contributors of [Mutagen](https://github.com/Mutagen-Modding/Mutagen), [SPID](https://github.com/powerof3/Spell-Perk-Item-Distributor), [SkyPatcher](https://github.com/Zzyxz/SkyPatcher), MO2, Vortex and the Skyrim modding community. MO2/Vortex installer workflows inspired the interface. This independent project is not affiliated with those tools or Bethesda.
 
 Licensed under [MIT](LICENSE). Dependency licenses remain applicable. Outfit mods/assets belong to their authors and are not redistributed by this tool.
+
+
+### MO2 startup compatibility (0.4.2)
+Version 0.4.2 fixes an immediate startup crash reproduced with MO2 2.5.2 / USVFS 0.5.6.1. The app uses the [documented .NET CET compatibility opt-out](https://learn.microsoft.com/en-us/dotnet/core/compatibility/interop/9.0/cet-support), also [used for this MO2 problem by Synthesis](https://github.com/Mutagen-Modding/Synthesis/issues/521). This disables CET hardware stack protection for this app host only; it does not alter Windows-wide security settings. Launch was verified with MO2's virtual filesystem DLL attached. Distribution still has the preview limitations described above.

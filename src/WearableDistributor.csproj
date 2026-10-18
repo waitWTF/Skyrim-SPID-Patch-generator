@@ -2,9 +2,12 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
-    <Version>0.4.1</Version>
-    <AssemblyVersion>0.4.1.0</AssemblyVersion>
-    <FileVersion>0.4.1.0</FileVersion>
+    <Version>0.4.2</Version>
+    <AssemblyVersion>0.4.2.0</AssemblyVersion>
+    <FileVersion>0.4.2.0</FileVersion>
+    <!-- MO2 2.5.2 / USVFS cannot inject into CET-enabled .NET apphosts.
+         App-only compatibility opt-out; no Windows security settings are changed. -->
+    <CETCompat>false</CETCompat>
     <AssemblyName>SkyrimSPIDPatchGenerator</AssemblyName>
     <Product>Skyrim SPID Patch Generator</Product>
     <Title>Skyrim SPID Patch Generator</Title>

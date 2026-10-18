@@ -1,3 +1,10 @@
+# 0.4.2 development preview — 2026-10-18
+
+- Fixed immediate startup crashes when launched through MO2 2.5.2 / USVFS 0.5.6.1. The application host now uses `CETCompat=false`, the documented compatibility workaround for MO2 injection into .NET 9+ applications.
+- This opts this application's host out of CET hardware stack protection. It does not change Windows-wide security settings, antivirus, MO2 files or game files.
+- Compared the published 0.4.1 EXE (crashes through MO2 with 0xc0000005; launches directly) with the fixed 0.4.2 build (visible window, startup log and MO2 usvfs_x64.dll confirmed loaded).
+- This verifies startup compatibility on the tested setup; it is not new in-game validation of outfit or merchant distribution.
+- Extract the entire new app ZIP into its own folder, then point MO2's Binary to SkyrimSPIDPatchGenerator.exe and Start in to that folder. Existing patch filenames/settings remain compatible.
 # 0.4.1 development preview — 2026-10-17
 
 - Renamed the application, executable, assembly, visible titles, version metadata, documentation and release packages to Skyrim SPID Patch Generator (`SkyrimSPIDPatchGenerator.exe`). Existing patch filenames and saved settings/backups remain compatible.
@@ -37,4 +44,5 @@
 - Validates outfit records, item links, masters, SPID rule shape and chance, and SkyPatcher rule shape before committing output.
 - Added automated Windows integration checks for merging, repatching, named variants, removal, restore, legacy migration, SPID, and SkyPatcher.
 - Attempted an SKSE launch check; the launcher exited without a Skyrim game process, so live-game behavior remains unverified.
+
 
