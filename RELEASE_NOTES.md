@@ -1,3 +1,11 @@
+# 0.4.3 development preview — 2026-10-18
+
+- Removed guards and related uniformed protectors from NPC distribution audiences, including broad groups, inherited alternatives and restored choices.
+- Added eligibility regression checks and required a scanned NPC roster in the wizard.
+- Preserved the 0.4.2 MO2 startup compatibility setting.
+- Full integration checks, including uniformed-NPC eligibility regressions, passed. No in-game validation was performed.
+- Rescan and regenerate all existing outfit entries to apply protection to older output. Incremental merging retains entries that you do not regenerate. This release does not automatically inspect male/female armor mesh compatibility.
+
 # 0.4.2 development preview — 2026-10-18
 
 - Fixed immediate startup crashes when launched through MO2 2.5.2 / USVFS 0.5.6.1. The application host now uses `CETCompat=false`, the documented compatibility workaround for MO2 injection into .NET 9+ applications.
@@ -44,5 +52,3 @@
 - Validates outfit records, item links, masters, SPID rule shape and chance, and SkyPatcher rule shape before committing output.
 - Added automated Windows integration checks for merging, repatching, named variants, removal, restore, legacy migration, SPID, and SkyPatcher.
 - Attempted an SKSE launch check; the launcher exited without a Skyrim game process, so live-game behavior remains unverified.
-
-

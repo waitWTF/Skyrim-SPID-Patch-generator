@@ -1,6 +1,6 @@
 # Skyrim SPID Patch Generator
 
-Windows WPF application for Skyrim SE/AE. Version 0.4.2-preview.
+Windows WPF application for Skyrim SE/AE. Version 0.4.3-preview.
 
 ## Purpose
 Scan installed wearable plugins, choose NPC audiences in a guided installer-style workflow, and manually generate an outfit plugin with SPID or SkyPatcher rules. Optional merchant stock uses SkyPatcher container rules.
@@ -23,4 +23,8 @@ This is a development preview. Static NPC discovery and audience counts cannot p
 
 ## Contributing
 Issues, improvements and forks are welcome at https://github.com/waitWTF/Skyrim-SPID-Patch-generator . The project was developed with substantial AI assistance and is MIT licensed. Do not commit personal logs, settings, raw mod scans, private conversation exports, credentials or third-party game assets.
+
+
+## Uniformed NPC protection
+Version 0.4.3 filters identified uniformed protectors from all NPC audiences, including inherited alternatives and restored choices. Requires rescan/regeneration for existing output. See docs/REVIEW-0.4.3.md. No automatic male/female mesh-compatibility inspection or new in-game validation is claimed.
 

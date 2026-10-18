@@ -107,7 +107,8 @@ public sealed class NpcTargetProfile
     public bool UsesTemplateInventory { get; set; }
     public List<NpcTargetVariant> Variants { get; set; } = [];
     public HashSet<string> OccupationTags { get; set; } = new(StringComparer.OrdinalIgnoreCase);
-    public bool CanReceiveWearables => IsHumanoid && !IsChild && IsEncounterable && !HasUnresolvedTemplate;
+    public bool IsProtectedUniformed { get; set; }
+    public bool CanReceiveWearables => IsHumanoid && !IsChild && IsEncounterable && !HasUnresolvedTemplate && !UniformedNpcPolicy.IsProtected(this);
 }
 
 public sealed class NpcTargetVariant

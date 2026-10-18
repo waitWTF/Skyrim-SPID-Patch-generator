@@ -8,13 +8,21 @@
 
 Skyrim SPID Patch Generator is a Windows desktop app for Skyrim Special Edition / Anniversary Edition. It scans installed plugins for wearable armor, clothing and accessories, groups them by source plugin, and guides you through choosing **who wears what**. It generates an outfit ESP and the matching **SPID or SkyPatcher INI** without making you write distribution rules yourself.
 
-**0.4.2 development preview** · Windows x64 · .NET 10 Desktop Runtime · MIT license
+**0.4.3 development preview** · Windows x64 · .NET 10 Desktop Runtime · MIT license
 
 Previously called **Wearable Distributor**. Start `SkyrimSPIDPatchGenerator.exe`. Existing settings, backups and generated `WearableDistributor.*` patch filenames are retained for compatibility; they do not need renaming.
 
 [Downloads](https://github.com/waitWTF/Skyrim-SPID-Patch-generator/releases) · [Issues and ideas](https://github.com/waitWTF/Skyrim-SPID-Patch-generator/issues) · [Changelog](RELEASE_NOTES.md) · [Source code](https://github.com/waitWTF/Skyrim-SPID-Patch-generator)
 
 > **Preview status:** generated files have validation checks, but successful outfit distribution has not yet been confirmed in a live Skyrim session. Use a separate test profile before relying on the output in a main playthrough. Images below use synthetic demo records; they are not in-game results or a list of bundled outfit mods.
+
+## New in 0.4.3: protect uniformed NPCs
+
+Guards, soldiers, officers/commanders, housecarls/bodyguards, Thalmor, Penitus Oculatus, Dawnguard and Vigilants are excluded from NPC outfit audiences when identified from scanned record evidence. This also applies to broad **Warriors / All NPCs**, inherited alternatives and restored saved audience choices. The **Guards** group is removed; the wizard requires a scanned NPC roster. Redguard and Imperial civilian races, and ordinary civilian crime factions, are not by themselves protection evidence.
+
+**Updating an existing patch:** rescan, then regenerate **all existing outfit entries** to refresh their recipient lists. Incremental merging keeps untouched entries, so merely installing the new app or patching one additional outfit does not repair older rules. Review **My patch** for the entries that need updating.
+
+Protection is based on record identity/class/faction/keyword/outfit evidence, not visual inspection or a guarantee for every script-driven mod NPC. This update **does not automatically inspect male/female armor mesh compatibility**. Full integration checks passed; no in-game validation was performed for this release. The 0.4.2 MO2 startup compatibility fix is retained. Existing documentation screenshots show the 0.4.1 interface.
 
 ## The workflow
 

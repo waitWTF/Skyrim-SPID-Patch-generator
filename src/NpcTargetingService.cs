@@ -14,7 +14,7 @@ public sealed class NpcTargetingService
     private static readonly Dictionary<string, string[]> Groups = new(StringComparer.OrdinalIgnoreCase)
     {
         ["Bandits"] = ["bandit", "bandits", "raider", "raiders"], ["Forsworn"] = ["forsworn"],
-        ["Guards"] = ["guard", "guards", "watchman"], ["Mages"] = ["mage", "wizard", "sorcerer", "spellcaster"],
+        ["Mages"] = ["mage", "wizard", "sorcerer", "spellcaster"],
         ["Necromancers"] = ["necromancer", "necromancy", "necro"], ["Farmers"] = ["farmer", "farmhand", "farming"],
         ["Merchants"] = ["merchant", "trader", "vendor"], ["Adventurers"] = ["adventurer", "explorer"],
         ["Warriors"] = ["warrior", "knight", "soldier", "fighter"], ["Hunters"] = ["hunter", "ranger"],
@@ -28,7 +28,10 @@ public sealed class NpcTargetingService
     public NpcTargetingService(IEnumerable<KeywordChoice> choices, IEnumerable<NpcTargetProfile> profiles)
     {
         this.choices = choices.DistinctBy(choice => choice.FormId, StringComparer.OrdinalIgnoreCase).ToList();
-        this.profiles = profiles.Where(profile => profile.CanReceiveWearables).ToList();
+        var protectionChoices = this.choices.ToDictionary(choice => choice.FormId, StringComparer.OrdinalIgnoreCase);
+        var population = profiles.ToList();
+        foreach (var profile in population) profile.IsProtectedUniformed |= UniformedNpcPolicy.IsProtected(profile, protectionChoices);
+        this.profiles = population.Where(profile => profile.CanReceiveWearables).ToList();
         byForm = this.choices.ToDictionary(choice => choice.FormId, StringComparer.OrdinalIgnoreCase);
         wordsByForm = this.choices.ToDictionary(choice => choice.FormId, choice => Words(choice.EditorId).ToHashSet(StringComparer.OrdinalIgnoreCase), StringComparer.OrdinalIgnoreCase);
     }

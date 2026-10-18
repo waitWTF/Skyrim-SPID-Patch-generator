@@ -218,6 +218,7 @@ public sealed class WearableScanService
                 IsEncounterable = reachable.Contains(id) && !alternatives.Any(item => item.FacePreset) && !IsTestEditorId(snapshot.EditorId) && !id.Equals("0x000007~Skyrim.esm", StringComparison.OrdinalIgnoreCase),
                 EncounterEvidence = reachable.Contains(id) ? "Referenced by a placed actor, reachable leveled list, or quest" : "No encounter reference found"
             };
+            profile.IsProtectedUniformed = alternatives.Any(item => UniformedNpcPolicy.HasProtectedIdentity(item.EditorId) || UniformedNpcPolicy.HasProtectedIdentity(item.Name)) || UniformedNpcPolicy.IsProtected(profile, targets);
             result.Npcs.Add(profile);
             if (profile.CanReceiveWearables) result.Targets.Add(new KeywordChoice { EditorId = profile.Name, Plugin = profile.Plugin, LocalId = npcs[id].LocalId, TargetKind = "Npc", Category = "NPC audience" });
         }
@@ -237,7 +238,7 @@ public sealed class WearableScanService
         result.Targets.AddRange(targets.Values.Where(target => used.Contains(target.FormId)));
         result.Targets.Sort((left, right) => StringComparer.OrdinalIgnoreCase.Compare(left.EditorId, right.EditorId)); result.Plugins.Sort((left, right) => StringComparer.OrdinalIgnoreCase.Compare(left.Plugin, right.Plugin));
         result.Diagnostics.AddRange(templateWarnings);
-        result.Diagnostics.Add($"NPC population: {result.Npcs.Count} effective bases; {result.Npcs.Count(profile => profile.CanReceiveWearables)} adult humanoids with encounter references. Children, creatures, player, face presets, and unreferenced templates are excluded.");
+        result.Diagnostics.Add($"NPC population: {result.Npcs.Count} effective bases; {result.Npcs.Count(profile => profile.CanReceiveWearables)} adult humanoids with encounter references. Children, creatures, player, face presets, unreferenced templates, guards, soldiers and uniformed protectors are excluded.");
         var inherited = result.Npcs.Count(profile => profile.CanReceiveWearables && profile.UsesTemplateInventory);
         if (inherited > 0) result.Diagnostics.Add($"{inherited} eligible NPC bases inherit inventory/outfit data. SkyPatcher default outfits on these bases need in-game verification; template owners are never broadened into the audience.");
         var variable = result.Npcs.Count(profile => profile.CanReceiveWearables && profile.Variants.Count > 1);

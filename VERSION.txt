@@ -1,7 +1,1 @@
-Skyrim SPID Patch Generator 0.4.2-preview
-Windows x64 framework-dependent build
-Package date: 2026-10-17
-Requires Microsoft .NET 10 Desktop Runtime x64
-Development preview. Read README before installing generated patches.
-
-
+0.4.3-preview

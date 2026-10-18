@@ -436,6 +436,7 @@ public sealed class PatchOptionsWindow : Window
         {
             pieceGrid.CommitEdit(DataGridEditingUnit.Cell, true); pieceGrid.CommitEdit(DataGridEditingUnit.Row, true); CommitFields();
             var problems = new List<string>();
+            if (!hasNpcScan) problems.Add("Rescan the deployed game Data folder before generating. A resolved NPC roster is required to exclude guards and uniformed protectors.");
             if (!int.TryParse(config.Chance, NumberStyles.Integer, CultureInfo.InvariantCulture, out var probability) || probability is < 1 or > 100) problems.Add("Enter a whole-number chance from 1 to 100.");
             if (!config.Pieces.Any(piece => piece.Include)) problems.Add("Include at least one outfit part.");
             if (config.TargetRules.Count == 0) problems.Add("Add at least one audience using the Add audience button.");

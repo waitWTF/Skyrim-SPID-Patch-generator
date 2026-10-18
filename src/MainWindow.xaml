@@ -98,7 +98,7 @@
               <TextBlock Text="Choose your mods. Decide who wears them. Build one patch." Foreground="{DynamicResource MutedBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,8,0,0" />
             </StackPanel>
           </Border>
-          <TextBlock Text="0.4.2 · DEVELOPMENT PREVIEW" FontSize="9" Foreground="{DynamicResource MutedBrush}" Margin="5,0,0,6" />
+          <TextBlock Text="0.4.3 · GUARD PROTECTION" FontSize="9" Foreground="{DynamicResource MutedBrush}" Margin="5,0,0,6" />
           <TextBlock Text="Skyrim Special Edition / Anniversary" FontSize="10" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="5,0,0,0" />
         </StackPanel>
       </DockPanel>
@@ -370,4 +370,3 @@
     </Grid>
   </Grid>
 </Window>
-

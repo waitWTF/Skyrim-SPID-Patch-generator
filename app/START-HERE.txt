@@ -12,3 +12,5 @@ Enable SkyPatcher container patching (iEnableContainerPatching=1 in your install
 Existing WearableDistributor.esp/INI/settings names are retained for compatibility. Do not rename generated records/files by hand.
 Source and documentation: https://github.com/waitWTF/Skyrim-SPID-Patch-generator
 This follow-up was built and UI-rendered. The repository includes verification checks; the new merchandise feature has not been verified in Skyrim.
+
+0.4.3: guards and uniformed protectors identified by the scan are excluded from NPC outfit audiences. Rescan and regenerate all existing outfit entries to refresh old recipient rules; incremental merging retains untouched entries. This does not automatically inspect male/female armor mesh compatibility. The 0.4.2 MO2 compatibility setting remains enabled. Full integration checks passed during development; no new in-game validation is claimed.

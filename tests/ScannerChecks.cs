@@ -8,6 +8,7 @@ public static class ScannerChecks
 {
     public static void Run(string root)
     {
+        UniformedProtectionChecks.Run();
         var folder = Path.Combine(root, "scanner-checks"); Directory.CreateDirectory(folder);
         var pluginList = Path.Combine(folder, "plugins.txt");
         File.WriteAllText(pluginList, "# active order\n*BaseWearables.esp\nDisabled.esp\n*OverrideNPCs.esp\n");
