@@ -23,7 +23,7 @@ public sealed class PatchReviewWindow : Window
         var header = new StackPanel { Margin = new Thickness(0, 0, 0, 16) };
         header.Children.Add(new TextBlock { Text = "03  /  REVIEW", Foreground = UiTheme.Brush("AccentBrush"), FontSize = 12, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 5) });
         header.Children.Add(new TextBlock { Text = "Ready to generate?", FontSize = 26, FontWeight = FontWeights.SemiBold });
-        header.Children.Add(UiTheme.Caption("Review who gets each outfit and check the notes. Select a row to inspect all its details."));
+        header.Children.Add(UiTheme.Caption("Review NPC recipients and trader stock. Select a row to inspect all its details."));
         if (!string.IsNullOrWhiteSpace(outputDirectory))
         {
             header.Children.Add(UiTheme.Caption("Output: " + outputDirectory));
@@ -58,13 +58,13 @@ public sealed class PatchReviewWindow : Window
 
         var footer = new Grid { Margin = new Thickness(0, 18, 0, 0) }; footer.ColumnDefinitions.Add(new ColumnDefinition()); footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var notes = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 20, 0) };
-        notes.Children.Add(new TextBlock { Text = $"{framework} · Existing outfits will be merged with this update.", FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap });
-        notes.Children.Add(UiTheme.Caption("NPC counts are base-record estimates. Multiple spawned actors may use one record, and the game applies other installed distribution rules too."));
+        notes.Children.Add(new TextBlock { Text = (configs.Any(config => config.DistributeToNpcs) ? framework + " NPC outfits" : "Shop stock only · SkyPatcher containers") + " · Merges with your existing patch.", FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap });
+        notes.Children.Add(UiTheme.Caption(configs.Any(config => config.DistributeToNpcs) ? "NPC counts are base-record estimates. Multiple spawned actors may use one record, and the game applies other installed distribution rules too." : "No NPC outfits are assigned by these setups. Shop stock requires SkyPatcher with container patching enabled."));
         footer.Children.Add(notes);
         var actions = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
         var back = UiTheme.Button("← Back to setup"); back.IsCancel = true; back.Click += (_, _) => DialogResult = false;
         var generate = UiTheme.Button("Generate patch", true); generate.IsDefault = true; generate.MinWidth = 140;
-        generate.IsEnabled = configs.Count > 0 && rows.Count > 0 && configs.All(config => config.Pieces.Any(piece => piece.Include) && config.TargetRules.Count > 0) && rows.All(row => !row.BlocksGeneration);
+        generate.IsEnabled = configs.Count > 0 && rows.Count > 0 && configs.All(config => config.Pieces.Any(piece => piece.Include) && (config.DistributeToNpcs ? config.TargetRules.Count > 0 : config.MerchantCategories.Count > 0)) && rows.All(row => !row.BlocksGeneration);
         generate.ToolTip = generate.IsEnabled ? "Write the outfit plugin, distribution INI, and patch manifest." : "Return to setup and fix the audiences with no matches or missing parts.";
         generate.Click += (_, _) => DialogResult = true;
         actions.Children.Add(back); actions.Children.Add(generate); Grid.SetColumn(actions, 1); footer.Children.Add(actions); Grid.SetRow(footer, 2); root.Children.Add(footer);
@@ -79,6 +79,19 @@ public sealed class PatchReviewWindow : Window
         foreach (var config in configs)
         {
             var included = config.Pieces.Where(piece => piece.Include).ToList();
+            if (!config.DistributeToNpcs)
+            {
+                var stock = MerchantStockService.Build(config);
+                var blocked = included.Count == 0 || stock.Count == 0;
+                rows.Add(new ReviewRow(config.OutfitName, $"{included.Count}/{config.Pieces.Count}", "Merchants only", "—", "N/A",
+                    blocked ? "Select parts and traders" : "Ready · shop stock only",
+                    $"Plugin: {config.Source.Plugin}\nTrader categories: {string.Join(", ", config.MerchantCategories)}\n" +
+                    $"Stock containers: {stock.Select(rule => (rule.ContainerPlugin, rule.ContainerId)).Distinct().Count()}\n" +
+                    $"Stock items: {stock.Select(rule => (rule.ItemPlugin, rule.ItemId)).Distinct().Count()}\n\n" +
+                    "No NPC outfits are assigned. NPC chance, sex and audience choices are ignored. Different body slots/sex variants may be sold together. Requires SkyPatcher with container patching enabled; clothing traders receive no weapons.\n\nSelected parts:\n" +
+                    string.Join("\n", included.Select(piece => "• " + piece.Name)), true, blocked));
+                continue;
+            }
             var slotWarnings = FindSlotOverlaps(config);
             if (config.TargetRules.Count == 0)
             {
@@ -91,6 +104,8 @@ public sealed class PatchReviewWindow : Window
                 rule.EstimatedNpcCount = matches;
                 var overlaps = countConflicts(rule, config); var installed = countInstalledConflicts(rule);
                 var notes = new List<string>();
+                if (rule.ProtectedNpcCount > 0) notes.Add($"⚠ Protected NPCs: {rule.ProtectedNpcCount} member(s) have existing uniform protection. This explicit faction selection replaces their outfits and can remove their recognizable uniforms. Guards stay excluded.");
+                if (rule.Group == NpcTargetingService.UniqueGroup) notes.Add("⚠ " + NpcTargetingService.UniqueWarning);
                 if (config.MerchantCategories.Count > 0)
                     notes.Add("Merchandise: " + string.Join(", ", config.MerchantCategories) + ". Requires SkyPatcher even with SPID NPC outfits. Stock gets one of each selected part; NPC chance does not apply. Clothing traders receive no weapons.");
                 if (included.Count == 0) notes.Add("No outfit parts included.");
@@ -99,12 +114,12 @@ public sealed class PatchReviewWindow : Window
                 if (overlaps > 0) notes.Add($"May overlap {overlaps} other configured outfit audience(s). Competing outfits do not guarantee the chance split you expect.");
                 if (installed > 0) notes.Add($"Potential overlap with {installed} installed distribution rule(s). The scan cannot fully simulate their runtime filters or priority.");
                 if (slotWarnings.Count > 0) notes.Add("Possible incompatible outfit parts:\n" + string.Join("\n", slotWarnings.Take(12)) + (slotWarnings.Count > 12 ? "\nMore overlapping combinations exist. Choose a compatible subset of parts." : ""));
-                var refinements = rule.Filters.Where(filter => filter.TargetKind != "Npc").GroupBy(filter => filter.Category)
+                var refinements = rule.Filters.Where(filter => filter.TargetKind != "Npc" || filter.Category == "NPC role").GroupBy(filter => filter.Category)
                     .Select(group => group.Key + ": " + string.Join(" OR ", group.Select(filter => NpcTargetingService.Humanize(filter.EditorId)).Distinct(StringComparer.OrdinalIgnoreCase)));
                 var details = $"Plugin: {config.Source.Plugin}\nCollection: {rule.Collection}\nNPC sex: {config.Gender}\nAudience: {rule.Group}\n" +
                     string.Join("\n", refinements) + $"\n\nIncluded parts ({included.Count}):\n" + string.Join("\n", included.Select(piece => "• " + piece.Name + " · " + piece.Slots)) +
                     (notes.Count == 0 ? "\n\nNo issues found by the available checks." : "\n\nReview notes:\n" + string.Join("\n\n", notes));
-                var status = matches == 0 ? "No matching NPCs" : included.Count == 0 ? "No parts included" : slotWarnings.Count > 0 ? "Check overlapping body slots" : overlaps + installed > 0 ? "Check competing outfits" : matches > 500 ? "Broad audience" : config.MerchantCategories.Count > 0 ? "Ready + merchandise" : "Ready";
+                var status = matches == 0 ? "No matching NPCs" : included.Count == 0 ? "No parts included" : rule.ProtectedNpcCount > 0 ? "⚠ Protected uniforms" : rule.Group == NpcTargetingService.UniqueGroup ? "⚠ Unique NPCs · quest/script caution" : slotWarnings.Count > 0 ? "Check overlapping body slots" : overlaps + installed > 0 ? "Check competing outfits" : matches > 500 ? "Broad audience" : config.MerchantCategories.Count > 0 ? "Ready + merchandise" : "Ready";
                 rows.Add(new ReviewRow(config.OutfitName, $"{included.Count}/{config.Pieces.Count}", rule.Group, matches.ToString(CultureInfo.InvariantCulture), config.Chance + "%", status, details, notes.Count > 0, matches == 0 || included.Count == 0));
             }
         }

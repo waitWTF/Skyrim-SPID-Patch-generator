@@ -16,7 +16,7 @@ public static class PreferencesService
 
     public static AppPreferences Normalize(AppPreferences value)
     {
-        if (value.SchemaVersion > 3) throw new InvalidDataException("These settings were created by a newer app. Update Skyrim SPID Patch Generator before importing them.");
+        if (value.SchemaVersion > 4) throw new InvalidDataException("These settings were created by a newer app. Update Skyrim SPID Patch Generator before importing them.");
         value.SchemaVersion = 2;
         value.DataPath = (value.DataPath ?? "").Trim(); value.PluginListPath = (value.PluginListPath ?? "").Trim();
         value.BaseGameDataPath = (value.BaseGameDataPath ?? "").Trim();
@@ -24,6 +24,7 @@ public static class PreferencesService
         value.Framework = value.Framework?.Equals("SkyPatcher", StringComparison.OrdinalIgnoreCase) == true ? "SkyPatcher" : "SPID";
         value.DefaultChance = int.TryParse(value.DefaultChance?.Trim().TrimEnd('%'), out var chance) && chance is >= 1 and <= 100 ? chance.ToString() : "25";
         value.IgnoredPlugins = new HashSet<string>((value.IgnoredPlugins ?? []).Where(ValidPlugin), StringComparer.OrdinalIgnoreCase);
+        value.UnhiddenPlugins = new HashSet<string>((value.UnhiddenPlugins ?? []).Where(ValidPlugin), StringComparer.OrdinalIgnoreCase);
         value.IncludedPlugins = new HashSet<string>((value.IncludedPlugins ?? []).Where(ValidPlugin), StringComparer.OrdinalIgnoreCase);
         value.DisabledPlugins = new HashSet<string>((value.DisabledPlugins ?? []).Where(ValidPlugin), StringComparer.OrdinalIgnoreCase);
         // Earlier versions could bulk-include every filtered plugin. Reconfirm those overrides once under the new policy.
@@ -37,6 +38,7 @@ public static class PreferencesService
         value.DistributionSettings = NormalizeSettings(value.DistributionSettings);
         value.DistributionPresets = NormalizeSettings(value.DistributionPresets);
         if (value.DistributionSettings.Values.Any(settings => settings.MerchantCategories.Count > 0)) value.SchemaVersion = 3;
+        if (value.DistributionSettings.Values.Concat(value.DistributionPresets.Values).Any(settings => !settings.DistributeToNpcs)) value.SchemaVersion = 4;
         return value;
     }
 

@@ -18,6 +18,7 @@ internal static class DistributionRuleCompiler
 
     internal static void Validate(PluginPatchOptions configuration)
     {
+        if (!configuration.DistributeToNpcs) return;
         if (configuration.TargetRules.Count > MaximumAudiences)
             throw new InvalidOperationException($"An outfit can have at most {MaximumAudiences} audiences. Narrow the selection before generating.");
         if (configuration.TargetRules.Sum(rule => (long)rule.Filters.Count) > MaximumTargets ||
@@ -52,6 +53,7 @@ internal static class DistributionRuleCompiler
 
     internal static List<string> Compile(PluginPatchOptions configuration, uint outfitId, bool skyPatcher)
     {
+        if (!configuration.DistributeToNpcs) return [];
         var lines = new List<string>();
         var resolved = configuration.TargetRules.All(rule => rule.NpcResolutionComplete);
         if (skyPatcher && !resolved)

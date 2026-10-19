@@ -13,6 +13,7 @@ Use a separate output mod folder. Enable the generated ESP, its required source 
 Rescan/repatch after changing your NPC mods or profile. Generated recipient lists are a scan snapshot.
 Do not put SPID and SkyPatcher output for this app in the same output folder.
 Optional merchandise requires SkyPatcher even when NPC outfits use SPID; keep its generated container INI installed.
+Only want shop stock? Tick only Sell selected parts through traders and leave NPC distribution unticked. No NPC audience or chance is needed.
 Enable SkyPatcher container patching (iEnableContainerPatching=1 in your installed SkyPatcher.ini) to use merchandise.
 Existing WearableDistributor.esp/INI/settings names are retained for compatibility. Do not rename generated records/files by hand.
 Source and documentation: https://github.com/waitWTF/Skyrim-SPID-Patch-generator

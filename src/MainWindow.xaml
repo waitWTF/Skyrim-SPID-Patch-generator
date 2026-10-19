@@ -120,6 +120,7 @@
           <TextBlock x:Name="ActivePathText" Text="Set up your Skyrim or mod staging folder in Settings." Foreground="{DynamicResource MutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
         </StackPanel>
         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="15,0,0,0">
+          <Button Content="Activity" Click="ShowActivity_Click" ToolTip="Live action history for this app session" />
           <Button Content="Error reports" Click="ShowErrorReports_Click" ToolTip="Save a shareable error report without personal paths, usernames, settings or mod lists" />
           <Button x:Name="CancelScanButton" Content="Cancel scan" Click="CancelScan_Click" Visibility="Collapsed" />
           <Button x:Name="ScanButton" Content="Scan for outfits" Click="Scan_Click" Padding="17,10" ToolTip="Read installed plugins and discover outfits and NPC groups" />
@@ -164,9 +165,19 @@
                 </StackPanel>
               </Grid>
               <WrapPanel Margin="0,9,0,0">
-                <Button Content="Enable selected" Style="{StaticResource QuietAction}" Click="EnableSelected_Click" ToolTip="Include highlighted rows in patch setup. Does not activate game plugins." />
-                <Button Content="Disable selected" Style="{StaticResource QuietAction}" Click="DisableSelected_Click" ToolTip="Leave highlighted rows out of patch setup. Does not deactivate game plugins." />
+                <Button Content="Enable selected" Style="{StaticResource QuietAction}" Click="EnableSelected_Click" ToolTip="Include action targets in patch setup. Does not activate game plugins." />
+                <Button Content="Disable selected" Style="{StaticResource QuietAction}" Click="DisableSelected_Click" ToolTip="Leave action targets out of patch setup. Does not deactivate game plugins." />
                 <Button Content="Hide selected" Style="{StaticResource QuietAction}" Click="IgnorePlugin_Click" ToolTip="Remember these plugins as hidden until you restore them." />
+                <Button Content="Unhide selected" Style="{StaticResource QuietAction}" Click="RestorePlugin_Click" />
+              </WrapPanel>
+              <WrapPanel Margin="0,7,0,0">
+                <TextBlock Text="Actions apply to:" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="{DynamicResource MutedBrush}" />
+                <ComboBox x:Name="ActionScopeBox" Width="225" SelectedIndex="0" SelectionChanged="ActionScopeChanged">
+                  <ComboBoxItem Content="Checked or highlighted rows" />
+                  <ComboBoxItem Content="Checked rows only" />
+                  <ComboBoxItem Content="Highlighted rows only" />
+                </ComboBox>
+                <TextBlock x:Name="ActionTargetsText" VerticalAlignment="Center" Margin="12,0,0,0" Foreground="{DynamicResource MutedBrush}" />
               </WrapPanel>
               <Expander Header="Hidden outfits and filter tools" Margin="0,8,0,0">
                 <StackPanel Margin="0,8,0,2">
@@ -186,7 +197,23 @@
               <DataGrid x:Name="PluginsGrid" AutoGenerateColumns="False" CanUserAddRows="False" SelectionMode="Extended" IsReadOnly="False" EnableRowVirtualization="True" EnableColumnVirtualization="True" PreviewMouseRightButtonDown="PluginRightClick">
                 <DataGrid.ContextMenu>
                   <ContextMenu Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource TextBrush}" BorderBrush="{DynamicResource BorderBrush}">
+                    <ContextMenu.Template>
+                      <ControlTemplate TargetType="ContextMenu">
+                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="7" Padding="5" SnapsToDevicePixels="True">
+                          <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle" />
+                        </Border>
+                      </ControlTemplate>
+                    </ContextMenu.Template>
                     <ContextMenu.Resources>
+                      <Style TargetType="Separator">
+                        <Setter Property="Template">
+                          <Setter.Value>
+                            <ControlTemplate TargetType="Separator">
+                              <Border Height="1" Margin="6,5" Background="{DynamicResource BorderBrush}" />
+                            </ControlTemplate>
+                          </Setter.Value>
+                        </Setter>
+                      </Style>
                       <Style TargetType="MenuItem">
                         <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
                         <Setter Property="Template">
@@ -197,6 +224,7 @@
                               </Border>
                               <ControlTemplate.Triggers>
                                 <Trigger Property="IsHighlighted" Value="True"><Setter TargetName="MenuHighlight" Property="Background" Value="{DynamicResource RaisedBrush}" /></Trigger>
+                                <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="MenuHighlight" Property="Background" Value="{DynamicResource RaisedBrush}" /></Trigger>
                                 <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.45" /></Trigger>
                               </ControlTemplate.Triggers>
                             </ControlTemplate>
@@ -277,7 +305,7 @@
                   <DataGridTextColumn Header="HEALTH" Binding="{Binding Health}" Width="115" />
                 <DataGridTextColumn Header="CHANCE" Binding="{Binding Chance}" Width="75" />
                 <DataGridTextColumn Header="SEX" Binding="{Binding Gender}" Width="65" />
-                <DataGridTextColumn Header="WHO WEARS IT" Binding="{Binding Audiences}" Width="2*" />
+                <DataGridTextColumn Header="RECIPIENTS / SHOPS" Binding="{Binding Audiences}" Width="2*" />
               </DataGrid.Columns>
             </DataGrid>
             <GridSplitter Grid.Row="2" Height="6" HorizontalAlignment="Stretch" Background="Transparent" />

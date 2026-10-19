@@ -33,7 +33,8 @@ public static class PatchPackageService
         var instructions = "Skyrim SPID Patch Generator generated mod\n\n" +
             "Install this ZIP using Vortex's Install From File or MO2's Install a new mod from an archive. Enable the new mod and WearableDistributor.esp.\n\n" +
             "Required source/NPC plugins (install and enable separately):\n" + string.Join("\n", required.Select(plugin => "- " + plugin)) +
-            "\n\nDistribution engine: " + string.Join(", ", manifest.Entries.Select(entry => entry.Framework).Distinct(StringComparer.OrdinalIgnoreCase)) +
+            "\n\nRequired distribution engines: " + string.Join(", ", manifest.Entries.Where(entry => entry.DistributeToNpcs).Select(entry => entry.Framework)
+                .Concat(manifest.Entries.Any(entry => entry.MerchantStock.Count > 0) ? new[] { "SkyPatcher (container patching)" } : []).Distinct(StringComparer.OrdinalIgnoreCase)) +
             "\nInstall the selected engine and its requirements separately. This archive contains generated patch records and configuration only; meshes and textures come from the source mods.\n" +
             "Rescan and regenerate after changing NPC mods or the active profile. SPID chance is per outfit and NPC; 100% does not prevent another mod from replacing the outfit.\n";
         if (manifest.Entries.Any(entry => entry.MerchantStock.Count > 0)) instructions += "\nMERCHANDISE REQUIRES SKYPATCHER even when the NPC outfit engine is SPID. Enable container patching (iEnableContainerPatching=1 in your installed SkyPatcher.ini). Keep the generated container INI installed. Adds one of each selected item to confirmed vendor stock; clothing traders receive no weapons. Existing saves may require a normal merchant restock.\n";

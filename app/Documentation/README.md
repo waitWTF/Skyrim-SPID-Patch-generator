@@ -8,7 +8,7 @@
 
 Skyrim SPID Patch Generator is a Windows desktop app for Skyrim Special Edition / Anniversary Edition. It scans installed plugins for wearable armor, clothing and accessories, groups them by source plugin, and guides you through choosing **who wears what**. It generates an outfit ESP and the matching **SPID or SkyPatcher INI** without making you write distribution rules yourself.
 
-**0.4.7 development preview** · Windows x64 · .NET 10 Desktop Runtime · MIT license
+**0.4.8 development preview** · Windows x64 · .NET 10 Desktop Runtime · MIT license
 
 Previously called **Wearable Distributor**. Start `SkyrimSPIDPatchGenerator.exe`. Existing settings, backups and generated `WearableDistributor.*` patch filenames are retained for compatibility; they do not need renaming.
 
@@ -16,7 +16,23 @@ Previously called **Wearable Distributor**. Start `SkyrimSPIDPatchGenerator.exe`
 
 > **Preview status:** generated files have validation checks, but successful outfit distribution has not yet been confirmed in a live Skyrim session. Use a separate test profile before relying on the output in a main playthrough. Images below use synthetic demo records; they are not in-game results or a list of bundled outfit mods.
 
-## New in 0.4.7: a tidy application folder
+## New in 0.4.8: merchants only, activity history and faction presets
+
+**Only want traders to sell an outfit? Tick only “Sell selected parts through traders.”** Leave “Distribute outfits for NPCs to wear” unticked. No NPC audience, sex or chance is needed. New setups start with neither destination ticked; saved choices are retained. Available blacksmith/general-goods/clothing trader categories are selected for you, and you can change them. Shop stock requires **SkyPatcher with container patching enabled**, even when your selected NPC engine is SPID. Weapons are never sent to clothing traders. Review and My patch clearly label merchants-only entries. You can also enable both destinations.
+
+**Activity** opens a live window with scan/generation stages, setup changes, checkbox actions, hiding/unhiding and results. It keeps the latest 1,000 entries for this app session in memory. It can display local paths and plugin names, and is never saved to disk, uploaded or attached to privacy-safe Error reports. Clear history and follow-latest controls are included; the wizard has its own Activity history button.
+
+**List actions work with checked rows and highlighted rows.** The visible action-scope menu chooses checked-or-highlighted (default), checked-only, or highlighted-only rows, with a target count. Actions are limited to the current visible/search results. None clears checks and highlights. Unhide restores manual exclusions and smart-filter candidates and can keep an already-patched plugin visible. Enabling/disabling affects patch selection, not game plugin activation.
+
+The right-click menu now has a matching dark frame and separator. Generation results show NPC and shop-stock rule counts separately, with the actual trader INI path when applicable.
+
+**Faction and guild presets** include the Thieves Guild, Dark Brotherhood, Companions, College of Winterhold, Bards College, Dawnguard, Volkihar vampires, Blades, Greybeards, Imperial Legion, Stormcloaks, Vigilants, Thalmor, Penitus Oculatus, Silver Hand, Morag Tong, Skaal and East Empire Company. Only groups with actual scanned members appear. Relevant role/subgroup presets come from those members' installed classes and faction records. Protected labels/warnings apply only to members covered by the existing uniform policy, not every guild. Those members require an explicit faction selection; broad groups retain protection. Guards, bodyguards and housecarls remain excluded.
+
+**Unique NPCs** uses the winning NPC record's Unique flag and supports selecting individual members. Setup and review warn about scripted outfit changes and quest-scene conflicts. Existing uniform protection still applies to this group. This is not a guarantee that a quest will break—or that a static scan can prove compatibility.
+
+See [0.4.8 behaviour and limits](docs/MERCHANTS_ACTIVITY_AND_AUDIENCES.md). Build/package verification only; no new automated tests, runtime UI/MO2 checks or in-game verification were run.
+
+## Application folder layout
 
 The Windows ZIP now extracts into one main folder:
 
@@ -217,7 +233,7 @@ The app does not directly manage either manager's profiles, deployment or plugin
 
 Use the **same output folder**. Later generations merge new source plugins into the existing ESP, rules and inventory. You do not need to select every previous plugin again.
 
-Repatching replaces only the selected named outfits. Other variants from the same source plugin and explicitly skipped outfits are preserved. To delete an existing outfit, use **My patch → Remove outfit**.
+Repatching replaces only the selected named outfits, including their NPC/merchant destination choices. Changing an outfit to merchants only removes its previous managed NPC rules; changing back can add them again. Other variants from the same source plugin and explicitly skipped outfits are preserved. To delete an existing outfit, use **My patch → Remove outfit**.
 
 Keep the ESP, selected engine's INI and manifest together. The installable ZIP includes generated files and instructions; it does **not** bundle third-party meshes, textures or source plugins.
 

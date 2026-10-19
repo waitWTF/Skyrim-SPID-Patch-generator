@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
 using System.Text;
 using System.Text.Json;
@@ -37,6 +38,11 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        var statusDescriptor = DependencyPropertyDescriptor.FromProperty(TextBlock.TextProperty, typeof(TextBlock));
+        EventHandler statusChanged = (_, _) => ActivityHistory.Add(StatusText.Text);
+        statusDescriptor.AddValueChanged(StatusText, statusChanged);
+        Closed += (_, _) => statusDescriptor.RemoveValueChanged(StatusText, statusChanged);
+        ActivityHistory.Add("App opened. Activity history is local to this session.");
         UiTheme.Apply(this);
         PluginsGrid.ItemsSource = visiblePlugins;
         PatchInventoryGrid.ItemsSource = inventoryRows;
@@ -47,6 +53,7 @@ public partial class MainWindow : Window
             SettingsNavButton.IsChecked = MainTabs.SelectedIndex == 2;
         };
         PluginsGrid.CellEditEnding += (_, _) => Dispatcher.BeginInvoke(new Action(UpdateSelectionSummary));
+        PluginsGrid.SelectionChanged += (_, _) => UpdateSelectionSummary();
         Closed += (_, _) => scanCancellation?.Cancel();
         LoadPreferences();
         DataPathBox.Text = preferences.DataPath;
@@ -299,11 +306,12 @@ public partial class MainWindow : Window
         if (SelectionCountText == null) return;
         var count = scannedPlugins.Count(IsSelectedForPatch);
         SelectionCountText.Text = $"{count} outfit{(count == 1 ? "" : "s")} selected";
+        if (ActionTargetsText is not null) ActionTargetsText.Text = $"{GetActionTargets().Count} visible action targets";
         GenerateButton.IsEnabled = scanCancellation == null && !isGenerating && !isDiscoveringLocations && count > 0;
     }
     private bool IsSelectedForPatch(PluginEntry plugin) => plugin.Selected && plugin.CanPatch && (editingPatchedOutfit ||
         !preferences.IgnoredPlugins.Contains(plugin.Plugin) && (!plugin.IsFiltered || preferences.IncludedPlugins.Contains(plugin.Plugin)) &&
-        (plugin.PatchStatus != "Patched" || ShowPatchedBox.IsChecked == true));
+        (plugin.PatchStatus != "Patched" || ShowPatchedBox.IsChecked == true || preferences.UnhiddenPlugins.Contains(plugin.Plugin)));
 
     private void PluginSelectionChanged(object sender, RoutedEventArgs e)
     {
@@ -316,6 +324,7 @@ public partial class MainWindow : Window
             }
             else preferences.DisabledPlugins.Add(plugin.Plugin);
             SavePreferences();
+            ActivityHistory.Add((plugin.Selected ? "Checked for setup/actions: " : "Unchecked: ") + plugin.Plugin);
         }
         UpdateSelectionSummary();
     }
@@ -334,8 +343,30 @@ public partial class MainWindow : Window
     }
 
     private void ShowErrorReports_Click(object sender, RoutedEventArgs e) => new SupportReportWindow { Owner = this }.ShowDialog();
+    private void ShowActivity_Click(object sender, RoutedEventArgs e) => ActivityHistoryWindow.ShowFor(this);
+    private void ActionScopeChanged(object sender, SelectionChangedEventArgs e) { if (PluginsGrid is not null) UpdateSelectionSummary(); }
 
-    private void RefreshPluginList(object? sender = null, RoutedEventArgs? e = null) => RefreshPluginList();
+    private List<PluginEntry> GetActionTargets()
+    {
+        var highlighted = PluginsGrid.SelectedItems.Cast<PluginEntry>().ToHashSet();
+        return visiblePlugins.Where(plugin => ActionScopeBox?.SelectedIndex switch
+        {
+            1 => plugin.Selected,
+            2 => highlighted.Contains(plugin),
+            _ => plugin.Selected || highlighted.Contains(plugin)
+        }).ToList();
+    }
+    private void RecordListAction(string action, IReadOnlyCollection<PluginEntry> targets)
+    {
+        StatusText.Text = targets.Count == 0 ? "No matching action targets. Check a row or highlight it, then try again." :
+            $"{action} {targets.Count} outfit plugin(s): " + string.Join(", ", targets.Take(15).Select(plugin => plugin.Plugin)) + (targets.Count > 15 ? ", …" : "");
+    }
+
+    private void RefreshPluginList(object? sender = null, RoutedEventArgs? e = null)
+    {
+        RefreshPluginList();
+        if (sender is CheckBox box) ActivityHistory.Add((box.IsChecked == true ? "Showing: " : "Hiding view: ") + box.Content);
+    }
 
     private void RefreshPluginList()
     {
@@ -345,7 +376,7 @@ public partial class MainWindow : Window
         var showPatched = ShowPatchedBox?.IsChecked == true;
         visiblePlugins.Clear();
         foreach (var plugin in scannedPlugins.OrderBy(item => item.Plugin, StringComparer.OrdinalIgnoreCase).Where(item =>
-                     (preferences.IgnoredPlugins.Contains(item.Plugin) ? showIgnored : item.PatchStatus == "Patched" ? showPatched :
+                     (preferences.IgnoredPlugins.Contains(item.Plugin) ? showIgnored : item.PatchStatus == "Patched" ? showPatched || preferences.UnhiddenPlugins.Contains(item.Plugin) :
                          showFiltered || !item.IsFiltered || preferences.IncludedPlugins.Contains(item.Plugin)) &&
                      (string.IsNullOrWhiteSpace(query) || item.Plugin.Contains(query, StringComparison.OrdinalIgnoreCase))))
             visiblePlugins.Add(plugin);
@@ -357,21 +388,25 @@ public partial class MainWindow : Window
 
     private void SelectAll_Click(object sender, RoutedEventArgs e)
     {
-        foreach (var plugin in visiblePlugins.Where(item => item.CanPatch && !preferences.IgnoredPlugins.Contains(item.Plugin) && (!item.IsFiltered || preferences.IncludedPlugins.Contains(item.Plugin)))) plugin.Selected = true;
+        foreach (var plugin in visiblePlugins.Where(item => item.CanPatch)) SetMark(plugin, true);
+        SavePreferences(); RecordListAction("Checked", visiblePlugins.Where(plugin => plugin.Selected).ToList());
         PluginsGrid.Items.Refresh();
         UpdateSelectionSummary();
     }
 
     private void SelectNone_Click(object sender, RoutedEventArgs e)
     {
-        foreach (var plugin in visiblePlugins) plugin.Selected = false;
+        foreach (var plugin in visiblePlugins) SetMark(plugin, false);
+        PluginsGrid.SelectedItems.Clear();
+        SavePreferences(); RecordListAction("Unchecked", visiblePlugins.ToList());
         PluginsGrid.Items.Refresh();
         UpdateSelectionSummary();
     }
 
     private void InvertSelection_Click(object sender, RoutedEventArgs e)
     {
-        foreach (var plugin in visiblePlugins.Where(item => item.CanPatch && !preferences.IgnoredPlugins.Contains(item.Plugin) && (!item.IsFiltered || preferences.IncludedPlugins.Contains(item.Plugin)))) plugin.Selected = !plugin.Selected;
+        foreach (var plugin in visiblePlugins.Where(item => item.CanPatch)) SetMark(plugin, !plugin.Selected);
+        SavePreferences(); RecordListAction("Inverted checks for", visiblePlugins.Where(plugin => plugin.CanPatch).ToList());
         PluginsGrid.Items.Refresh();
         UpdateSelectionSummary();
     }
@@ -381,8 +416,8 @@ public partial class MainWindow : Window
 
     private void IncludeFiltered_Click(object sender, RoutedEventArgs e)
     {
-        if (PluginsGrid.SelectedItems.Count == 0) return;
-        foreach (var plugin in PluginsGrid.SelectedItems.Cast<PluginEntry>().Where(candidate => candidate.IsFiltered))
+        var targets = GetActionTargets().Where(candidate => candidate.IsFiltered && candidate.CanPatch).ToList();
+        foreach (var plugin in targets)
         {
             preferences.IncludedPlugins.Add(plugin.Plugin);
             preferences.IgnoredPlugins.Remove(plugin.Plugin);
@@ -391,47 +426,57 @@ public partial class MainWindow : Window
         }
         SavePreferences();
         RefreshPluginList();
-        StatusText.Text = "Selected filtered candidate(s) will be included in future scans. Review them carefully before generating a patch.";
+        RecordListAction("Included filtered candidates:", targets);
+    }
+
+    private void SetMark(PluginEntry plugin, bool marked)
+    {
+        plugin.Selected = marked;
+        if (marked) { preferences.DisabledPlugins.Remove(plugin.Plugin); if (plugin.IsFiltered) preferences.IncludedPlugins.Add(plugin.Plugin); }
+        else preferences.DisabledPlugins.Add(plugin.Plugin);
     }
 
     private void SetSelectedRows(bool enabled)
     {
-        foreach (PluginEntry plugin in PluginsGrid.SelectedItems)
-            if (plugin.CanPatch && !preferences.IgnoredPlugins.Contains(plugin.Plugin))
+        var targets = GetActionTargets().Where(plugin => !enabled || plugin.CanPatch).ToList();
+        foreach (var plugin in targets)
             {
-                plugin.Selected = enabled;
-                if (enabled) { preferences.DisabledPlugins.Remove(plugin.Plugin); if (plugin.IsFiltered) preferences.IncludedPlugins.Add(plugin.Plugin); }
-                else preferences.DisabledPlugins.Add(plugin.Plugin);
+                if (enabled) { preferences.IgnoredPlugins.Remove(plugin.Plugin); if (plugin.PatchStatus == "Patched") preferences.UnhiddenPlugins.Add(plugin.Plugin); }
+                SetMark(plugin, enabled);
             }
         SavePreferences();
         PluginsGrid.Items.Refresh();
         UpdateSelectionSummary();
+        RecordListAction(enabled ? "Enabled for patch setup:" : "Disabled for patch setup:", targets);
     }
 
     private void IgnorePlugin_Click(object sender, RoutedEventArgs e)
     {
-        if (PluginsGrid.SelectedItems.Count == 0) return;
-        foreach (PluginEntry plugin in PluginsGrid.SelectedItems)
+        var targets = GetActionTargets().Where(plugin => !preferences.IgnoredPlugins.Contains(plugin.Plugin)).ToList();
+        foreach (var plugin in targets)
         {
             preferences.IgnoredPlugins.Add(plugin.Plugin);
+            preferences.UnhiddenPlugins.Remove(plugin.Plugin);
             plugin.Selected = false;
         }
         SavePreferences();
         RefreshPluginList();
-        StatusText.Text = "Hidden choices saved. Reveal ‘Show my exclusions’, then use Unhide selected to restore them.";
+        RecordListAction("Hidden (restore through Show my exclusions):", targets);
     }
 
     private void RestorePlugin_Click(object sender, RoutedEventArgs e)
     {
-        if (PluginsGrid.SelectedItems.Count == 0) return;
-        foreach (PluginEntry plugin in PluginsGrid.SelectedItems)
+        var targets = GetActionTargets().Where(plugin => preferences.IgnoredPlugins.Contains(plugin.Plugin) || plugin.IsFiltered || plugin.PatchStatus == "Patched").ToList();
+        foreach (var plugin in targets)
         {
             preferences.IgnoredPlugins.Remove(plugin.Plugin);
+            preferences.UnhiddenPlugins.Add(plugin.Plugin);
+            if (plugin.IsFiltered) preferences.IncludedPlugins.Add(plugin.Plugin);
             plugin.Selected = plugin.CanPatch && !preferences.DisabledPlugins.Contains(plugin.Plugin) && (!plugin.IsFiltered || preferences.IncludedPlugins.Contains(plugin.Plugin));
         }
         SavePreferences();
         RefreshPluginList();
-        StatusText.Text = "Selected plugin(s) restored to the scan list.";
+        RecordListAction("Unhidden:", targets);
     }
 
     private async void Generate_Click(object sender, RoutedEventArgs e)
@@ -489,7 +534,7 @@ public partial class MainWindow : Window
                 outputDirectory = outputPicker.FolderName;
             }
             var targeting = new NpcTargetingService(availableKeywords, npcProfiles.Values);
-            foreach (var config in dialog.Options)
+            foreach (var config in dialog.Options.Where(config => config.DistributeToNpcs))
                 foreach (var rule in config.TargetRules) targeting.Resolve(rule, config.Gender);
             var review = new PatchReviewWindow(dialog.Options, CountMatchingNpcs, (rule, owner) => CountOverlappingRules(rule, owner, dialog.Options), CountInstalledRuleOverlaps, framework, outputDirectory) { Owner = this };
             if (review.ShowDialog() == true) break;
@@ -518,19 +563,25 @@ public partial class MainWindow : Window
             ActionProgress.Visibility = Visibility.Visible;
             ActionProgress.IsIndeterminate = true;
             StatusText.Text = $"Generating {framework} outfit records and NPC distributions…";
-            var result = await Task.Run(() => PatchGenerator.Generate(dialog.Options, outputDirectory, framework, dialog.SkippedOptions));
+            var generationProgress = new Progress<string>(message => StatusText.Text = message);
+            var result = await Task.Run(() => PatchGenerator.Generate(dialog.Options, outputDirectory, framework, dialog.SkippedOptions, generationProgress));
             preferences.BackupOutputPath = outputDirectory;
             SavePreferences();
             ActionProgress.IsIndeterminate = false;
             ActionProgress.Visibility = Visibility.Collapsed;
-            StatusText.Text = $"Updated {result.UpdatedOutfitCount} outfit(s), kept {result.PreservedOutfitCount} unchanged · {result.DistributionCount} rules in the complete patch.";
+            StatusText.Text = $"Updated {result.UpdatedOutfitCount} outfit(s), kept {result.PreservedOutfitCount} unchanged · {result.DistributionCount} NPC rule(s) · {result.MerchantDistributionCount} shop-stock rule(s) in the complete patch.";
             RefreshInventory();
             MainTabs.SelectedIndex = 1;
-            var runtimeNote = result.Framework == "SPID"
+            var runtimeNote = !dialog.Options.Any(config => config.DistributeToNpcs) && result.DistributionCount == 0
+                ? "Merchants-only output: install/enable SkyPatcher with container patching enabled. No NPC outfits are changed, and SPID is not required for these shop rules."
+                : result.Framework == "SPID"
                 ? "Install/enable SPID and enable WearableDistributor.esp together with the _DISTR.ini. SPID honors the configured chance."
                 : "Install/enable SkyPatcher and enable WearableDistributor.esp with the generated npc INI. SkyPatcher outfit rules apply to every matching NPC and cannot use a random chance.";
+            if (dialog.Options.Any(config => config.MerchantCategories.Count > 0)) runtimeNote += "\nShop stock also requires the generated SkyPatcher container INI and iEnableContainerPatching=1.";
             var masters = result.Masters.Count > 0 ? $"\n\nRequired source plugins: {string.Join(", ", result.Masters)}" : "";
-            MessageBox.Show($"Patch generated and validated.\n\nPlugin: {result.PluginPath}\nDistribution: {result.DistributionPath}{masters}\n\n{runtimeNote}\n\nFor Mod Organizer 2, install the selected output folder as a mod and enable it in the profile.", "Patch ready", MessageBoxButton.OK, MessageBoxImage.Information);
+            var distributionDetails = result.DistributionCount == 0 ? "NPC assignment: none (shop-stock output)." : "NPC rules: " + result.DistributionPath;
+            if (result.MerchantDistributionPath is not null) distributionDetails += "\nShop-stock rules: " + result.MerchantDistributionPath;
+            MessageBox.Show($"Patch generated and validated.\n\nPlugin: {result.PluginPath}\n{distributionDetails}{masters}\n\n{runtimeNote}\n\nFor Mod Organizer 2, install the selected output folder as a mod and enable it in the profile.", "Patch ready", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
@@ -554,7 +605,7 @@ public partial class MainWindow : Window
         var targeting = new NpcTargetingService(availableKeywords, npcProfiles.Values);
         var matches = rule.NpcResolutionComplete ? rule.ResolvedNpcFormIds.ToHashSet(StringComparer.OrdinalIgnoreCase) : targeting.GetMatchingProfiles(rule, owner.Gender).Select(profile => profile.FormId).ToHashSet(StringComparer.OrdinalIgnoreCase);
         if (matches.Count == 0) return 0;
-        return current.Where(config => !ReferenceEquals(config, owner)).Sum(config => config.TargetRules.Count(other =>
+        return current.Where(config => config.DistributeToNpcs && !ReferenceEquals(config, owner)).Sum(config => config.TargetRules.Count(other =>
             matches.Overlaps(other.NpcResolutionComplete ? other.ResolvedNpcFormIds : targeting.GetMatchingProfiles(other, config.Gender).Select(profile => profile.FormId))));
     }
 
@@ -606,7 +657,7 @@ public partial class MainWindow : Window
         {
             var entries = manifest.Entries.Where(entry => entry.SourcePlugin.Equals(plugin.Plugin, StringComparison.OrdinalIgnoreCase)).ToList();
             plugin.PatchStatus = entries.Count == 0 ? "Not patched" : entries.All(entry => health[entry].Status == "Ready") ? "Patched" : "Needs review";
-            if (plugin.PatchStatus == "Patched") plugin.Selected = false;
+            if (plugin.PatchStatus == "Patched" && !preferences.UnhiddenPlugins.Contains(plugin.Plugin)) plugin.Selected = false;
         }
         PluginsGrid.Items.Refresh();
         ScanSummaryText.Text = $"{scannedPlugins.Count} wearable plugin candidate(s) · {scannedPlugins.Sum(plugin => plugin.PieceCount)} wearable record(s) · {patchedPlugins.Count} plugin(s) already patched";
@@ -616,11 +667,11 @@ public partial class MainWindow : Window
                 Health = health[entry].Status,
                 SourcePlugin = string.IsNullOrWhiteSpace(entry.OutfitName) ? entry.SourcePlugin : $"{entry.SourcePlugin} · {entry.OutfitName}",
                 IncludedPieces = entry.IncludedPieces.Count.ToString(),
-                Audiences = (entry.MerchantStock.Count > 0 ? "Shops + " : "") + string.Join(", ", entry.Audiences.Select(audience => audience.Split(':', 2)[0]).Distinct(StringComparer.OrdinalIgnoreCase)),
-                Chance = entry.Framework == "SPID" ? $"{entry.Chance}%" : "100% (SkyPatcher)",
-                Gender = entry.Gender,
+                Audiences = !entry.DistributeToNpcs ? "Merchants only" : (entry.MerchantStock.Count > 0 ? "Shops + " : "") + string.Join(", ", entry.Audiences.Select(audience => audience.Split(':', 2)[0]).Distinct(StringComparer.OrdinalIgnoreCase)),
+                Chance = !entry.DistributeToNpcs ? "N/A (shops)" : entry.Framework == "SPID" ? $"{entry.Chance}%" : "100% (SkyPatcher)",
+                Gender = entry.DistributeToNpcs ? entry.Gender : "N/A (shops)",
                 LastGenerated = entry.GeneratedAtUtc.ToLocalTime().ToString("g"),
-                Details = MerchantStockService.Describe(entry) + "\n\n" + $"Status: {health[entry].Status}\n{health[entry].Explanation}\n\nSource plugin: {entry.SourcePlugin}\nFramework: {entry.Framework}\nDistribution file: {entry.DistributionPath}\nGenerated outfit: {(string.IsNullOrEmpty(entry.OutfitEditorId) ? "legacy record (not indexed)" : entry.OutfitEditorId)}\nRequired masters: {string.Join(", ", entry.RequiredMasters)}\nChance: {entry.Chance}%\nNPC sex: {entry.Gender}\nDistribution rows: {entry.DistributionRows}\n\nIncluded pieces:\n• {string.Join("\n• ", entry.IncludedPieces)}\n\nExcluded pieces:\n• {string.Join("\n• ", entry.ExcludedPieces)}\n\nAudiences:\n• {string.Join("\n• ", entry.Audiences)}",
+                Details = MerchantStockService.Describe(entry) + "\n\n" + $"Status: {health[entry].Status}\n{health[entry].Explanation}\n\nSource plugin: {entry.SourcePlugin}\nFramework: {entry.Framework}\nDistribution file: {entry.DistributionPath}\nGenerated outfit: {(string.IsNullOrEmpty(entry.OutfitEditorId) ? "legacy record (not indexed)" : entry.OutfitEditorId)}\nRequired masters: {string.Join(", ", entry.RequiredMasters)}\nChance: {(entry.DistributeToNpcs ? entry.Chance + "%" : "N/A (shops only)")}\nNPC sex: {(entry.DistributeToNpcs ? entry.Gender : "N/A (shops only)")}\nDistribution rows: {entry.DistributionRows}\n\nIncluded pieces:\n• {string.Join("\n• ", entry.IncludedPieces)}\n\nExcluded pieces:\n• {string.Join("\n• ", entry.ExcludedPieces)}\n\nAudiences:\n• {string.Join("\n• ", entry.Audiences)}",
                 Entry = entry
             });
         if (inventoryRows.Count == 0 && (File.Exists(Path.Combine(output, PatchGenerator.OutputPluginName)) || Directory.Exists(output)))

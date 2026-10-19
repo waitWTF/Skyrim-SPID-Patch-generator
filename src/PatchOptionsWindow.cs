@@ -109,15 +109,16 @@ public sealed class PatchOptionsWindow : Window
         var config = new PluginPatchOptions
         {
             Source = plugin, OutfitName = name,
+            DistributeToNpcs = saved?.DistributeToNpcs ?? false,
             Chance = IsSkyPatcher ? "100" : saved?.Chance ?? defaultChance, Gender = saved?.Gender ?? "Any",
             Pieces = plugin.Pieces.Select(piece => ClonePiece(piece, !excluded.Contains(piece.FormId))).ToList(),
             Keywords = availableKeywords.ToList(),
             // A deliberately empty or stale saved setup must never silently become a broader suggestion.
             TargetRules = saved is not null ? restored : SuggestAudiences(plugin.Plugin)
         };
-        if (missing > 0) { App.WriteDiagnostic(DiagnosticEvent.OutfitValidationFailed, level: DiagnosticLevel.Warning); restorationNotes[config] = $"{missing} saved audience(s) could not be restored completely. Their targets may have changed or been removed. Choose replacement audiences below."; }
+        if (config.DistributeToNpcs && missing > 0) { App.WriteDiagnostic(DiagnosticEvent.OutfitValidationFailed, level: DiagnosticLevel.Warning); restorationNotes[config] = $"{missing} saved audience(s) could not be restored completely. Their targets may have changed or been removed. Choose replacement audiences below."; }
         var required = OutfitGenderPolicy.RequiredGender(config.Pieces);
-        if (required is "Female" or "Male" && config.Gender != "Any" && config.Gender != required)
+        if (config.DistributeToNpcs && required is "Female" or "Male" && config.Gender != "Any" && config.Gender != required)
             restorationNotes[config] = (restorationNotes.GetValueOrDefault(config) ?? "") + $" Saved {config.Gender} selection is incompatible with {required}-only outfit parts and has been corrected.";
         config.MerchantCategories = (saved?.MerchantCategories ?? []).Where(MerchantStockService.Categories.Contains).Distinct().ToList();
         config.IncludeMerchandiseWeapons = saved?.IncludeMerchandiseWeapons ?? true;
@@ -144,8 +145,10 @@ public sealed class PatchOptionsWindow : Window
         var stage = new TextBlock { Text = "02  /  DISTRIBUTION", Foreground = UiTheme.Brush("AccentBrush"), FontWeight = FontWeights.SemiBold, FontSize = 12, Margin = new Thickness(0, 0, 0, 5) };
         var heading = new StackPanel(); heading.Children.Add(stage);
         heading.Children.Add(new TextBlock { Text = "Build your outfit distribution", FontSize = 25, FontWeight = FontWeights.SemiBold });
-        heading.Children.Add(UiTheme.Caption("Choose an audience and outfit parts. Each plugin has its own step; your choices are remembered."));
-        header.Children.Add(heading); root.Children.Add(header);
+        heading.Children.Add(UiTheme.Caption("Choose NPC outfits, trader stock or both, then select parts. Each plugin has its own step; your choices are remembered."));
+        var history = UiTheme.Button("Activity history"); DockPanel.SetDock(history, Dock.Right);
+        history.Click += (_, _) => ActivityHistoryWindow.ShowFor(this);
+        header.Children.Add(history); header.Children.Add(heading); root.Children.Add(header);
 
         var body = new Grid(); body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(228) }); body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(18) }); body.ColumnDefinitions.Add(new ColumnDefinition());
         var sidebar = new DockPanel();
@@ -186,6 +189,7 @@ public sealed class PatchOptionsWindow : Window
             var key = GetSavedKey(pages[currentIndex].Config);
             if (skippedOutfits.Remove(key)) { ShowPage(currentIndex); return; }
             skippedOutfits.Add(key);
+            ActivityHistory.Add("Skipped outfit: " + pages[currentIndex].Config.OutfitName + ". Existing patch retained.");
             if (Options.Count == 0) { DialogResult = false; return; }
             if (currentIndex < pages.Count - 1) ShowPage(currentIndex + 1);
             else CompleteSetup();
@@ -205,6 +209,9 @@ public sealed class PatchOptionsWindow : Window
 
     private PageState BuildPage(PluginPatchOptions config)
     {
+        GroupBox? audienceBox = null;
+        Expander? advancedTargets = null;
+        string? lastActivityState = null;
         var content = new StackPanel { Margin = new Thickness(0, 0, 12, 8) };
         var title = new StackPanel { Margin = new Thickness(0, 0, 0, 12) };
         title.Children.Add(new TextBlock { Text = config.OutfitName, FontSize = 21, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap });
@@ -212,6 +219,8 @@ public sealed class PatchOptionsWindow : Window
         var summary = new TextBlock { Foreground = UiTheme.Brush("AccentBrush"), FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 3, 0, 0) };
         summary.ToolTip = "NPC counts describe distinct base records in the scan. More than one spawned actor can use the same record.";
         title.Children.Add(summary); content.Children.Add(title);
+        var targetWarning = new TextBlock { Foreground = UiTheme.Brush("WarningBrush"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 10), Visibility = Visibility.Collapsed };
+        content.Children.Add(targetWarning);
         var feedback = new TextBlock { Foreground = UiTheme.Brush("WarningBrush"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 12), Visibility = Visibility.Collapsed };
         if (restorationNotes.TryGetValue(config, out var restoreNote)) { feedback.Text = restoreNote; feedback.Visibility = Visibility.Visible; }
         content.Children.Add(feedback);
@@ -221,12 +230,15 @@ public sealed class PatchOptionsWindow : Window
         var gender = new ComboBox { Width = 150, ItemsSource = new[] { "Any", "Female", "Male" }, SelectedItem = config.Gender, Margin = new Thickness(0, 5, 14, 5) };
         if (gender.SelectedItem is null) gender.SelectedIndex = 0;
         var settings = new StackPanel();
-        settings.Children.Add(new WrapPanel { Children = { Labeled(IsSkyPatcher ? "Assignment (%)" : "Chance per NPC (%)", chance), Labeled("NPC sex", gender) } });
-        var genderHint = UiTheme.Caption(""); settings.Children.Add(genderHint);
+        var npcMode = new CheckBox { Content = "Distribute outfits for NPCs to wear", IsChecked = config.DistributeToNpcs, Margin = new Thickness(0, 0, 0, 8) };
+        settings.Children.Add(npcMode);
+        var npcControls = new StackPanel(); settings.Children.Add(npcControls);
+        npcControls.Children.Add(new WrapPanel { Children = { Labeled(IsSkyPatcher ? "Assignment (%)" : "Chance per NPC (%)", chance), Labeled("NPC sex", gender) } });
+        var genderHint = UiTheme.Caption(""); npcControls.Children.Add(genderHint);
         var updatingGender = false;
         void SyncGender()
         {
-            if (updatingGender) return;
+            if (updatingGender || !config.DistributeToNpcs) return;
             updatingGender = true;
             try
             {
@@ -245,20 +257,24 @@ public sealed class PatchOptionsWindow : Window
             finally { updatingGender = false; }
         }
         SyncGender();
-        var chanceHint = UiTheme.Caption(""); settings.Children.Add(chanceHint);
-        var sell = new CheckBox { Content = "Also sell selected outfit parts through traders", IsChecked = config.MerchantCategories.Count > 0, Margin = new Thickness(0, 10, 0, 5) };
+        var chanceHint = UiTheme.Caption(""); npcControls.Children.Add(chanceHint);
+        var sell = new CheckBox { Content = "Sell selected parts through traders", IsChecked = config.MerchantCategories.Count > 0, Margin = new Thickness(0, 10, 0, 5) };
+        settings.Children.Add(UiTheme.Caption("Choose NPCs, traders, or both. Untick NPC distribution for shop stock only; no NPC audience or chance is needed."));
         var shopOptions = new StackPanel { Margin = new Thickness(23, 0, 0, 0) };
         var shopChecks = MerchantStockService.Categories.Select(category => (Category: category, Box: new CheckBox
         {
             Content = category + " (" + merchantTargets.Count(target => target.Category == category) + " stock containers)",
-            IsChecked = config.MerchantCategories.Count == 0 || config.MerchantCategories.Contains(category)
+            IsChecked = config.MerchantCategories.Count == 0 ? merchantTargets.Any(target => target.Category == category) : config.MerchantCategories.Contains(category),
+            IsEnabled = merchantTargets.Any(target => target.Category == category) || config.MerchantCategories.Contains(category)
         })).ToList();
         foreach (var (_, box) in shopChecks) shopOptions.Children.Add(box);
         var stockWeapons = new CheckBox { Content = $"Include weapons from this plugin ({config.Source.Weapons.Count})", IsChecked = config.IncludeMerchandiseWeapons, IsEnabled = config.Source.Weapons.Count > 0, Margin = new Thickness(0, 6, 0, 0) };
         shopOptions.Children.Add(stockWeapons);
         shopOptions.Children.Add(UiTheme.Caption("Requires SkyPatcher with container patching enabled, even with SPID NPC outfits. Adds one of each included item to shop stock; NPC chance does not apply. Weapons go only to blacksmiths/general goods, never clothing traders."));
         shopOptions.Visibility = sell.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-        settings.Children.Add(sell); settings.Children.Add(shopOptions);
+        settings.Children.Add(sell);
+        settings.Children.Add(UiTheme.Caption("Only want traders to sell these items? Tick only ‘Sell selected parts through traders.’ Leave NPC distribution unticked. No NPC audience or chance is required; SkyPatcher container patching is required."));
+        settings.Children.Add(shopOptions);
         content.Children.Add(new GroupBox { Header = "1. Distribution", Content = settings, Margin = new Thickness(0, 0, 0, 12) });
 
         var ruleList = new DataGrid { AutoGenerateColumns = false, IsReadOnly = true, Height = 150, SelectionMode = DataGridSelectionMode.Single };
@@ -268,6 +284,13 @@ public sealed class PatchOptionsWindow : Window
         var audiencesEmpty = UiTheme.Caption("No audience added yet. Choose a group below, then click Add audience.");
         var collection = new ComboBox { MinWidth = 250, MaxWidth = 340, ItemsSource = targeting.GetCollections(), SelectedIndex = 0, Margin = new Thickness(0, 5, 12, 6) };
         var group = new ComboBox { MinWidth = 200, MaxWidth = 320, Margin = new Thickness(0, 5, 0, 6) };
+        var groupText = new FrameworkElementFactory(typeof(TextBlock));
+        groupText.SetBinding(TextBlock.TextProperty, new Binding { Converter = new GroupLabelConverter(label =>
+        {
+            var rule = targeting.BuildRule(label, collection.SelectedItem?.ToString() ?? NpcTargetingService.OfficialCollection);
+            return label + (rule.ProtectedNpcCount > 0 ? " · ⚠ Protected members" : label == NpcTargetingService.UniqueGroup ? " · ⚠ Quest/script caution" : "");
+        }) });
+        group.ItemTemplate = new DataTemplate { VisualTree = groupText };
         var roleChoices = new ObservableCollection<SelectableChoice>(); var raceChoices = new ObservableCollection<SelectableChoice>();
         var roles = CheckList(roleChoices); var races = CheckList(raceChoices);
         var roleEmpty = UiTheme.Caption("No separate roles found for this group. All members will be included.");
@@ -313,13 +336,17 @@ public sealed class PatchOptionsWindow : Window
             if (rule.EstimatedNpcCount == 0) return;
             if (!config.TargetRules.Any(existing => RuleSignature(existing) == RuleSignature(rule))) config.TargetRules.Add(rule);
             feedback.Text = $"Added {source.Group}. Review the audience list below; other audiences are kept.";
+            ActivityHistory.Add(config.OutfitName + ": added audience preset " + preset.Label);
             feedback.Visibility = Visibility.Visible; RefreshAudiences(); SaveCurrent();
         };
         var removeAudience = UiTheme.Button("Remove selected"); removeAudience.IsEnabled = false;
         ruleList.SelectionChanged += (_, _) => removeAudience.IsEnabled = ruleList.SelectedItem is AudienceRow;
-
         void CommitFields()
         {
+            config.DistributeToNpcs = npcMode.IsChecked == true;
+            npcControls.Visibility = config.DistributeToNpcs ? Visibility.Visible : Visibility.Collapsed;
+            if (audienceBox is not null) audienceBox.Visibility = npcControls.Visibility;
+            if (advancedTargets is not null) advancedTargets.IsEnabled = config.DistributeToNpcs;
             config.Chance = IsSkyPatcher ? "100" : chance.Text.Trim().TrimEnd('%').Trim();
             SyncGender();
             config.MerchantCategories = sell.IsChecked == true ? shopChecks.Where(item => item.Box.IsChecked == true).Select(item => item.Category).ToList() : [];
@@ -330,7 +357,9 @@ public sealed class PatchOptionsWindow : Window
         {
             CommitFields();
             var match = hasNpcScan ? config.TargetRules.SelectMany(rule => targeting.GetMatchingProfiles(rule, config.Gender)).DistinctBy(profile => profile.FormId, StringComparer.OrdinalIgnoreCase).Count() : -1;
-            summary.Text = $"{config.Pieces.Count(piece => piece.Include)} / {config.Pieces.Count} parts included   ·   {config.TargetRules.Count} audience(s)" + (match >= 0 ? $"   ·   {match} matching NPCs" : "") + $"   ·   {config.Chance}%" + (config.MerchantCategories.Count > 0 ? "   ·   Merchandise enabled" : "");
+            summary.Text = $"{config.Pieces.Count(piece => piece.Include)} / {config.Pieces.Count} parts included   ·   " +
+                (!config.DistributeToNpcs ? config.MerchantCategories.Count > 0 ? "Merchants only · no NPC outfits changed" : "Choose NPCs, traders or both" : $"{config.TargetRules.Count} audience(s)" + (match >= 0 ? $"   ·   {match} matching NPCs" : "") + $"   ·   {config.Chance}%") +
+                (config.MerchantCategories.Count > 0 ? $"   ·   {config.MerchantCategories.Count} trader categories" : "");
             chanceHint.Text = IsSkyPatcher ? "Every matched NPC receives this outfit. Use SPID for a random chance. Existing outfits are replaced."
                 : int.TryParse(config.Chance, out var probability) && probability is > 0 and <= 100
                     ? probability == 100 ? "Every eligible NPC receives this outfit. Existing outfits are replaced."
@@ -338,15 +367,49 @@ public sealed class PatchOptionsWindow : Window
                             : $"{probability}% rolls independently for each eligible NPC. Existing outfits are replaced."
                     : "Enter a whole-number chance from 1 to 100.";
             if (outfitSteps is not null) RefreshSteps();
+            var protectedCount = config.DistributeToNpcs ? config.TargetRules.SelectMany(rule => targeting.GetMatchingProfiles(rule, config.Gender)).Where(profile => profile.IsProtectedUniformed).DistinctBy(profile => profile.FormId).Count() : 0;
+            var warnings = new List<string>();
+            if (protectedCount > 0) warnings.Add($"⚠ Protected: {protectedCount} selected NPC(s) have uniform protection. This explicit faction selection can replace their uniforms. Guards remain excluded.");
+            if (config.DistributeToNpcs && config.TargetRules.Any(rule => rule.Group == NpcTargetingService.UniqueGroup)) warnings.Add("⚠ " + NpcTargetingService.UniqueWarning);
+            targetWarning.Text = string.Join("\n", warnings); targetWarning.Visibility = warnings.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         }
-        void SaveCurrent() { CommitFields(); SavePage(config); RefreshAudiences(); RefreshQuickPresets(); }
-        sell.Checked += (_, _) => { shopOptions.Visibility = Visibility.Visible; SaveCurrent(); };
-        sell.Unchecked += (_, _) => { shopOptions.Visibility = Visibility.Collapsed; SaveCurrent(); };
-        foreach (var (_, box) in shopChecks) { box.Checked += (_, _) => SaveCurrent(); box.Unchecked += (_, _) => SaveCurrent(); }
+        string DescribeSetup() => config.OutfitName + ": " +
+            (config.DistributeToNpcs ? $"NPC outfits on · {config.Chance}% · {config.Gender} · {config.TargetRules.Count} audience(s)" : "NPC outfits off") +
+            (config.MerchantCategories.Count > 0 ? " · Shops: " + string.Join(", ", config.MerchantCategories) : " · Shop stock off") +
+            $" · {config.Pieces.Count(piece => piece.Include)}/{config.Pieces.Count} parts · source weapons {(config.IncludeMerchandiseWeapons ? "included for eligible shops" : "excluded")}";
+        void SaveCurrent()
+        {
+            CommitFields(); SavePage(config); RefreshAudiences(); RefreshQuickPresets();
+            var state = DescribeSetup();
+            if (state != lastActivityState) { lastActivityState = state; ActivityHistory.Add(state); }
+        }
+        void ModeChanged()
+        {
+            feedback.Visibility = Visibility.Collapsed;
+            SaveCurrent();
+            ActivityHistory.Add(config.OutfitName + (config.DistributeToNpcs ? ": NPC distribution enabled." : ": NPC distribution disabled; choose traders for merchants-only stock."));
+        }
+        npcMode.Checked += (_, _) => ModeChanged(); npcMode.Unchecked += (_, _) => ModeChanged();
+        sell.Checked += (_, _) =>
+        {
+            shopOptions.Visibility = Visibility.Visible;
+            SaveCurrent(); ActivityHistory.Add(config.OutfitName + ": trader stock enabled" + (!config.DistributeToNpcs ? " · merchants only; no NPC audience required." : " alongside NPC outfits."));
+        };
+        sell.Unchecked += (_, _) => { shopOptions.Visibility = Visibility.Collapsed; SaveCurrent(); ActivityHistory.Add(config.OutfitName + ": trader stock disabled."); };
+        foreach (var (category, box) in shopChecks)
+        {
+            box.Checked += (_, _) => { SaveCurrent(); ActivityHistory.Add(config.OutfitName + ": trader category selected · " + category); };
+            box.Unchecked += (_, _) => { SaveCurrent(); ActivityHistory.Add(config.OutfitName + ": trader category removed · " + category); };
+        }
         stockWeapons.Checked += (_, _) => SaveCurrent(); stockWeapons.Unchecked += (_, _) => SaveCurrent();
         void RefreshAudiences()
         {
-            ruleList.ItemsSource = config.TargetRules.Select(rule => new AudienceRow(rule.Group, AudienceDetails(rule), hasNpcScan ? targeting.CountMatches(rule, config.Gender).ToString(CultureInfo.InvariantCulture) : "—", rule)).ToList();
+            ruleList.ItemsSource = config.TargetRules.Select(rule =>
+            {
+                var matches = targeting.GetMatchingProfiles(rule, config.Gender);
+                rule.ProtectedNpcCount = matches.Count(profile => profile.IsProtectedUniformed);
+                return new AudienceRow(rule.Group + (rule.ProtectedNpcCount > 0 ? " · ⚠ Protected" : ""), AudienceDetails(rule), hasNpcScan ? matches.Count.ToString(CultureInfo.InvariantCulture) : "—", rule);
+            }).ToList();
             audiencesEmpty.Visibility = config.TargetRules.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
             ruleList.Visibility = config.TargetRules.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
             UpdateSummary();
@@ -367,11 +430,14 @@ public sealed class PatchOptionsWindow : Window
                 ? hasNpcScan ? "No eligible NPCs match this selection. Try another group, role, race, or collection." : "NPC targets are unavailable. Rescan the deployed game Data folder to enable audience selection."
                 : $"{matches.Count} matching NPCs · " + string.Join(", ", matches.Take(4).Select(profile => string.IsNullOrWhiteSpace(profile.Name) ? profile.EditorId : profile.Name)) + (matches.Count > 4 ? ", …" : "");
             draftSummary.Foreground = UiTheme.Brush(matches.Count == 0 ? "WarningBrush" : "MutedBrush");
+            if (matches.Any(profile => profile.IsProtectedUniformed)) { draftSummary.Text += "\n⚠ Protected members: this explicit faction selection can replace their uniforms. Guards remain excluded."; draftSummary.Foreground = UiTheme.Brush("WarningBrush"); }
+            if (draft.Group == NpcTargetingService.UniqueGroup) { draftSummary.Text += "\n⚠ " + NpcTargetingService.UniqueWarning; draftSummary.Foreground = UiTheme.Brush("WarningBrush"); }
         }
         void RefreshNarrowing()
         {
             var selectedCollection = collection.SelectedItem?.ToString() ?? NpcTargetingService.OfficialCollection;
             var selectedGroup = group.SelectedItem?.ToString() ?? "";
+            rolesBox.Header = selectedGroup == NpcTargetingService.UniqueGroup ? "Individual NPCs · optional" : "Roles · optional";
             FillChecks(roleChoices, targeting.GetRoles(selectedCollection, selectedGroup), RefreshDraft);
             FillChecks(raceChoices, targeting.GetRaces(selectedCollection, selectedGroup), RefreshDraft);
             roleEmpty.Visibility = roleChoices.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -402,21 +468,23 @@ public sealed class PatchOptionsWindow : Window
                 feedback.Text = "That audience is already included. Select another group or narrow the roles and races."; feedback.Visibility = Visibility.Visible; return;
             }
             config.TargetRules.Add(rule); feedback.Visibility = Visibility.Collapsed; RefreshAudiences(); SaveCurrent();
+            ActivityHistory.Add(config.OutfitName + ": added audience " + rule.Group + " · " + targeting.CountMatches(rule, config.Gender) + " NPCs");
         };
-        removeAudience.Click += (_, _) => { if (ruleList.SelectedItem is AudienceRow row) config.TargetRules.Remove(row.Rule); RefreshAudiences(); SaveCurrent(); };
+        removeAudience.Click += (_, _) => { if (ruleList.SelectedItem is AudienceRow row) { config.TargetRules.Remove(row.Rule); ActivityHistory.Add(config.OutfitName + ": removed audience " + row.Rule.Group); } RefreshAudiences(); SaveCurrent(); };
 
         var audiencePanel = new StackPanel();
         audiencePanel.Children.Add(Labeled("Find a preset or NPC mod (optional)", quickSearch));
         audiencePanel.Children.Add(Labeled("Quick distribution presets", quickPicker));
         audiencePanel.Children.Add(useQuickPreset);
-        audiencePanel.Children.Add(UiTheme.Caption("Grouped by common audiences and installed NPC mods. Only eligible, encountered adult NPCs from this scan are listed. Guards and uniformed protectors remain excluded."));
+        audiencePanel.Children.Add(UiTheme.Caption("Grouped by common audiences, factions/guilds and installed NPC mods. Protected labels apply only to members already covered by uniform protection. Choosing their explicit faction can replace their uniforms. Guards remain excluded."));
         audiencePanel.Children.Add(UiTheme.Caption("Pick the NPC collection, then a familiar group. Leave roles and races unchecked to include the whole group. Multiple checked roles or races are alternatives."));
         audiencePanel.Children.Add(new WrapPanel { Children = { Labeled("NPC collection", collection), Labeled("Group", group) } });
         audiencePanel.Children.Add(narrow); audiencePanel.Children.Add(draftSummary);
         audiencePanel.Children.Add(new WrapPanel { Margin = new Thickness(0, 0, 0, 12), Children = { addAudience, removeAudience } });
         audiencePanel.Children.Add(audiencesEmpty); audiencePanel.Children.Add(ruleList);
         audiencePanel.Children.Add(UiTheme.Caption("Separate audiences are alternatives. Within one audience: group + any selected role + any selected race are required together."));
-        content.Children.Add(new GroupBox { Header = "2. Who should wear it?", Content = audiencePanel, Margin = new Thickness(0, 0, 0, 12) });
+        audienceBox = new GroupBox { Header = "2. Who should wear it?", Content = audiencePanel, Margin = new Thickness(0, 0, 0, 12) };
+        content.Children.Add(audienceBox);
 
         var pieceView = new ListCollectionView(config.Pieces); pieceView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(WearableRecord.Variant)));
         var pieceGrid = new DataGrid { AutoGenerateColumns = false, ItemsSource = pieceView, Height = 320, MinHeight = 170, SelectionMode = DataGridSelectionMode.Single };
@@ -433,10 +501,17 @@ public sealed class PatchOptionsWindow : Window
         var groupStyle = new GroupStyle();
         var groupHeader = new FrameworkElementFactory(typeof(TextBlock)); groupHeader.SetBinding(TextBlock.TextProperty, new Binding("Name")); groupHeader.SetValue(TextBlock.FontWeightProperty, FontWeights.SemiBold); groupHeader.SetValue(TextBlock.ForegroundProperty, UiTheme.Brush("AccentBrush")); groupHeader.SetValue(TextBlock.MarginProperty, new Thickness(10, 10, 10, 7));
         groupStyle.HeaderTemplate = new DataTemplate { VisualTree = groupHeader }; pieceGrid.GroupStyle.Add(groupStyle);
-        pieceGrid.AddHandler(CheckBox.CheckedEvent, new RoutedEventHandler((_, _) => Dispatcher.BeginInvoke(new Action(SaveCurrent))));
-        pieceGrid.AddHandler(CheckBox.UncheckedEvent, new RoutedEventHandler((_, _) => Dispatcher.BeginInvoke(new Action(SaveCurrent))));
+        pieceGrid.AddHandler(CheckBox.ClickEvent, new RoutedEventHandler((sender, args) =>
+        {
+            var piece = (args.OriginalSource as CheckBox)?.DataContext as WearableRecord;
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                SaveCurrent();
+                if (piece is not null) ActivityHistory.Add(config.OutfitName + (piece.Include ? ": included part " : ": excluded part ") + piece.Name);
+            }));
+        }));
         var pieceActions = new WrapPanel { Margin = new Thickness(0, 0, 0, 10) };
-        void SetPieces(Func<WearableRecord, bool> include) { foreach (var piece in config.Pieces) piece.Include = include(piece); pieceGrid.Items.Refresh(); SaveCurrent(); }
+        void SetPieces(Func<WearableRecord, bool> include) { foreach (var piece in config.Pieces) piece.Include = include(piece); pieceGrid.Items.Refresh(); SaveCurrent(); ActivityHistory.Add(config.OutfitName + $": selected {config.Pieces.Count(piece => piece.Include)} of {config.Pieces.Count} parts."); }
         var all = UiTheme.Button("All parts"); all.Click += (_, _) => SetPieces(_ => true);
         var none = UiTheme.Button("None"); none.Click += (_, _) => SetPieces(_ => false);
         var compatible = UiTheme.Button("Choose compatible parts");
@@ -520,7 +595,8 @@ public sealed class PatchOptionsWindow : Window
             };
             tools.Children.Add(removeVariant);
         }
-        tools.Children.Add(BuildAdvanced(config, RefreshAudiences, SaveCurrent, feedback));
+        advancedTargets = BuildAdvanced(config, RefreshAudiences, SaveCurrent, feedback);
+        tools.Children.Add(advancedTargets);
         content.Children.Add(new Expander { Header = "Presets, separate outfits & advanced targets", Content = tools, Margin = new Thickness(0, 2, 0, 0) });
 
         RefreshGroups();
@@ -530,21 +606,23 @@ public sealed class PatchOptionsWindow : Window
             if (targeting.GetGroupLabels(collection.SelectedItem?.ToString() ?? NpcTargetingService.OfficialCollection).Contains(initial.Group)) group.SelectedItem = initial.Group;
         }
         RefreshAudiences(); RefreshQuickPresets();
+        lastActivityState = DescribeSetup();
         var scroll = new ScrollViewer { Content = content, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, CanContentScroll = false, PanningMode = PanningMode.VerticalOnly };
         UiTheme.EnableScrollChaining(scroll);
         bool Validate()
         {
             pieceGrid.CommitEdit(DataGridEditingUnit.Cell, true); pieceGrid.CommitEdit(DataGridEditingUnit.Row, true); CommitFields();
             var problems = new List<string>();
-            if (!hasNpcScan) problems.Add("Rescan the deployed game Data folder before generating. A resolved NPC roster is required to exclude guards and uniformed protectors.");
-            if (!int.TryParse(config.Chance, NumberStyles.Integer, CultureInfo.InvariantCulture, out var probability) || probability is < 1 or > 100) problems.Add("Enter a whole-number chance from 1 to 100.");
+            if (config.DistributeToNpcs && !hasNpcScan) problems.Add("Rescan the deployed game Data folder before generating. A resolved NPC roster is required to exclude guards and uniformed protectors.");
+            if (config.DistributeToNpcs && (!int.TryParse(config.Chance, NumberStyles.Integer, CultureInfo.InvariantCulture, out var probability) || probability is < 1 or > 100)) problems.Add("Enter a whole-number chance from 1 to 100.");
             if (!config.Pieces.Any(piece => piece.Include)) problems.Add("Include at least one outfit part.");
-            if (OutfitGenderPolicy.ValidationIssue(config) is { } sexIssue) problems.Add(sexIssue);
-            if (config.TargetRules.Count == 0) problems.Add("Add at least one audience using the Add audience button.");
+            if (config.DistributeToNpcs && OutfitGenderPolicy.ValidationIssue(config) is { } sexIssue) problems.Add(sexIssue);
+            if (config.DistributeToNpcs && config.TargetRules.Count == 0) problems.Add("Add at least one audience using the Add audience button, or untick NPC distribution for merchants-only stock.");
+            if (!config.DistributeToNpcs && config.MerchantCategories.Count == 0) problems.Add("Tick trader sales and choose an available trader category, or enable NPC distribution and add an audience.");
             if (sell.IsChecked == true && config.MerchantCategories.Count == 0) problems.Add("Tick at least one trader category, or untick merchandise.");
             foreach (var category in config.MerchantCategories)
                 if (!merchantTargets.Any(target => target.Category == category)) problems.Add($"No confirmed {category} stock containers found. Rescan or untick that category.");
-            if (hasNpcScan && config.TargetRules.Any(rule => targeting.CountMatches(rule, config.Gender) == 0)) problems.Add("One or more saved audiences match no eligible NPCs. Remove or replace those audiences.");
+            if (config.DistributeToNpcs && hasNpcScan && config.TargetRules.Any(rule => targeting.CountMatches(rule, config.Gender) == 0)) problems.Add("One or more saved audiences match no eligible NPCs. Remove or replace those audiences.");
             feedback.Text = string.Join(" ", problems); feedback.Visibility = problems.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
             if (problems.Count > 0) { App.WriteDiagnostic(DiagnosticEvent.OutfitValidationFailed, level: DiagnosticLevel.Warning); scroll.ScrollToTop(); }
             UpdateSummary(); return problems.Count == 0;
@@ -613,11 +691,11 @@ public sealed class PatchOptionsWindow : Window
         outfitSteps.Items.Clear();
         for (var i = 0; i < options.Count; i++)
         {
-            var config = options[i]; var ready = config.TargetRules.Count > 0 && config.Pieces.Any(piece => piece.Include);
+            var config = options[i]; var ready = (config.DistributeToNpcs ? config.TargetRules.Count > 0 : config.MerchantCategories.Count > 0) && config.Pieces.Any(piece => piece.Include);
             var skipped = IsSkipped(config);
             var label = new StackPanel();
             label.Children.Add(new TextBlock { Text = $"{i + 1:00}   {config.OutfitName}", FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap });
-            label.Children.Add(new TextBlock { Text = skipped ? "Skipped · not included this session" : ready ? $"{config.Pieces.Count(piece => piece.Include)} parts · {config.TargetRules.Count} audience(s)" : "Choose parts & audience", FontSize = 11, Foreground = UiTheme.Brush(!skipped && ready ? "AccentBrush" : "MutedBrush"), Margin = new Thickness(22, 5, 0, 0), TextWrapping = TextWrapping.Wrap });
+            label.Children.Add(new TextBlock { Text = skipped ? "Skipped · not included this session" : ready ? $"{config.Pieces.Count(piece => piece.Include)} parts · " + (config.DistributeToNpcs ? $"{config.TargetRules.Count} audience(s)" : "merchants only") : "Choose parts & recipients", FontSize = 11, Foreground = UiTheme.Brush(!skipped && ready ? "AccentBrush" : "MutedBrush"), Margin = new Thickness(22, 5, 0, 0), TextWrapping = TextWrapping.Wrap });
             outfitSteps.Items.Add(new ListBoxItem { Content = label, ToolTip = config.Source.Plugin, Padding = new Thickness(10), Margin = new Thickness(0, 0, 0, 5) });
         }
         outfitSteps.SelectedIndex = Math.Clamp(currentIndex, 0, options.Count - 1); changingStep = false;
@@ -626,6 +704,7 @@ public sealed class PatchOptionsWindow : Window
     private void ShowPage(int index)
     {
         currentIndex = Math.Clamp(index, 0, pages.Count - 1); pageHost.Content = pages[currentIndex].View;
+        ActivityHistory.Add("Opened outfit setup: " + pages[currentIndex].Config.OutfitName);
         stepLabel.Text = $"Outfit {currentIndex + 1} of {pages.Count} · {pages[currentIndex].Config.OutfitName}";
         stepProgress.Value = 100.0 * (currentIndex + 1) / pages.Count;
         backButton.IsEnabled = currentIndex > 0; nextButton.Content = currentIndex == pages.Count - 1 ? "Review patch →" : "Next outfit →";
@@ -648,7 +727,7 @@ public sealed class PatchOptionsWindow : Window
         DialogResult = true;
     }
 
-    private void CommitCurrentPage() { if (pages.Count > 0) { pages[currentIndex].Commit(); SavePage(pages[currentIndex].Config); } }
+    private void CommitCurrentPage() { if (pages.Count > 0) { pages[currentIndex].Commit(); SavePage(pages[currentIndex].Config); ActivityHistory.Add("Saved setup: " + pages[currentIndex].Config.OutfitName); } }
     private void SaveAllPages()
     {
         foreach (var page in pages) page.Commit();
@@ -659,6 +738,7 @@ public sealed class PatchOptionsWindow : Window
     private static SavedDistributionOptions SaveConfiguration(PluginPatchOptions config, bool includePieces) => new()
     {
         OutfitName = config.OutfitName, Chance = config.Chance, Gender = config.Gender,
+        DistributeToNpcs = config.DistributeToNpcs,
         MerchantCategories = config.MerchantCategories.ToList(), IncludeMerchandiseWeapons = config.IncludeMerchandiseWeapons,
         ExcludedPieceFormIds = includePieces ? config.Pieces.Where(piece => !piece.Include).Select(piece => piece.FormId).ToList() : [],
         TargetRules = config.TargetRules.Select(rule => new SavedDistributionTargetRule
@@ -671,10 +751,10 @@ public sealed class PatchOptionsWindow : Window
     private static string GetSavedKey(PluginPatchOptions config) => config.OutfitName.Equals(Path.GetFileNameWithoutExtension(config.Source.Plugin), StringComparison.OrdinalIgnoreCase) ? config.Source.Plugin : config.Source.Plugin + "|outfit|" + config.OutfitName;
     private static WearableRecord ClonePiece(WearableRecord piece, bool include) => new() { Plugin = piece.Plugin, LocalId = piece.LocalId, EditorId = piece.EditorId, Name = piece.Name, Slots = piece.Slots, Category = piece.Category, SourcePath = piece.SourcePath, Include = include, SupportedGender = piece.SupportedGender, GenderEvidence = piece.GenderEvidence };
     private static KeywordChoice CloneChoice(KeywordChoice choice, string? category = null) => new() { EditorId = choice.EditorId, Plugin = choice.Plugin, Category = category ?? choice.Category, TargetKind = choice.TargetKind, LocalId = choice.LocalId, Selected = choice.Selected, SuggestionReason = choice.SuggestionReason };
-    private static PluginPatchOptions CloneConfiguration(PluginPatchOptions source, string name) => new() { Source = source.Source, OutfitName = name, Chance = source.Chance, Gender = source.Gender, MerchantCategories = source.MerchantCategories.ToList(), IncludeMerchandiseWeapons = source.IncludeMerchandiseWeapons, MerchantTargets = source.MerchantTargets.ToList(), Pieces = source.Pieces.Select(piece => ClonePiece(piece, piece.Include)).ToList(), Keywords = source.Keywords, TargetRules = source.TargetRules.Select(rule => new DistributionTargetRule { Collection = rule.Collection, Group = rule.Group, Filters = rule.Filters.Select(choice => CloneChoice(choice)).ToList() }).ToList() };
+    private static PluginPatchOptions CloneConfiguration(PluginPatchOptions source, string name) => new() { Source = source.Source, OutfitName = name, DistributeToNpcs = source.DistributeToNpcs, Chance = source.Chance, Gender = source.Gender, MerchantCategories = source.MerchantCategories.ToList(), IncludeMerchandiseWeapons = source.IncludeMerchandiseWeapons, MerchantTargets = source.MerchantTargets.ToList(), Pieces = source.Pieces.Select(piece => ClonePiece(piece, piece.Include)).ToList(), Keywords = source.Keywords, TargetRules = source.TargetRules.Select(rule => new DistributionTargetRule { Collection = rule.Collection, Group = rule.Group, Filters = rule.Filters.Select(choice => CloneChoice(choice)).ToList() }).ToList() };
     private static string AudienceDetails(DistributionTargetRule rule)
     {
-        var refinements = rule.Filters.Where(choice => choice.TargetKind != "Npc").Select(FriendlyLabel).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var refinements = rule.Filters.Where(choice => choice.TargetKind != "Npc" || choice.Category == "NPC role").Select(FriendlyLabel).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         return rule.Collection + (refinements.Count > 0 ? " · " + string.Join(", ", refinements.Take(8)) + (refinements.Count > 8 ? ", …" : "") : " · All roles & races");
     }
     private static string RuleSignature(DistributionTargetRule rule) => rule.Collection.ToUpperInvariant() + "|" + string.Join(";", rule.Filters.Select(choice => choice.Category.ToUpperInvariant() + ":" + choice.FormId.ToUpperInvariant()).Order(StringComparer.Ordinal));
@@ -706,6 +786,11 @@ public sealed class PatchOptionsWindow : Window
     }
 
     private sealed record PageState(PluginPatchOptions Config, FrameworkElement View, Action Commit, Func<bool> Validate);
+    private sealed class GroupLabelConverter(Func<string, string> label) : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture) => value is string name ? label(name) : value;
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
+    }
     private sealed record AudienceRow(string Group, string Details, string Matches, DistributionTargetRule Rule);
     private sealed record AdvancedChoice(string Label, KeywordChoice Choice);
     private sealed class SelectableChoice(List<KeywordChoice> choices, string label, bool selected) : INotifyPropertyChanged

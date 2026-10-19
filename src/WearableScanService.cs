@@ -307,14 +307,16 @@ public sealed class WearableScanService
                 OccupationTags = variants.SelectMany(item => item.Variant.OccupationTags).ToHashSet(StringComparer.OrdinalIgnoreCase), Variants = variants.Select(item => item.Variant).ToList(),
                 HasUnresolvedTemplate = alternatives.Any(item => !item.InheritanceComplete), UsesTemplateInventory = snapshot.TemplateFlags.HasFlag(NpcConfiguration.TemplateFlag.Inventory),
                 IsChild = variants.Any(item => item.Child), IsHumanoid = variants.All(item => item.Humanoid),
+                IsUnique = snapshot.Unique,
                 IsEncounterable = reachable.Contains(id) && !alternatives.Any(item => item.FacePreset) && !IsTestEditorId(snapshot.EditorId) && !id.Equals("0x000007~Skyrim.esm", StringComparison.OrdinalIgnoreCase),
                 EncounterEvidence = reachable.Contains(id) ? "Referenced by a placed actor, reachable leveled list, or quest" : "No encounter reference found"
             };
             profile.IsProtectedUniformed = alternatives.Any(item => UniformedNpcPolicy.HasProtectedIdentity(item.EditorId) || UniformedNpcPolicy.HasProtectedIdentity(item.Name)) || UniformedNpcPolicy.IsProtected(profile, targets);
+            profile.IsProtectedGuard = alternatives.Any(item => UniformedNpcPolicy.HasGuardIdentity(item.EditorId) || UniformedNpcPolicy.HasGuardIdentity(item.Name)) || UniformedNpcPolicy.IsGuard(profile, targets);
             result.Npcs.Add(profile);
-            if (profile.CanReceiveWearables) result.Targets.Add(new KeywordChoice { EditorId = profile.Name, Plugin = profile.Plugin, LocalId = npcs[id].LocalId, TargetKind = "Npc", Category = "NPC audience" });
+            if (profile.HasWearableBody && !profile.IsProtectedGuard) result.Targets.Add(new KeywordChoice { EditorId = profile.Name, Plugin = profile.Plugin, LocalId = npcs[id].LocalId, TargetKind = "Npc", Category = "NPC audience" });
         }
-        var used = result.Npcs.Where(profile => profile.CanReceiveWearables).SelectMany(profile => profile.TargetForms).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var used = result.Npcs.Where(profile => profile.HasWearableBody && !profile.IsProtectedGuard).SelectMany(profile => profile.TargetForms).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var vendorChestReferences = vendors.Values.Select(vendor => vendor.ContainerReference).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var sharedWithNonVendor = vendorReferences.Where(pair => !vendorChestReferences.Contains(pair.Key)).Select(pair => pair.Value).ToHashSet(StringComparer.OrdinalIgnoreCase);
         foreach (var (factionId, vendor) in vendors)
@@ -330,7 +332,7 @@ public sealed class WearableScanService
         result.Targets.AddRange(targets.Values.Where(target => used.Contains(target.FormId)));
         result.Targets.Sort((left, right) => StringComparer.OrdinalIgnoreCase.Compare(left.EditorId, right.EditorId)); result.Plugins.Sort((left, right) => StringComparer.OrdinalIgnoreCase.Compare(left.Plugin, right.Plugin));
         result.Diagnostics.AddRange(templateWarnings);
-        result.Diagnostics.Add($"NPC population: {result.Npcs.Count} effective bases; {result.Npcs.Count(profile => profile.CanReceiveWearables)} adult humanoids with encounter references. Children, creatures, player, face presets, unreferenced templates, guards, soldiers and uniformed protectors are excluded.");
+        result.Diagnostics.Add($"NPC population: {result.Npcs.Count} effective bases; {result.Npcs.Count(profile => profile.CanReceiveWearables)} adult humanoids available to broad groups. Children, creatures, player, face presets, unreferenced templates and guards are excluded. Members covered by existing uniform protection require an explicit faction preset and show a warning; other guild members are not marked protected.");
         var inherited = result.Npcs.Count(profile => profile.CanReceiveWearables && profile.UsesTemplateInventory);
         if (inherited > 0) result.Diagnostics.Add($"{inherited} eligible NPC bases inherit inventory/outfit data. SkyPatcher default outfits on these bases need in-game verification; template owners are never broadened into the audience.");
         var variable = result.Npcs.Count(profile => profile.CanReceiveWearables && profile.Variants.Count > 1);
@@ -499,13 +501,14 @@ public sealed class WearableScanService
     private sealed class NpcSnapshot
     {
         public string Name = "", EditorId = "", OriginPlugin = "", WinningPlugin = "", Race = "", Class = "", Template = "";
-        public uint LocalId; public bool Female, FacePreset; public bool InheritanceComplete = true; public NpcConfiguration.TemplateFlag TemplateFlags;
+        public uint LocalId; public bool Female, FacePreset, Unique; public bool InheritanceComplete = true; public NpcConfiguration.TemplateFlag TemplateFlags;
         public List<string> Factions = [], Keywords = [], Packages = [];
         public NpcSnapshot(INpcGetter npc, string winner)
         {
             Name = npc.Name?.String ?? npc.EditorID ?? "Unnamed NPC"; EditorId = npc.EditorID ?? ""; OriginPlugin = npc.FormKey.ModKey.FileName; WinningPlugin = winner; LocalId = npc.FormKey.ID;
             Race = Form(npc.Race.FormKey); Class = Form(npc.Class.FormKey); Template = Form(npc.Template.FormKey);
             Female = npc.Configuration.Flags.HasFlag(NpcConfiguration.Flag.Female); FacePreset = npc.Configuration.Flags.HasFlag(NpcConfiguration.Flag.IsCharGenFacePreset); TemplateFlags = npc.Configuration.TemplateFlags;
+            Unique = npc.Configuration.Flags.HasFlag(NpcConfiguration.Flag.Unique);
             Factions = (npc.Factions ?? []).Where(faction => !faction.Faction.IsNull && faction.Rank >= 0).Select(faction => Form(faction.Faction.FormKey)).ToList();
             if (!npc.CrimeFaction.IsNull) Factions.Add(Form(npc.CrimeFaction.FormKey));
             Keywords = (npc.Keywords ?? []).Where(link => !link.IsNull).Select(link => Form(link.FormKey)).ToList(); Packages = (npc.Packages ?? []).Where(link => !link.IsNull).Select(link => Form(link.FormKey)).ToList();

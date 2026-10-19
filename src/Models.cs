@@ -68,6 +68,7 @@ public sealed class KeywordChoice
 
 public sealed class PluginPatchOptions
 {
+    public bool DistributeToNpcs { get; set; } = true;
     public List<string> MerchantCategories { get; set; } = [];
     public bool IncludeMerchandiseWeapons { get; set; } = true;
     public List<MerchantTarget> MerchantTargets { get; set; } = [];
@@ -84,6 +85,7 @@ public sealed class PluginPatchOptions
 
 public sealed class DistributionTargetRule
 {
+    public int ProtectedNpcCount { get; set; }
     public string Collection { get; set; } = "Skyrim + official DLC";
     public string Group { get; set; } = "";
     public List<KeywordChoice> Filters { get; set; } = [];
@@ -103,6 +105,7 @@ public sealed class NpcTargetProfile
     public string Gender { get; set; } = "Any";
     public string RaceFormId { get; set; } = "";
     public bool IsChild { get; set; }
+    public bool IsUnique { get; set; }
     public bool IsHumanoid { get; set; }
     public bool IsEncounterable { get; set; }
     public string EncounterEvidence { get; set; } = "";
@@ -111,7 +114,9 @@ public sealed class NpcTargetProfile
     public List<NpcTargetVariant> Variants { get; set; } = [];
     public HashSet<string> OccupationTags { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public bool IsProtectedUniformed { get; set; }
-    public bool CanReceiveWearables => IsHumanoid && !IsChild && IsEncounterable && !HasUnresolvedTemplate && !UniformedNpcPolicy.IsProtected(this);
+    public bool IsProtectedGuard { get; set; }
+    public bool HasWearableBody => IsHumanoid && !IsChild && IsEncounterable && !HasUnresolvedTemplate;
+    public bool CanReceiveWearables => HasWearableBody && !UniformedNpcPolicy.IsProtected(this);
 }
 
 public sealed class NpcTargetVariant
@@ -132,6 +137,7 @@ public sealed class AppPreferences
     public string DefaultChance { get; set; } = "25";
     public bool IncludeAccessories { get; set; }
     public HashSet<string> IgnoredPlugins { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public HashSet<string> UnhiddenPlugins { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public HashSet<string> IncludedPlugins { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public HashSet<string> DisabledPlugins { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public int SmartFilterRevision { get; set; }
@@ -153,6 +159,7 @@ public sealed class PatchManifest
 
 public sealed class PatchManifestEntry
 {
+    public bool DistributeToNpcs { get; set; } = true;
     public List<MerchantStockRule> MerchantStock { get; set; } = [];
     public string SourcePlugin { get; set; } = "";
     public string OutfitName { get; set; } = "";
@@ -184,6 +191,7 @@ public sealed class PatchInventoryRow
 
 public sealed class SavedDistributionOptions
 {
+    public bool DistributeToNpcs { get; set; } = true;
     public List<string> MerchantCategories { get; set; } = [];
     public bool IncludeMerchandiseWeapons { get; set; } = true;
     public string OutfitName { get; set; } = "";

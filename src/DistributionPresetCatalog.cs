@@ -19,25 +19,29 @@ public sealed class DistributionPresetCatalog(NpcTargetingService targeting)
 
         void AddCollection(string collection, string category, bool includeAll)
         {
-            foreach (var group in CommonGroups)
+            foreach (var group in CommonGroups.Concat(FactionAudienceCatalog.Groups).Append(NpcTargetingService.UniqueGroup))
             {
                 var rule = targeting.BuildRule(group, collection);
-                Add(group, rule);
-                if (group is "Bandits" or "Forsworn" or "Adventurers")
-                    foreach (var role in new[] { "Archers", "Chiefs and leaders", "Mages", "Melee fighters" })
+                var faction = FactionAudienceCatalog.IsKnown(group);
+                Add(faction ? group + " · All members" : group, rule, faction);
+                if (faction || group is "Bandits" or "Forsworn" or "Adventurers")
+                    foreach (var roleGroup in targeting.GetRoles(collection, group).GroupBy(NpcTargetingService.FriendlyLabel).Take(32))
                     {
-                        var choices = targeting.GetRoles(collection, group).Where(choice => NpcTargetingService.FriendlyLabel(choice) == role).ToList();
+                        var role = roleGroup.Key;
+                        var choices = roleGroup.ToList();
                         if (choices.Count == 0) continue;
                         var refined = targeting.BuildRule(group, collection);
                         refined.Filters.AddRange(choices.Select(choice => new KeywordChoice { Plugin = choice.Plugin, LocalId = choice.LocalId, EditorId = choice.EditorId, TargetKind = choice.TargetKind, Category = "NPC role" }));
-                        Add(group + " · " + role, refined);
+                        Add(group + " · " + role, refined, faction);
                     }
             }
             if (includeAll) Add("All eligible NPCs from this mod", targeting.BuildRule("All NPCs", collection));
-            void Add(string label, DistributionTargetRule rule)
+            void Add(string label, DistributionTargetRule rule, bool faction = false)
             {
                 targeting.Resolve(rule, gender);
-                if (rule.EstimatedNpcCount > 0) result.Add(new QuickAudiencePreset(category, $"{label} · {rule.EstimatedNpcCount} NPCs", rule));
+                if (rule.EstimatedNpcCount > 0) result.Add(new QuickAudiencePreset(
+                    faction ? "Factions & guilds · " + collection : category,
+                    $"{label} · {rule.EstimatedNpcCount} NPCs" + (rule.ProtectedNpcCount > 0 ? $" · ⚠ Protected ({rule.ProtectedNpcCount})" : rule.Group == NpcTargetingService.UniqueGroup ? " · ⚠ Quest/script caution" : ""), rule));
             }
         }
     }

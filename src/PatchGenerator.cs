@@ -12,7 +12,7 @@ using Mutagen.Bethesda.Skyrim;
 namespace WearableDistributor;
 
 public sealed record PatchGenerationResult(string PluginPath, string DistributionPath, int OutfitCount, int DistributionCount, IReadOnlyList<string> Masters, string Framework,
-    int UpdatedOutfitCount = 0, int PreservedOutfitCount = 0);
+    int UpdatedOutfitCount = 0, int PreservedOutfitCount = 0, string? MerchantDistributionPath = null, int MerchantDistributionCount = 0);
 
 public static class PatchGenerator
 {
@@ -23,12 +23,13 @@ public static class PatchGenerator
     public static string ManifestPathFor(string outputDirectory) => Path.Combine(outputDirectory, ManifestName);
 
     public static PatchGenerationResult Generate(IEnumerable<PluginPatchOptions> sourceOptions, string outputDirectory, string framework,
-        IEnumerable<PluginPatchOptions>? skippedOptions = null)
+        IEnumerable<PluginPatchOptions>? skippedOptions = null, IProgress<string>? progress = null)
     {
         if (!framework.Equals("SPID", StringComparison.OrdinalIgnoreCase) && !framework.Equals("SkyPatcher", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Choose SPID or SkyPatcher as the distribution framework.");
         var useSkyPatcher = framework.Equals("SkyPatcher", StringComparison.OrdinalIgnoreCase);
         var configurations = sourceOptions.ToList();
+        progress?.Report($"Checking {configurations.Count} outfit setup(s) and trader selections…");
         if (configurations.Count == 0) throw new InvalidOperationException("No plugin configurations were provided.");
         if (configurations.Any(configuration => !configuration.Pieces.Any(piece => piece.Include)))
             throw new InvalidOperationException("Each selected outfit needs at least one included part. Skip an outfit to preserve its existing patch without changing it.");
@@ -39,7 +40,7 @@ public static class PatchGenerator
                 Configuration = configuration,
                 Pieces = configuration.Pieces.Where(piece => piece.Include).ToList(),
                 Rules = configuration.TargetRules.Select(rule => rule.Filters).ToList(),
-                Chance = ParseChance(configuration.Chance)
+                Chance = configuration.DistributeToNpcs ? ParseChance(configuration.Chance) : 100
             })
             .Where(item => item.Pieces.Count > 0)
             .ToList();
@@ -49,17 +50,19 @@ public static class PatchGenerator
 
         foreach (var item in outfits)
         {
-            if (item.Rules.Count == 0 || item.Rules.Any(rule => rule.Count == 0)) throw new InvalidOperationException($"{item.Configuration.Source.Plugin} has an audience with no NPC target. Choose at least one group.");
-            if (useSkyPatcher && item.Chance != 100)
+            if (item.Configuration.DistributeToNpcs && (item.Rules.Count == 0 || item.Rules.Any(rule => rule.Count == 0))) throw new InvalidOperationException($"{item.Configuration.Source.Plugin} has an audience with no NPC target. Choose at least one group.");
+            if (item.Configuration.DistributeToNpcs && useSkyPatcher && item.Chance != 100)
                 throw new InvalidOperationException("SkyPatcher's NPC outfit rules do not support a per-NPC chance. Choose 100% for a full outfit assignment, or select SPID in Preferences to use the configured chance.");
             ValidateConfiguration(item.Configuration);
-            _ = MerchantStockService.Build(item.Configuration);
+            if (MerchantStockService.Build(item.Configuration).Count == 0 && !item.Configuration.DistributeToNpcs)
+                throw new InvalidOperationException("Choose at least one confirmed trader category for a merchants-only outfit.");
         }
 
         outputDirectory = PatchOutputTransaction.NormalizeRoot(outputDirectory);
         using var outputLease = PatchOutputTransaction.Acquire(outputDirectory);
         PatchOutputTransaction.EnsureNoInterruptedWrite(outputDirectory);
         var previousManifest = PatchInventoryService.ReadManifest(outputDirectory);
+        progress?.Report($"Loaded existing patch: {previousManifest.Entries.Count} saved outfit(s). Preparing a merged update…");
         var skipped = skippedOptions?.ToList() ?? [];
         var preservedIds = skipped.Select(config => StableEditorId(config.Source.Plugin, config.OutfitName))
             .Concat(previousManifest.Entries.Where(entry => skipped.Any(config =>
@@ -127,6 +130,7 @@ public static class PatchGenerator
             var generatedEntries = new List<PatchManifestEntry>();
             foreach (var item in outfits)
             {
+                progress?.Report("Building " + item.Configuration.OutfitName + (item.Configuration.DistributeToNpcs ? " · NPC outfits" : " · merchants only") + (item.Configuration.MerchantCategories.Count > 0 ? " · shop stock" : ""));
                 var editorId = StableEditorId(item.Configuration.Source.Plugin, item.Configuration.OutfitName);
                 var outfit = outputMod.Outfits.FirstOrDefault(existing => string.Equals(existing.EditorID, editorId, StringComparison.OrdinalIgnoreCase));
                 var oldEntry = previousManifest.Entries.FirstOrDefault(entry => GeneratedDistributionIndex.Key(entry.SourcePlugin, entry.OutfitName)
@@ -156,6 +160,7 @@ public static class PatchGenerator
                 distributionCount += compiled.Count(line => IsOutfitRule(line) || line.Contains("outfitDefault=", StringComparison.Ordinal));
                 generatedEntries.Add(new PatchManifestEntry
                 {
+                    DistributeToNpcs = item.Configuration.DistributeToNpcs,
                     SourcePlugin = item.Configuration.Source.Plugin,
                     OutfitName = item.Configuration.OutfitName,
                     OutfitEditorId = editorId,
@@ -163,8 +168,8 @@ public static class PatchGenerator
                     DistributionPath = relativeIniPath,
                     IncludedPieces = item.Pieces.Select(piece => $"{piece.Name} [{piece.FormId}]").ToList(),
                     ExcludedPieces = item.Configuration.Pieces.Where(piece => !piece.Include).Select(piece => $"{piece.Name} [{piece.FormId}]").ToList(),
-                    RequiredMasters = item.Pieces.Select(piece => piece.Plugin).Concat(DistributionRuleCompiler.RequiredTargetPlugins(item.Configuration)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(plugin => plugin, StringComparer.OrdinalIgnoreCase).ToList(),
-                    Audiences = item.Configuration.TargetRules.Count > 0
+                    RequiredMasters = item.Pieces.Select(piece => piece.Plugin).Concat(item.Configuration.DistributeToNpcs ? DistributionRuleCompiler.RequiredTargetPlugins(item.Configuration) : []).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(plugin => plugin, StringComparer.OrdinalIgnoreCase).ToList(),
+                    Audiences = !item.Configuration.DistributeToNpcs ? [] : item.Configuration.TargetRules.Count > 0
                         ? item.Configuration.TargetRules.Select(rule => $"{rule.Collection} / {rule.Group}: {string.Join(", ", rule.Filters.Select(target => target.EditorId))}").ToList()
                         : [string.Join(", ", item.Configuration.Keywords.Select(target => target.EditorId))],
                     Chance = item.Chance,
@@ -193,6 +198,7 @@ public static class PatchGenerator
             var mergedDistributionCount = mergedLines.Count(line => IsOutfitRule(line) || line.Contains("outfitDefault=", StringComparison.Ordinal));
             var existingManifest = previousManifest;
             if (generatedEntries.Any(entry => entry.MerchantStock.Count > 0)) existingManifest.SchemaVersion = 3;
+            if (generatedEntries.Concat(previousManifest.Entries).Any(entry => !entry.DistributeToNpcs)) existingManifest.SchemaVersion = 4;
             foreach (var entry in generatedEntries)
                 entry.RequiredMasters = entry.RequiredMasters.Concat(entry.MerchantStock.SelectMany(rule => new[] { rule.ContainerPlugin, rule.ItemPlugin })).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase).ToList();
             existingManifest.Framework = useSkyPatcher ? "SkyPatcher" : "SPID";
@@ -201,19 +207,25 @@ public static class PatchGenerator
             existingManifest.GeneratedAtUtc = DateTime.UtcNow;
             existingManifest.Entries = existingManifest.Entries.Where(entry => !Replaces(entry) || !entry.Framework.Equals(existingManifest.Framework, StringComparison.OrdinalIgnoreCase)).Concat(generatedEntries).OrderBy(entry => entry.SourcePlugin, StringComparer.OrdinalIgnoreCase).ThenBy(entry => entry.OutfitName, StringComparer.OrdinalIgnoreCase).ToList();
             var tempManifest = Path.Combine(tempDirectory, ManifestName);
+            progress?.Report("Staging the merged ESP, NPC rules, merchant stock and inventory…");
             var tempMerchandise = MerchantStockService.Stage(tempDirectory, existingManifest);
+            var merchantRuleCount = tempMerchandise is null ? 0 : File.ReadLines(tempMerchandise).Count(line => line.StartsWith("filterByContainers=", StringComparison.Ordinal));
             File.WriteAllText(tempManifest, JsonSerializer.Serialize(existingManifest, new JsonSerializerOptions { WriteIndented = true }), new UTF8Encoding(false));
             var expectedRecordItems = outputMod.Outfits.Where(outfit => !string.IsNullOrWhiteSpace(outfit.EditorID))
                 .ToDictionary(outfit => outfit.EditorID!, outfit => (outfit.Items?.Select(item => item.FormKey) ?? []).ToHashSet(), StringComparer.OrdinalIgnoreCase);
 
             outputMod.BeginWrite.ToPath(tempPlugin).WithNoLoadOrder().NoNextFormIDProcessing().Write();
             File.WriteAllText(tempIni, string.Join(Environment.NewLine, mergedLines), new UTF8Encoding(false));
+            progress?.Report("Validating the complete staged patch before changing existing files…");
             ValidateGeneratedPlugin(tempPlugin, expectedRecordItems, selectedMasters);
             ValidateGeneratedIni(tempIni, mergedDistributionCount, useSkyPatcher, outputMod.Outfits.Select(outfit => outfit.FormKey.ID).ToHashSet());
             ValidateOutputSet(tempDirectory);
 
+            progress?.Report("Validation passed. Backing up and committing the patch update…");
+
             PatchOutputTransaction.Commit(outputDirectory, [tempPlugin, tempIni, tempManifest, tempMerchandise], [outputPlugin, outputIni, manifestPath, PatchOutputTransaction.ManagedPath(outputDirectory, MerchantStockService.RelativePath)], "Generate");
-            return new PatchGenerationResult(outputPlugin, outputIni, existingManifest.Entries.Count, mergedDistributionCount, outputMod.ModHeader.MasterReferences.Select(reference => reference.Master.FileName.ToString()).ToList(), useSkyPatcher ? "SkyPatcher" : "SPID", generatedEntries.Count, existingManifest.Entries.Count - generatedEntries.Count);
+            return new PatchGenerationResult(outputPlugin, outputIni, existingManifest.Entries.Count, mergedDistributionCount, outputMod.ModHeader.MasterReferences.Select(reference => reference.Master.FileName.ToString()).ToList(), useSkyPatcher ? "SkyPatcher" : "SPID", generatedEntries.Count, existingManifest.Entries.Count - generatedEntries.Count,
+                tempMerchandise is null ? null : PatchOutputTransaction.ManagedPath(outputDirectory, MerchantStockService.RelativePath), merchantRuleCount);
         }
         finally
         {
@@ -240,7 +252,7 @@ public static class PatchGenerator
             throw new InvalidOperationException("An outfit name cannot contain line breaks.");
         if (configuration.Gender is not ("Any" or "Male" or "Female"))
             throw new InvalidOperationException("Choose Any, Male, or Female for NPC sex.");
-        if (OutfitGenderPolicy.ValidationIssue(configuration) is { } sexIssue) throw new InvalidOperationException(sexIssue);
+        if (configuration.DistributeToNpcs && OutfitGenderPolicy.ValidationIssue(configuration) is { } sexIssue) throw new InvalidOperationException(sexIssue);
         foreach (var piece in configuration.Pieces.Where(piece => piece.Include))
         {
             DistributionRuleCompiler.ValidatePluginName(piece.Plugin);
@@ -436,8 +448,6 @@ public static class PatchGenerator
                     referencedIds.Add(id); observedRuleCounts[id] = observedRuleCounts.GetValueOrDefault(id) + 1;
                 }
             }
-        if (!ids.SetEquals(referencedIds))
-            throw new InvalidDataException("The saved ESP contains an outfit without its distribution rules. Restore a backup or regenerate in a new output folder.");
         var manifest = PatchInventoryService.ReadManifest(directory);
         MerchantStockService.Validate(directory, manifest);
         var editorIds = mod.Outfits.Where(outfit => !string.IsNullOrWhiteSpace(outfit.EditorID))
@@ -445,6 +455,7 @@ public static class PatchGenerator
         var distributionFiles = new Dictionary<string, GeneratedDistributionIndex>(StringComparer.OrdinalIgnoreCase);
         var verifiedManifestIds = new HashSet<uint>();
         var verifiedKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var merchandiseOnlyIds = new HashSet<uint>();
         foreach (var entry in manifest.Entries)
         {
             if (!verifiedKeys.Add(GeneratedDistributionIndex.Key(entry.SourcePlugin, entry.OutfitName)))
@@ -457,10 +468,14 @@ public static class PatchGenerator
             if (!string.IsNullOrWhiteSpace(entry.OutfitEditorId))
             {
                 var id = editorIds[entry.OutfitEditorId];
+                if (!entry.DistributeToNpcs) merchandiseOnlyIds.Add(id);
                 if (!verifiedManifestIds.Add(id) || observedRuleCounts.GetValueOrDefault(id) != entry.DistributionRows)
                     throw new InvalidDataException($"Unexpected or duplicated distribution rows exist outside the managed section for '{entry.SourcePlugin} / {entry.OutfitName}'. Repatch this outfit or restore a backup.");
             }
         }
+        referencedIds.UnionWith(merchandiseOnlyIds);
+        if (!ids.SetEquals(referencedIds))
+            throw new InvalidDataException("The saved ESP contains an outfit without NPC distribution or a validated merchants-only entry. Restore a backup or regenerate in a new output folder.");
     }
 
     internal static void ValidateInventoryDistribution(string directory, PatchManifestEntry entry, IReadOnlyDictionary<string, uint> outfitIdsByEditorId, GeneratedDistributionIndex? index = null)
@@ -473,7 +488,9 @@ public static class PatchGenerator
         var skyPatcher = entry.Framework.Equals("SkyPatcher", StringComparison.OrdinalIgnoreCase);
         var rules = matchingSections.SelectMany(section => section.Lines).Where(line => !line.TrimStart().StartsWith(';') &&
             (skyPatcher ? line.Contains("outfitDefault=", StringComparison.Ordinal) : IsOutfitRule(line))).ToList();
-        if (matchingSections.Count != 1 || rules.Count == 0 || rules.Count != entry.DistributionRows)
+        if (matchingSections.Count != 1 || rules.Count != entry.DistributionRows ||
+            (entry.DistributeToNpcs ? rules.Count == 0 : rules.Count != 0 || entry.MerchantStock.Count == 0 ||
+                matchingSections.SelectMany(section => section.Lines).Any(line => !string.IsNullOrWhiteSpace(line) && !line.TrimStart().StartsWith(';'))))
             throw new InvalidDataException($"The distribution rules for '{entry.SourcePlugin} / {entry.OutfitName}' are missing, duplicated or incomplete. Repatch this outfit in My patch; if other entries also need repair, use Repatch all or restore a backup.");
         foreach (var rule in rules)
         {

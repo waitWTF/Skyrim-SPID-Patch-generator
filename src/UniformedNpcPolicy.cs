@@ -5,6 +5,15 @@ namespace WearableDistributor;
 /// <summary>Keep uniformed protectors out of every wearable audience, including broad selections.</summary>
 public static class UniformedNpcPolicy
 {
+    public static bool HasGuardIdentity(string text)
+    {
+        var split = Regex.Replace(Regex.Replace(text ?? "", "([A-Z]+)([A-Z][a-z])", "$1 $2"), "([a-z0-9])([A-Z])", "$1 $2");
+        return Regex.Matches(split, "[A-Za-z]+").Any(match => new[] { "guard", "guards", "bodyguard", "bodyguards", "watchman", "watchmen", "citywatch", "housecarl", "housecarls" }.Contains(match.Value, StringComparer.OrdinalIgnoreCase));
+    }
+    public static bool IsGuard(NpcTargetProfile profile, IReadOnlyDictionary<string, KeywordChoice> choices) =>
+        profile.IsProtectedGuard || HasGuardIdentity(profile.EditorId) || HasGuardIdentity(profile.Name) ||
+        profile.TargetForms.Concat(profile.Variants.SelectMany(variant => variant.TargetForms)).Any(form =>
+            choices.TryGetValue(form, out var choice) && choice.TargetKind is "Faction" or "Class" or "Keyword" or "Outfit" && HasGuardIdentity(choice.EditorId));
     private static readonly HashSet<string> ProtectedWords = new(StringComparer.OrdinalIgnoreCase)
     {
         "guard", "guards", "bodyguard", "bodyguards", "watchman", "watchmen", "citywatch",

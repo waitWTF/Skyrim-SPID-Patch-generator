@@ -7,10 +7,13 @@ public sealed class NpcTargetingService
 {
     public const string OfficialCollection = "Skyrim + official DLC";
     public const string AllCollection = "All installed NPCs";
+    public const string UniqueGroup = "Unique NPCs";
+    public const string UniqueWarning = "Unique NPCs may have scripted outfits or quest scenes. Replacing their clothing can conflict with those changes; static scans cannot guarantee quest compatibility. Uniformed protectors stay excluded from this group.";
     private readonly List<KeywordChoice> choices;
     private readonly List<NpcTargetProfile> profiles;
     private readonly Dictionary<string, KeywordChoice> byForm;
     private readonly Dictionary<string, HashSet<string>> wordsByForm;
+    private readonly Dictionary<string, IReadOnlyList<NpcTargetProfile>> collectionCache = new(StringComparer.OrdinalIgnoreCase);
     private static readonly Dictionary<string, string[]> Groups = new(StringComparer.OrdinalIgnoreCase)
     {
         ["Bandits"] = ["bandit", "bandits", "raider", "raiders"], ["Forsworn"] = ["forsworn"],
@@ -34,8 +37,12 @@ public sealed class NpcTargetingService
         this.choices = choices.DistinctBy(choice => choice.FormId, StringComparer.OrdinalIgnoreCase).ToList();
         var protectionChoices = this.choices.ToDictionary(choice => choice.FormId, StringComparer.OrdinalIgnoreCase);
         var population = profiles.ToList();
-        foreach (var profile in population) profile.IsProtectedUniformed |= UniformedNpcPolicy.IsProtected(profile, protectionChoices);
-        this.profiles = population.Where(profile => profile.CanReceiveWearables).ToList();
+        foreach (var profile in population)
+        {
+            profile.IsProtectedUniformed |= UniformedNpcPolicy.IsProtected(profile, protectionChoices);
+            profile.IsProtectedGuard |= UniformedNpcPolicy.IsGuard(profile, protectionChoices);
+        }
+        this.profiles = population.Where(profile => profile.HasWearableBody && !profile.IsProtectedGuard).ToList();
         byForm = this.choices.ToDictionary(choice => choice.FormId, StringComparer.OrdinalIgnoreCase);
         wordsByForm = this.choices.ToDictionary(choice => choice.FormId, choice => Words(choice.EditorId).ToHashSet(StringComparer.OrdinalIgnoreCase), StringComparer.OrdinalIgnoreCase);
     }
@@ -47,19 +54,24 @@ public sealed class NpcTargetingService
     public IReadOnlyList<string> GetGroupLabels(string collection, string? plugin = null)
     {
         var population = InCollection(collection, plugin).ToList();
-        var groups = Groups.Keys.Where(group => population.Any(profile => InGroup(profile, group))).ToList();
+        var groups = Groups.Keys.Concat(FactionAudienceCatalog.Groups).Append(UniqueGroup).Where(group => population.Any(profile => InGroup(profile, group))).ToList();
         var used = population.SelectMany(profile => profile.TargetForms).ToHashSet(StringComparer.OrdinalIgnoreCase);
         groups.AddRange(choices.Where(choice => choice.TargetKind == "Faction" && used.Contains(choice.FormId))
             .Where(choice => MeaningfulFaction(choice.EditorId) && !Groups.Any(group => MatchesWords(choice.EditorId, group.Value)))
-            .Select(choice => Humanize(choice.EditorId)).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase));
-        if (population.Count > 0) groups.Add("All NPCs");
+            .Select(choice => Humanize(choice.EditorId)).Distinct(StringComparer.OrdinalIgnoreCase)
+            .Where(label => population.Any(profile => InGroup(profile, label))).Order(StringComparer.OrdinalIgnoreCase));
+        if (population.Any(profile => profile.CanReceiveWearables)) groups.Add("All NPCs");
         return groups;
     }
 
-    public List<KeywordChoice> GetRoles(string collection, string group, string? plugin = null) =>
-        PopulationChoices(collection, group, plugin).Where(choice => choice.TargetKind == "Class" ||
+    public List<KeywordChoice> GetRoles(string collection, string group, string? plugin = null) => group == UniqueGroup
+        ? InCollection(collection, plugin).Where(profile => InGroup(profile, group)).Select(profile =>
+        {
+            var choice = NpcChoice(profile); choice.EditorId += " · " + profile.Plugin + " · " + profile.FormId.Split('~')[0]; return choice;
+        }).OrderBy(choice => choice.EditorId, StringComparer.OrdinalIgnoreCase).ToList()
+        : PopulationChoices(collection, group, plugin).Where(choice => choice.TargetKind == "Class" ||
             choice.TargetKind == "Keyword" && choice.EditorId.StartsWith("Job", StringComparison.OrdinalIgnoreCase) ||
-            choice.TargetKind is "Keyword" or "Faction" && MatchesWords(choice.EditorId, ["archer", "missile", "marksman", "chief", "boss", "mage", "warrior", "melee", "scout", "healer", "spellsword"]))
+            choice.TargetKind is "Keyword" or "Faction" && MatchesWords(choice.EditorId, ["archer", "missile", "marksman", "chief", "boss", "mage", "warrior", "melee", "scout", "healer", "spellsword", "archmage", "harbinger", "recruit", "initiate", "leader", "shaman"]))
             .OrderBy(FriendlyLabel, StringComparer.OrdinalIgnoreCase).ToList();
 
     public List<KeywordChoice> GetRaces(string collection, string group, string? plugin = null) =>
@@ -75,6 +87,7 @@ public sealed class NpcTargetingService
             Group = group,
             Filters = members.Select(profile => NpcChoice(profile)).ToList(),
             EstimatedNpcCount = members.Count,
+            ProtectedNpcCount = members.Count(profile => profile.IsProtectedUniformed),
             ResolvedNpcFormIds = members.Select(profile => profile.FormId).ToList(),
             NpcResolutionComplete = true
         };
@@ -86,7 +99,8 @@ public sealed class NpcTargetingService
         var groups = rule.Filters.GroupBy(choice => choice.Category, StringComparer.OrdinalIgnoreCase).Select(group =>
             (Npcs: group.Where(choice => choice.TargetKind.Equals("Npc", StringComparison.OrdinalIgnoreCase)).Select(choice => choice.FormId).ToHashSet(StringComparer.OrdinalIgnoreCase),
              Forms: group.Where(choice => !choice.TargetKind.Equals("Npc", StringComparison.OrdinalIgnoreCase)).Select(choice => choice.FormId).ToHashSet(StringComparer.OrdinalIgnoreCase))).ToList();
-        return profiles.Where(profile => InCollection(profile, rule.Collection, null) &&
+        return InCollection(rule.Collection, null).Where(profile => EligibleForGroup(profile, rule.Group) &&
+            (!FactionAudienceCatalog.IsKnown(rule.Group) && rule.Group != UniqueGroup || InGroup(profile, rule.Group)) &&
             (profile.Variants.Count == 0
                 ? Fits(profile.FormId, profile.Gender, profile.TargetForms)
                 : profile.Variants.All(variant => Fits(profile.FormId, variant.Gender, variant.TargetForms)))).ToList();
@@ -98,14 +112,16 @@ public sealed class NpcTargetingService
 
     public void Resolve(DistributionTargetRule rule, string gender = "Any")
     {
-        rule.ResolvedNpcFormIds = GetMatchingProfiles(rule, gender).Select(profile => profile.FormId).ToList();
+        var matched = GetMatchingProfiles(rule, gender);
+        rule.ResolvedNpcFormIds = matched.Select(profile => profile.FormId).ToList();
+        rule.ProtectedNpcCount = matched.Count(profile => profile.IsProtectedUniformed);
         rule.EstimatedNpcCount = rule.ResolvedNpcFormIds.Count;
         rule.NpcResolutionComplete = true;
     }
 
     public static bool Matches(DistributionTargetRule rule, NpcTargetProfile profile, string gender = "Any")
     {
-        if (!profile.CanReceiveWearables || rule.Filters.Count == 0) return false;
+        if (!EligibleForGroup(profile, rule.Group) || rule.Filters.Count == 0) return false;
         if (!InCollection(profile, rule.Collection, null)) return false;
         var groups = rule.Filters.GroupBy(choice => choice.Category, StringComparer.OrdinalIgnoreCase).ToList();
         return profile.Variants.Count == 0 ? Fits(profile.Gender, profile.TargetForms) : profile.Variants.All(variant => Fits(variant.Gender, variant.TargetForms));
@@ -118,7 +134,12 @@ public sealed class NpcTargetingService
     public static bool IsOfficialPlugin(string plugin) => new[] { "Skyrim.esm", "Update.esm", "Dawnguard.esm", "HearthFires.esm", "Dragonborn.esm" }
         .Contains(plugin, StringComparer.OrdinalIgnoreCase);
 
-    private IEnumerable<NpcTargetProfile> InCollection(string collection, string? plugin) => profiles.Where(profile => InCollection(profile, collection, plugin));
+    private IEnumerable<NpcTargetProfile> InCollection(string collection, string? plugin)
+    {
+        var key = collection + "\0" + plugin;
+        if (!collectionCache.TryGetValue(key, out var population)) collectionCache[key] = population = profiles.Where(profile => InCollection(profile, collection, plugin)).ToList();
+        return population;
+    }
     private static bool InCollection(NpcTargetProfile profile, string collection, string? plugin) => collection switch
     {
         OfficialCollection => IsOfficialPlugin(profile.Plugin),
@@ -130,10 +151,13 @@ public sealed class NpcTargetingService
 
     private bool InGroup(NpcTargetProfile profile, string group)
     {
+        if (!EligibleForGroup(profile, group)) return false;
+        if (group == UniqueGroup) return profile.IsUnique;
         if (group == "All NPCs") return true;
         return profile.Variants.Count == 0 ? InGroupForms(profile.TargetForms, profile.OccupationTags) : profile.Variants.All(variant => InGroupForms(variant.TargetForms, variant.OccupationTags));
         bool InGroupForms(HashSet<string> forms, HashSet<string> occupationTags)
         {
+        if (FactionAudienceCatalog.IsKnown(group)) return FactionAudienceCatalog.Matches(group, forms, byForm);
         if (!Groups.TryGetValue(group, out var aliases))
             return forms.Any(form => byForm.TryGetValue(form, out var choice) && !IsNegativeEvidence(choice.EditorId) && Humanize(choice.EditorId).Equals(group, StringComparison.OrdinalIgnoreCase));
         // Occupations must follow occupation records or actual AI package evidence, never the NPC's name.
@@ -146,6 +170,9 @@ public sealed class NpcTargetingService
             (group != "Farmers" || !MatchesWords(choice.EditorId, ["animal", "animals", "crime", "ownership"])));
         }
     }
+
+    private static bool EligibleForGroup(NpcTargetProfile profile, string group) => profile.CanReceiveWearables ||
+        profile.HasWearableBody && !profile.IsProtectedGuard && FactionAudienceCatalog.IsKnown(group);
 
     private bool HasAlias(string form, IEnumerable<string> aliases) => wordsByForm.TryGetValue(form, out var words) &&
         aliases.Any(alias => words.Contains(alias) || words.Contains(alias + "s") || string.Concat(words).Equals(alias, StringComparison.OrdinalIgnoreCase));
@@ -168,7 +195,7 @@ public sealed class NpcTargetingService
     }
 
     private static bool MeaningfulFaction(string id) => !IsNegativeEvidence(id) && MatchesWords(id,
-        ["wench", "maid", "courtesan", "adventurer", "farmer", "merchant", "bandit", "hunter", "guard", "priest", "soldier", "assassin", "mage", "necromancer"]);
+        ["wench", "maid", "courtesan", "adventurer", "farmer", "merchant", "bandit", "hunter", "guard", "priest", "soldier", "assassin", "mage", "necromancer", "guild", "college", "brotherhood", "companions", "dawnguard", "clan", "order"]);
     private static bool MatchesWords(string text, IEnumerable<string> aliases)
     {
         var words = Words(text);
@@ -185,6 +212,9 @@ public sealed class NpcTargetingService
         if (choice.TargetKind != "Race")
         {
             var text = choice.EditorId;
+            if (MatchesWords(text, ["archmage", "harbinger", "leader"])) return "Leaders";
+            if (MatchesWords(text, ["recruit", "initiate"])) return "Recruits and initiates";
+            if (MatchesWords(text, ["shaman"])) return "Shamans";
             if (MatchesWords(text, ["chief", "boss"])) return "Chiefs and leaders";
             if (MatchesWords(text, ["archer", "marksman", "missile", "ranged", "bow"])) return "Archers";
             if (MatchesWords(text, ["necromancer", "necromancy", "necro"])) return "Necromancers";
