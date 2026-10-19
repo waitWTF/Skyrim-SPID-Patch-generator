@@ -47,6 +47,7 @@ internal static class PatchOutputTransaction
         }
         catch (IOException exception)
         {
+            App.WriteDiagnostic(DiagnosticEvent.OutputLockFailed, exception);
             throw new IOException("This output folder is busy. Close other patch operations using it and try again.", exception);
         }
     }
@@ -102,10 +103,11 @@ internal static class PatchOutputTransaction
             }
             SaveSnapshot(backupPath, snapshot);
         }
-        catch
+        catch (Exception failure)
         {
+            App.WriteDiagnostic(DiagnosticEvent.SnapshotCreateFailed, failure);
             // No destination has been touched while preparing the snapshot.
-            try { Directory.Delete(backupPath, true); } catch { }
+            try { Directory.Delete(backupPath, true); } catch (Exception cleanup) { App.WriteDiagnostic(DiagnosticEvent.TemporaryCleanupFailed, cleanup, DiagnosticLevel.Warning); }
             throw;
         }
         try
@@ -122,6 +124,7 @@ internal static class PatchOutputTransaction
         }
         catch (Exception failure)
         {
+            App.WriteDiagnostic(DiagnosticEvent.OutputCommitFailed, failure);
             try
             {
                 ValidateSnapshot(root, backupPath, snapshot);
@@ -131,6 +134,7 @@ internal static class PatchOutputTransaction
             }
             catch (Exception rollbackFailure)
             {
+                App.WriteDiagnostic(DiagnosticEvent.OutputRollbackFailed, rollbackFailure);
                 throw new IOException($"The output update failed and automatic rollback could not finish. Close programs using the output files, then use Restore last backup. Backup: {backupPath}", new AggregateException(failure, rollbackFailure));
             }
             throw new IOException("The output update failed. The previous generated files have been restored.", failure);
@@ -139,9 +143,9 @@ internal static class PatchOutputTransaction
         try
         {
             foreach (var old in Directory.GetDirectories(backupRoot).OrderByDescending(Path.GetFileName, StringComparer.Ordinal).Skip(10))
-                try { Directory.Delete(old, true); } catch { }
+                try { Directory.Delete(old, true); } catch (Exception maintenance) { App.WriteDiagnostic(DiagnosticEvent.BackupMaintenanceFailed, maintenance, DiagnosticLevel.Warning); }
         }
-        catch { /* A completed patch remains successful if backup maintenance is unavailable. */ }
+        catch (Exception maintenance) { App.WriteDiagnostic(DiagnosticEvent.BackupMaintenanceFailed, maintenance, DiagnosticLevel.Warning); }
     }
 
     internal static void Restore(string directory, Action<string> validateStagedOutput)
@@ -177,10 +181,10 @@ internal static class PatchOutputTransaction
             if (snapshot.State == "Ready")
             {
                 snapshot.State = "Recovered";
-                try { SaveSnapshot(latest, snapshot); } catch { /* The new committed restore snapshot already records recovery. */ }
+                try { SaveSnapshot(latest, snapshot); } catch (Exception maintenance) { App.WriteDiagnostic(DiagnosticEvent.BackupMaintenanceFailed, maintenance, DiagnosticLevel.Warning); }
             }
         }
-        finally { try { Directory.Delete(tempRoot, true); } catch { } }
+        finally { try { Directory.Delete(tempRoot, true); } catch (Exception cleanup) { App.WriteDiagnostic(DiagnosticEvent.TemporaryCleanupFailed, cleanup, DiagnosticLevel.Warning); } }
     }
 
     private static void ValidateSnapshot(string root, string backupPath, OutputSnapshot snapshot)

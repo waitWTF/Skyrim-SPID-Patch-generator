@@ -23,11 +23,11 @@ internal static class UiTheme
         {
             var enabled = 1;
             try { DwmSetWindowAttribute(new WindowInteropHelper(window).Handle, 20, ref enabled, sizeof(int)); }
-            catch (DllNotFoundException) { }
-            catch (EntryPointNotFoundException) { }
+            catch (DllNotFoundException error) { App.WriteDiagnostic(DiagnosticEvent.UiThemeUnavailable, error, DiagnosticLevel.Warning); }
+            catch (EntryPointNotFoundException error) { App.WriteDiagnostic(DiagnosticEvent.UiThemeUnavailable, error, DiagnosticLevel.Warning); }
         };
         try { window.Icon = System.Windows.Media.Imaging.BitmapFrame.Create(new Uri("pack://application:,,,/SkyrimSPIDPatchGenerator;component/assets/WearableDistributor.ico", UriKind.Absolute)); }
-        catch (IOException) { /* The executable icon remains available if the resource is missing. */ }
+        catch (IOException error) { App.WriteDiagnostic(DiagnosticEvent.UiIconLoadFailed, error, DiagnosticLevel.Warning); }
     }
 
     public static TextBlock Caption(string text) => new()

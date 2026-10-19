@@ -37,7 +37,7 @@ public static class GameDataLocator
                     }
                 }
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { App.WriteDiagnostic(DiagnosticEvent.GameLocationProbeFailed, ex, DiagnosticLevel.Warning); }
         }
         if (!string.IsNullOrWhiteSpace(fallback)) candidates.Add(fallback);
         return candidates.Distinct(StringComparer.OrdinalIgnoreCase).FirstOrDefault(IsGameData);

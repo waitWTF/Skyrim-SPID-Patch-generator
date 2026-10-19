@@ -11,7 +11,8 @@ using Mutagen.Bethesda.Skyrim;
 
 namespace WearableDistributor;
 
-public sealed record PatchGenerationResult(string PluginPath, string DistributionPath, int OutfitCount, int DistributionCount, IReadOnlyList<string> Masters, string Framework);
+public sealed record PatchGenerationResult(string PluginPath, string DistributionPath, int OutfitCount, int DistributionCount, IReadOnlyList<string> Masters, string Framework,
+    int UpdatedOutfitCount = 0, int PreservedOutfitCount = 0);
 
 public static class PatchGenerator
 {
@@ -29,6 +30,8 @@ public static class PatchGenerator
         var useSkyPatcher = framework.Equals("SkyPatcher", StringComparison.OrdinalIgnoreCase);
         var configurations = sourceOptions.ToList();
         if (configurations.Count == 0) throw new InvalidOperationException("No plugin configurations were provided.");
+        if (configurations.Any(configuration => !configuration.Pieces.Any(piece => piece.Include)))
+            throw new InvalidOperationException("Each selected outfit needs at least one included part. Skip an outfit to preserve its existing patch without changing it.");
 
         var outfits = configurations
             .Select(configuration => new
@@ -63,11 +66,11 @@ public static class PatchGenerator
                 config.Source.Plugin.Equals(entry.SourcePlugin, StringComparison.OrdinalIgnoreCase) &&
                 config.OutfitName.Equals(entry.OutfitName, StringComparison.OrdinalIgnoreCase))).Select(entry => entry.OutfitEditorId))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        // A skipped variant must survive even when another variant of its plugin is repatched.
-        EnsureFrameworkIsolation(outputDirectory, previousManifest, useSkyPatcher);
-        // Existence alone does not prove that a previously generated outfit
-        // still has a distribution rule. Do not merge into a truncated output.
-        ValidateOutputSet(outputDirectory);
+        var replacingKeys = configurations.Select(config => GeneratedDistributionIndex.Key(config.Source.Plugin, config.OutfitName)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        bool Replaces(PatchManifestEntry entry) => replacingKeys.Contains(GeneratedDistributionIndex.Key(entry.SourcePlugin, entry.OutfitName)) && !preservedIds.Contains(entry.OutfitEditorId);
+        // A damaged entry can be repaired when it is explicitly regenerated. Untouched entries must
+        // survive and pass validation in the staged complete set before any destination is changed.
+        EnsureFrameworkIsolation(outputDirectory, previousManifest, useSkyPatcher, previousManifest.Entries.Where(entry => !Replaces(entry)).ToList());
         var outputPlugin = PatchOutputTransaction.ManagedPath(outputDirectory, OutputPluginName);
         var relativeIniPath = useSkyPatcher
             ? PatchOutputTransaction.SkyPatcherIniPath.Replace('/', Path.DirectorySeparatorChar)
@@ -107,6 +110,8 @@ public static class PatchGenerator
             foreach (var master in selectedMasters)
                 if (!outputMod.ModHeader.MasterReferences.Any(reference => reference.Master == master))
                     outputMod.ModHeader.MasterReferences.Add(new MasterReference { Master = master });
+            var previousSelectedIds = previousManifest.Entries.Where(Replaces).Select(entry => entry.OutfitEditorId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var replacedNumericIds = outputMod.Outfits.Where(outfit => previousSelectedIds.Contains(outfit.EditorID ?? "")).Select(outfit => outfit.FormKey.ID).ToHashSet();
 
             Directory.CreateDirectory(Path.GetDirectoryName(tempIni)!);
             var lines = new List<string>
@@ -118,18 +123,23 @@ public static class PatchGenerator
                 "; Audiences are combined as alternatives. Required categories within an audience use AND.",
                 ""
             };
-            var replacingPlugins = configurations.Select(configuration => configuration.Source.Plugin).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var distributionCount = 0;
             var generatedEntries = new List<PatchManifestEntry>();
             foreach (var item in outfits)
             {
                 var editorId = StableEditorId(item.Configuration.Source.Plugin, item.Configuration.OutfitName);
                 var outfit = outputMod.Outfits.FirstOrDefault(existing => string.Equals(existing.EditorID, editorId, StringComparison.OrdinalIgnoreCase));
+                var oldEntry = previousManifest.Entries.FirstOrDefault(entry => GeneratedDistributionIndex.Key(entry.SourcePlugin, entry.OutfitName)
+                    .Equals(GeneratedDistributionIndex.Key(item.Configuration.Source.Plugin, item.Configuration.OutfitName), StringComparison.OrdinalIgnoreCase));
+                // Reuse a known legacy record's FormID rather than reallocating it during migration.
+                if (outfit is null && !string.IsNullOrWhiteSpace(oldEntry?.OutfitEditorId))
+                    outfit = outputMod.Outfits.FirstOrDefault(existing => string.Equals(existing.EditorID, oldEntry.OutfitEditorId, StringComparison.OrdinalIgnoreCase));
                 if (outfit is null)
                 {
                     outfit = new Outfit(outputMod, editorId);
                     outputMod.Outfits.Add(outfit);
                 }
+                outfit.EditorID = editorId;
                 outfit.Items = new Noggog.ExtendedList<IFormLinkGetter<IOutfitTargetGetter>>();
                 var outfitItems = outfit.Items;
                 foreach (var piece in item.Pieces.DistinctBy(piece => piece.FormId, StringComparer.OrdinalIgnoreCase))
@@ -143,7 +153,7 @@ public static class PatchGenerator
                 lines.Add($"; Outfit: {item.Configuration.OutfitName}");
                 var compiled = DistributionRuleCompiler.Compile(item.Configuration, outfit.FormKey.ID, useSkyPatcher);
                 lines.AddRange(compiled);
-                distributionCount += compiled.Count(line => line.StartsWith("Outfit = ", StringComparison.Ordinal) || line.Contains("outfitDefault=", StringComparison.Ordinal));
+                distributionCount += compiled.Count(line => IsOutfitRule(line) || line.Contains("outfitDefault=", StringComparison.Ordinal));
                 generatedEntries.Add(new PatchManifestEntry
                 {
                     SourcePlugin = item.Configuration.Source.Plugin,
@@ -166,25 +176,21 @@ public static class PatchGenerator
                 lines.Add("");
             }
 
-            foreach (var legacyOutfit in outputMod.Outfits.Where(existing => !preservedIds.Contains(existing.EditorID ?? "") && replacingPlugins.Any(plugin =>
-                         existing.EditorID is { } id &&
-                         System.Text.RegularExpressions.Regex.IsMatch(id, $"^WD_[0-9]{{4}}_{System.Text.RegularExpressions.Regex.Escape(SanitizeEditorId(Path.GetFileNameWithoutExtension(plugin)))}$", System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant))).ToList())
-                outputMod.Outfits.Remove(legacyOutfit);
             var activeOutfitIds = generatedEntries.Select(entry => entry.OutfitEditorId).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var removedIds = previousManifest.Entries
-                .Where(entry => replacingPlugins.Contains(entry.SourcePlugin) && !preservedIds.Contains(entry.OutfitEditorId) && entry.Framework.Equals(framework, StringComparison.OrdinalIgnoreCase))
+                .Where(entry => Replaces(entry) && entry.Framework.Equals(framework, StringComparison.OrdinalIgnoreCase))
                 .Select(entry => entry.OutfitEditorId).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var retainedIds = previousManifest.Entries
-                .Where(entry => !replacingPlugins.Contains(entry.SourcePlugin) || preservedIds.Contains(entry.OutfitEditorId) || !entry.Framework.Equals(framework, StringComparison.OrdinalIgnoreCase))
+                .Where(entry => !Replaces(entry) || !entry.Framework.Equals(framework, StringComparison.OrdinalIgnoreCase))
                 .Select(entry => entry.OutfitEditorId).ToHashSet(StringComparer.OrdinalIgnoreCase);
             foreach (var staleOutfit in outputMod.Outfits.Where(existing => existing.EditorID is { } id &&
-                         !activeOutfitIds.Contains(id) && !retainedIds.Contains(id) && (removedIds.Contains(id) ||
-                         replacingPlugins.Any(plugin => string.Equals(id, StableEditorId(plugin), StringComparison.OrdinalIgnoreCase)))).ToList())
+                         !activeOutfitIds.Contains(id) && !retainedIds.Contains(id) && removedIds.Contains(id)).ToList())
                 outputMod.Outfits.Remove(staleOutfit);
 
             var existingIniLines = File.Exists(outputIni) ? File.ReadAllLines(outputIni).ToList() : [];
-            var mergedLines = MergeIni(existingIniLines, lines, replacingPlugins, preservedIds);
-            var mergedDistributionCount = mergedLines.Count(line => line.StartsWith("Outfit = ", StringComparison.Ordinal) || line.Contains("outfitDefault=", StringComparison.Ordinal));
+            replacedNumericIds.UnionWith(outputMod.Outfits.Where(outfit => activeOutfitIds.Contains(outfit.EditorID ?? "")).Select(outfit => outfit.FormKey.ID));
+            var mergedLines = MergeIni(existingIniLines, lines, replacingKeys, replacedNumericIds, useSkyPatcher);
+            var mergedDistributionCount = mergedLines.Count(line => IsOutfitRule(line) || line.Contains("outfitDefault=", StringComparison.Ordinal));
             var existingManifest = previousManifest;
             if (generatedEntries.Any(entry => entry.MerchantStock.Count > 0)) existingManifest.SchemaVersion = 3;
             foreach (var entry in generatedEntries)
@@ -193,7 +199,7 @@ public static class PatchGenerator
             existingManifest.OutputPlugin = OutputPluginName;
             existingManifest.DistributionPath = relativeIniPath;
             existingManifest.GeneratedAtUtc = DateTime.UtcNow;
-            existingManifest.Entries = existingManifest.Entries.Where(entry => !replacingPlugins.Contains(entry.SourcePlugin) || preservedIds.Contains(entry.OutfitEditorId) || !entry.Framework.Equals(existingManifest.Framework, StringComparison.OrdinalIgnoreCase)).Concat(generatedEntries).OrderBy(entry => entry.SourcePlugin, StringComparer.OrdinalIgnoreCase).ThenBy(entry => entry.Framework, StringComparer.OrdinalIgnoreCase).ToList();
+            existingManifest.Entries = existingManifest.Entries.Where(entry => !Replaces(entry) || !entry.Framework.Equals(existingManifest.Framework, StringComparison.OrdinalIgnoreCase)).Concat(generatedEntries).OrderBy(entry => entry.SourcePlugin, StringComparer.OrdinalIgnoreCase).ThenBy(entry => entry.OutfitName, StringComparer.OrdinalIgnoreCase).ToList();
             var tempManifest = Path.Combine(tempDirectory, ManifestName);
             var tempMerchandise = MerchantStockService.Stage(tempDirectory, existingManifest);
             File.WriteAllText(tempManifest, JsonSerializer.Serialize(existingManifest, new JsonSerializerOptions { WriteIndented = true }), new UTF8Encoding(false));
@@ -207,11 +213,11 @@ public static class PatchGenerator
             ValidateOutputSet(tempDirectory);
 
             PatchOutputTransaction.Commit(outputDirectory, [tempPlugin, tempIni, tempManifest, tempMerchandise], [outputPlugin, outputIni, manifestPath, PatchOutputTransaction.ManagedPath(outputDirectory, MerchantStockService.RelativePath)], "Generate");
-            return new PatchGenerationResult(outputPlugin, outputIni, existingManifest.Entries.Count, mergedDistributionCount, outputMod.ModHeader.MasterReferences.Select(reference => reference.Master.FileName.ToString()).ToList(), useSkyPatcher ? "SkyPatcher" : "SPID");
+            return new PatchGenerationResult(outputPlugin, outputIni, existingManifest.Entries.Count, mergedDistributionCount, outputMod.ModHeader.MasterReferences.Select(reference => reference.Master.FileName.ToString()).ToList(), useSkyPatcher ? "SkyPatcher" : "SPID", generatedEntries.Count, existingManifest.Entries.Count - generatedEntries.Count);
         }
         finally
         {
-            try { Directory.Delete(tempDirectory, true); } catch { }
+            try { Directory.Delete(tempDirectory, true); } catch (Exception cleanup) { App.WriteDiagnostic(DiagnosticEvent.TemporaryCleanupFailed, cleanup, DiagnosticLevel.Warning); }
         }
     }
 
@@ -244,7 +250,7 @@ public static class PatchGenerator
         DistributionRuleCompiler.Validate(configuration);
     }
 
-    private static void EnsureFrameworkIsolation(string outputDirectory, PatchManifest manifest, bool useSkyPatcher)
+    private static void EnsureFrameworkIsolation(string outputDirectory, PatchManifest manifest, bool useSkyPatcher, IReadOnlyList<PatchManifestEntry> retainedEntries)
     {
         var framework = useSkyPatcher ? "SkyPatcher" : "SPID";
         var oppositeIni = PatchOutputTransaction.ManagedPath(outputDirectory, useSkyPatcher ? OutputIniName : PatchOutputTransaction.SkyPatcherIniPath);
@@ -254,8 +260,8 @@ public static class PatchGenerator
             throw new InvalidOperationException("This output folder already contains a patch for the other distribution framework. Generate the alternate framework in a new output mod folder, and enable only one Skyrim SPID Patch Generator output mod at a time because both use WearableDistributor.esp.");
         if (manifest.Entries.Count > 0 && !File.Exists(PatchOutputTransaction.ManagedPath(outputDirectory, OutputPluginName)))
             throw new InvalidDataException("The existing patch inventory is missing WearableDistributor.esp. Restore a backup or choose a new output folder before generating.");
-        if (manifest.Entries.Any(entry => !File.Exists(PatchOutputTransaction.ManagedPath(outputDirectory, entry.DistributionPath))))
-            throw new InvalidDataException("The existing patch inventory is missing its distribution INI. Restore a backup or choose a new output folder before generating.");
+        if (retainedEntries.Any(entry => !File.Exists(PatchOutputTransaction.ManagedPath(outputDirectory, entry.DistributionPath))))
+            throw new InvalidDataException("The existing patch is missing distribution rules for outfits not selected in this run. Use My patch → Repatch all, or restore a backup. All missing entries must be regenerated together before the shared INI can be rebuilt.");
     }
 
     private static string SanitizeEditorId(string source)
@@ -280,18 +286,17 @@ public static class PatchGenerator
         return $"WD_{safeLabel}_{hash}{nameSuffix}";
     }
 
-    private static List<string> MergeIni(IReadOnlyList<string> existing, IReadOnlyList<string> generated, IReadOnlySet<string> replacingPlugins, IReadOnlySet<string> preservedIds)
+    private static List<string> MergeIni(IReadOnlyList<string> existing, IReadOnlyList<string> generated, IReadOnlySet<string> replacingKeys, IReadOnlySet<uint> replacingIds, bool skyPatcher)
     {
         if (existing.Count == 0) return generated.ToList();
         var kept = new List<string>();
         for (var i = 0; i < existing.Count;)
         {
             var line = existing[i];
-            var marker = line.StartsWith("; ", StringComparison.Ordinal) ? line[2..] : "";
-            var sourcePlugin = replacingPlugins.FirstOrDefault(plugin => marker.StartsWith(plugin + " — ", StringComparison.OrdinalIgnoreCase) && marker.EndsWith(" piece(s)", StringComparison.Ordinal));
+            var sourcePlugin = GeneratedDistributionIndex.TryHeader(line, out var plugin) ? plugin : null;
             var outfitName = i + 1 < existing.Count && existing[i + 1].StartsWith("; Outfit: ", StringComparison.Ordinal)
                 ? existing[i + 1][10..] : sourcePlugin is null ? "" : Path.GetFileNameWithoutExtension(sourcePlugin);
-            var replacedSection = sourcePlugin is not null && !preservedIds.Contains(StableEditorId(sourcePlugin, outfitName));
+            var replacedSection = sourcePlugin is not null && replacingKeys.Contains(GeneratedDistributionIndex.Key(sourcePlugin, outfitName));
             if (replacedSection)
             {
                 i++;
@@ -299,17 +304,39 @@ public static class PatchGenerator
                 while (i < existing.Count && string.IsNullOrWhiteSpace(existing[i])) i++;
                 continue;
             }
-            kept.Add(line);
+            // Recover a selected outfit even when its comment header was lost. Do not guess ownership
+            // of malformed/foreign rules: keep them and let complete staged validation reject damage.
+            if (!ReferencesReplacedOutfit(line)) kept.Add(line);
             i++;
         }
         while (kept.Count > 0 && string.IsNullOrWhiteSpace(kept[^1])) kept.RemoveAt(kept.Count - 1);
         kept.Add("");
         kept.AddRange(generated.Skip(4));
         return kept;
+
+        bool ReferencesReplacedOutfit(string line)
+        {
+            if (line.TrimStart().StartsWith(';')) return false;
+            try
+            {
+                (uint Id, string Plugin) form;
+                if (skyPatcher && line.Contains("outfitDefault=", StringComparison.Ordinal))
+                    form = DistributionRuleCompiler.ParseSkyPatcherForm(line.Split(':').Single(field => field.StartsWith("outfitDefault=", StringComparison.Ordinal))[14..]);
+                else if (!skyPatcher && IsOutfitRule(line))
+                    form = DistributionRuleCompiler.ParseSpidForm(line[(line.IndexOf('=') + 1)..].Trim().Split('|')[0]);
+                else return false;
+                return form.Plugin.Equals(OutputPluginName, StringComparison.OrdinalIgnoreCase) && replacingIds.Contains(form.Id);
+            }
+            catch (Exception error) when (error is InvalidDataException or ArgumentException or InvalidOperationException or FormatException or OverflowException)
+            { App.WriteDiagnostic(DiagnosticEvent.LegacyRuleReadFailed, error, DiagnosticLevel.Warning); return false; }
+        }
     }
 
     private static bool IsSectionHeader(string line) => line.StartsWith("; ", StringComparison.Ordinal) &&
         line.Contains(" — ", StringComparison.Ordinal) && line.EndsWith(" piece(s)", StringComparison.Ordinal);
+
+    private static bool IsOutfitRule(string line) => System.Text.RegularExpressions.Regex.IsMatch(line,
+        @"^\s*Outfit\s*=", System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
 
     private static void ValidateGeneratedPlugin(string path, IReadOnlyDictionary<string, HashSet<FormKey>> expectedOutfits, IReadOnlyCollection<ModKey> expectedMasters)
     {
@@ -332,7 +359,7 @@ public static class PatchGenerator
     {
         var activeLines = File.ReadLines(path).Where(line => !string.IsNullOrWhiteSpace(line) && !line.TrimStart().StartsWith(";", StringComparison.Ordinal)).ToList();
         var rules = activeLines.Where(line =>
-            (skyPatcher ? line.Contains("outfitDefault=", StringComparison.Ordinal) : line.StartsWith("Outfit = ", StringComparison.Ordinal))).ToList();
+            (skyPatcher ? line.Contains("outfitDefault=", StringComparison.Ordinal) : IsOutfitRule(line))).ToList();
         if (rules.Count != expectedDistributions)
             throw new InvalidDataException($"Generated distribution validation failed: expected {expectedDistributions} outfit rules, found {rules.Count}.");
         foreach (var rule in rules)
@@ -354,7 +381,7 @@ public static class PatchGenerator
             else
             {
                 var columns = rule[(rule.IndexOf('=') + 1)..].Trim().Split('|');
-                if (columns.Length != 7 || !columns[0].Contains('~') || (columns[1] == "NONE" && columns[2] == "NONE") ||
+                if (columns.Length != 7 || !columns[0].Contains('~') || (columns[1].Trim().Equals("NONE", StringComparison.OrdinalIgnoreCase) && columns[2].Trim().Equals("NONE", StringComparison.OrdinalIgnoreCase)) ||
                     !int.TryParse(columns[6], NumberStyles.None, CultureInfo.InvariantCulture, out var chance) || chance is < 1 or > 100)
                     throw new InvalidDataException($"Invalid SPID outfit rule: {rule}");
                 var outfit = DistributionRuleCompiler.ParseSpidForm(columns[0]);
@@ -395,15 +422,19 @@ public static class PatchGenerator
         using var mod = SkyrimMod.CreateFromBinaryOverlay(new Noggog.FilePath(plugin), SkyrimRelease.SkyrimSE);
         var ids = mod.Outfits.Select(outfit => outfit.FormKey.ID).ToHashSet();
         var referencedIds = new HashSet<uint>();
+        var observedRuleCounts = new Dictionary<uint, int>();
         foreach (var (path, isSky) in new[] { (spid, false), (sky, true) })
             if (File.Exists(path))
             {
                 var rules = File.ReadLines(path).Where(line => !line.TrimStart().StartsWith(';') &&
-                    (isSky ? line.Contains("outfitDefault=", StringComparison.Ordinal) : line.StartsWith("Outfit = ", StringComparison.Ordinal))).ToList();
+                    (isSky ? line.Contains("outfitDefault=", StringComparison.Ordinal) : IsOutfitRule(line))).ToList();
                 ValidateGeneratedIni(path, rules.Count, isSky, ids);
                 foreach (var rule in rules)
-                    referencedIds.Add(isSky ? DistributionRuleCompiler.ParseSkyPatcherForm(rule.Split(':').Single(field => field.StartsWith("outfitDefault=", StringComparison.Ordinal))[14..]).Id :
-                        DistributionRuleCompiler.ParseSpidForm(rule[(rule.IndexOf('=') + 1)..].Trim().Split('|')[0]).Id);
+                {
+                    var id = isSky ? DistributionRuleCompiler.ParseSkyPatcherForm(rule.Split(':').Single(field => field.StartsWith("outfitDefault=", StringComparison.Ordinal))[14..]).Id :
+                        DistributionRuleCompiler.ParseSpidForm(rule[(rule.IndexOf('=') + 1)..].Trim().Split('|')[0]).Id;
+                    referencedIds.Add(id); observedRuleCounts[id] = observedRuleCounts.GetValueOrDefault(id) + 1;
+                }
             }
         if (!ids.SetEquals(referencedIds))
             throw new InvalidDataException("The saved ESP contains an outfit without its distribution rules. Restore a backup or regenerate in a new output folder.");
@@ -411,36 +442,39 @@ public static class PatchGenerator
         MerchantStockService.Validate(directory, manifest);
         var editorIds = mod.Outfits.Where(outfit => !string.IsNullOrWhiteSpace(outfit.EditorID))
             .ToDictionary(outfit => outfit.EditorID!, outfit => outfit.FormKey.ID, StringComparer.OrdinalIgnoreCase);
+        var distributionFiles = new Dictionary<string, GeneratedDistributionIndex>(StringComparer.OrdinalIgnoreCase);
+        var verifiedManifestIds = new HashSet<uint>();
+        var verifiedKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var entry in manifest.Entries)
         {
+            if (!verifiedKeys.Add(GeneratedDistributionIndex.Key(entry.SourcePlugin, entry.OutfitName)))
+                throw new InvalidDataException("The inventory contains duplicate outfit entries. Restore a backup before repatching.");
             if (!string.IsNullOrEmpty(entry.OutfitEditorId) && !editorIds.ContainsKey(entry.OutfitEditorId))
                 throw new InvalidDataException("The saved inventory refers to an outfit missing from its generated ESP.");
-            ValidateInventoryDistribution(directory, entry, editorIds);
+            if (!distributionFiles.TryGetValue(entry.DistributionPath, out var index))
+                distributionFiles[entry.DistributionPath] = index = new GeneratedDistributionIndex(PatchOutputTransaction.ManagedPath(directory, entry.DistributionPath));
+            ValidateInventoryDistribution(directory, entry, editorIds, index);
+            if (!string.IsNullOrWhiteSpace(entry.OutfitEditorId))
+            {
+                var id = editorIds[entry.OutfitEditorId];
+                if (!verifiedManifestIds.Add(id) || observedRuleCounts.GetValueOrDefault(id) != entry.DistributionRows)
+                    throw new InvalidDataException($"Unexpected or duplicated distribution rows exist outside the managed section for '{entry.SourcePlugin} / {entry.OutfitName}'. Repatch this outfit or restore a backup.");
+            }
         }
     }
 
-    internal static void ValidateInventoryDistribution(string directory, PatchManifestEntry entry, IReadOnlyDictionary<string, uint> outfitIdsByEditorId)
+    internal static void ValidateInventoryDistribution(string directory, PatchManifestEntry entry, IReadOnlyDictionary<string, uint> outfitIdsByEditorId, GeneratedDistributionIndex? index = null)
     {
         var ini = PatchOutputTransaction.ManagedPath(directory, entry.DistributionPath);
         if (!File.Exists(ini))
             throw new InvalidDataException($"The distribution file for '{entry.SourcePlugin} / {entry.OutfitName}' is missing. Restore a backup or regenerate in a new output folder.");
-        var lines = File.ReadAllLines(ini);
-        var rules = new List<string>();
-        var sections = 0;
+        index ??= new GeneratedDistributionIndex(ini);
+        var matchingSections = index.Find(entry.SourcePlugin, entry.OutfitName);
         var skyPatcher = entry.Framework.Equals("SkyPatcher", StringComparison.OrdinalIgnoreCase);
-        for (var i = 0; i < lines.Length; i++)
-        {
-            if (!IsSectionHeader(lines[i]) || !lines[i].StartsWith("; " + entry.SourcePlugin + " — ", StringComparison.OrdinalIgnoreCase)) continue;
-            var name = i + 1 < lines.Length && lines[i + 1].StartsWith("; Outfit: ", StringComparison.Ordinal)
-                ? lines[i + 1][10..] : Path.GetFileNameWithoutExtension(entry.SourcePlugin);
-            if (!name.Equals(entry.OutfitName, StringComparison.OrdinalIgnoreCase)) continue;
-            sections++;
-            for (var row = i + 1; row < lines.Length && !IsSectionHeader(lines[row]); row++)
-                if (!lines[row].TrimStart().StartsWith(';') && (skyPatcher ? lines[row].Contains("outfitDefault=", StringComparison.Ordinal) : lines[row].StartsWith("Outfit = ", StringComparison.Ordinal)))
-                    rules.Add(lines[row]);
-        }
-        if (sections != 1 || rules.Count == 0 || rules.Count != entry.DistributionRows)
-            throw new InvalidDataException($"The distribution rules for '{entry.SourcePlugin} / {entry.OutfitName}' are missing, duplicated or incomplete. Restore a backup or regenerate in a new output folder.");
+        var rules = matchingSections.SelectMany(section => section.Lines).Where(line => !line.TrimStart().StartsWith(';') &&
+            (skyPatcher ? line.Contains("outfitDefault=", StringComparison.Ordinal) : IsOutfitRule(line))).ToList();
+        if (matchingSections.Count != 1 || rules.Count == 0 || rules.Count != entry.DistributionRows)
+            throw new InvalidDataException($"The distribution rules for '{entry.SourcePlugin} / {entry.OutfitName}' are missing, duplicated or incomplete. Repatch this outfit in My patch; if other entries also need repair, use Repatch all or restore a backup.");
         foreach (var rule in rules)
         {
             var referenced = skyPatcher

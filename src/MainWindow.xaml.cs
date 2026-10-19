@@ -31,6 +31,8 @@ public partial class MainWindow : Window
     private string lastScanReport = "No scan report yet.";
     private bool settingsRecoveryRequired;
     private bool editingPatchedOutfit;
+    private IReadOnlyDictionary<string, IReadOnlyList<string>>? requestedRepatchOutfits;
+    private bool reuseSavedRepatch;
 
     public MainWindow()
     {
@@ -71,7 +73,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            App.WriteDiagnostic("Could not load saved preferences", ex);
+            App.WriteDiagnostic(DiagnosticEvent.PreferencesLoadFailed, ex);
             preferences = new AppPreferences();
             settingsRecoveryRequired = true;
             StatusText.Text = "Saved settings could not be read. The original file has been preserved. Import a backup or explicitly save new preferences.";
@@ -86,7 +88,7 @@ public partial class MainWindow : Window
         try { PreferencesService.Save(preferencesFile, preferences); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            App.WriteDiagnostic("Could not save preferences", ex);
+            App.WriteDiagnostic(DiagnosticEvent.PreferencesSaveFailed, ex);
             StatusText.Text = $"The app could not save settings: {ex.Message}";
         }
     }
@@ -110,14 +112,14 @@ public partial class MainWindow : Window
             foreach (var key in new[] { @"HKEY_LOCAL_MACHINE\SOFTWARE\Bethesda Softworks\Skyrim Special Edition", @"HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Bethesda Softworks\Skyrim Special Edition" })
                 if (Registry.GetValue(key, "Installed Path", null) is string installed) roots.Add(Path.Combine(installed, "Data"));
         }
-        catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException) { App.WriteDiagnostic("Could not read optional game install registry entries", ex); }
+        catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException) { App.WriteDiagnostic(DiagnosticEvent.RegistryDiscoveryFailed, ex, DiagnosticLevel.Warning); }
         roots.Add(Path.Combine(steamRoot, "steamapps", "common", "Skyrim Special Edition", "Data"));
         var steamLibraries = Path.Combine(steamRoot, "steamapps", "libraryfolders.vdf");
         try { if (File.Exists(steamLibraries))
             foreach (Match match in System.Text.RegularExpressions.Regex.Matches(File.ReadAllText(steamLibraries), "\\\"path\\\"\\s+\\\"([^\\\"]+)\\\"", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
                 roots.Add(Path.Combine(match.Groups[1].Value.Replace("\\\\", "\\"), "steamapps", "common", "Skyrim Special Edition", "Data"));
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { App.WriteDiagnostic("Could not read optional Steam library locations", ex); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { App.WriteDiagnostic(DiagnosticEvent.SteamDiscoveryFailed, ex, DiagnosticLevel.Warning); }
         path = roots.FirstOrDefault(GameDataLocator.IsGameData) ?? "";
         return !string.IsNullOrEmpty(path);
     }
@@ -182,7 +184,7 @@ public partial class MainWindow : Window
             lastScanReport = "Detected scan location:\n" + selected.Explanation;
             ScanDiagnosticsBox.Text = lastScanReport;
         }
-        catch (Exception ex) { App.WriteDiagnostic("Folder discovery failed", ex); StatusText.Text = "Folder detection failed: " + ex.Message + ". Browse manually in Settings."; }
+        catch (Exception ex) { App.WriteDiagnostic(DiagnosticEvent.FolderDiscoveryFailed, ex); StatusText.Text = "Folder detection failed: " + ex.Message + ". Browse manually in Settings."; }
         finally
         {
             isDiscoveringLocations = false; ScanButton.IsEnabled = true;
@@ -270,7 +272,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            App.WriteDiagnostic("Plugin scan failed", ex);
+            App.WriteDiagnostic(DiagnosticEvent.ScanFailed, ex);
             lastScanReport = $"Scan failed: {ex.Message}\nFolder: {requestedRoot}";
             ScanDiagnosticsBox.Text = lastScanReport;
             StatusText.Text = $"Scan failed: {ex.Message}. Previous results are preserved.";
@@ -328,11 +330,10 @@ public partial class MainWindow : Window
     }
     private void ExportScanReport_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new SaveFileDialog { Filter = "Scan report (*.txt)|*.txt", FileName = "SkyrimSPIDPatchGenerator-scan-report.txt" };
-        if (dialog.ShowDialog(this) != true) return;
-        try { File.WriteAllText(dialog.FileName, lastScanReport); StatusText.Text = "Scan diagnostics exported."; }
-        catch (Exception ex) { MessageBox.Show(this, ex.Message, "Could not export scan report", MessageBoxButton.OK, MessageBoxImage.Error); }
+        ShowErrorReports_Click(sender, e);
     }
+
+    private void ShowErrorReports_Click(object sender, RoutedEventArgs e) => new SupportReportWindow { Owner = this }.ShowDialog();
 
     private void RefreshPluginList(object? sender = null, RoutedEventArgs? e = null) => RefreshPluginList();
 
@@ -440,7 +441,9 @@ public partial class MainWindow : Window
         PluginsGrid.CommitEdit(DataGridEditingUnit.Row, true);
         var selected = scannedPlugins.Where(IsSelectedForPatch).ToList();
         if (selected.Count == 0) { MessageBox.Show("Select at least one plugin to patch.", "No plugins selected"); return; }
-        var outputDirectory = "";
+        var outputDirectory = Directory.Exists(preferences.OutputPath) ? preferences.OutputPath : "";
+        var requestedOutfits = requestedRepatchOutfits;
+        var preferSavedSetup = reuseSavedRepatch;
         var framework = preferences.Framework;
         PatchOptionsWindow dialog;
         var skippedOutfits = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -460,12 +463,17 @@ public partial class MainWindow : Window
         {
             preferences.DistributionPresets.Remove(name);
             SavePreferences();
-        }, npcProfiles: npcProfiles.Values, skippedOutfits: skippedOutfits, merchantTargets: merchantTargets) { Owner = this };
+        }, npcProfiles: npcProfiles.Values, skippedOutfits: skippedOutfits, merchantTargets: merchantTargets, requestedOutfits: requestedOutfits,
+        saveBatch: saved => { foreach (var pair in saved) preferences.DistributionSettings[pair.Key] = pair.Value; SavePreferences(); }) { Owner = this };
 
-        while (true)
+        try
         {
+          while (true)
+          {
             dialog = CreateSetup();
-            if (dialog.ShowDialog() != true)
+            var usingSavedSetup = preferSavedSetup && dialog.CanReviewSavedSetup();
+            if (usingSavedSetup) dialog.Close();
+            if (!usingSavedSetup && dialog.ShowDialog() != true)
             {
                 if (dialog.Options.Count == 0) StatusText.Text = "All outfits skipped. Your existing patch has not been changed.";
                 return;
@@ -483,20 +491,21 @@ public partial class MainWindow : Window
             var targeting = new NpcTargetingService(availableKeywords, npcProfiles.Values);
             foreach (var config in dialog.Options)
                 foreach (var rule in config.TargetRules) targeting.Resolve(rule, config.Gender);
-            var review = new PatchReviewWindow(dialog.Options, CountMatchingNpcs, (rule, owner) => CountOverlappingRules(rule, owner, dialog.Options), CountInstalledRuleOverlaps, framework) { Owner = this };
+            var review = new PatchReviewWindow(dialog.Options, CountMatchingNpcs, (rule, owner) => CountOverlappingRules(rule, owner, dialog.Options), CountInstalledRuleOverlaps, framework, outputDirectory) { Owner = this };
             if (review.ShowDialog() == true) break;
+            preferSavedSetup = false;
             // WPF windows cannot be shown again after closing. Saved setup is restored in a fresh instance.
+          }
         }
-        var distributionRelativePath = framework == "SkyPatcher"
-            ? Path.Combine("SKSE", "Plugins", "SkyPatcher", "npc", "WearableDistributor", "WearableDistributor.ini")
-            : PatchGenerator.OutputIniName;
-        var outputPluginPath = Path.Combine(outputDirectory, PatchGenerator.OutputPluginName);
-        var outputDistributionPath = Path.Combine(outputDirectory, distributionRelativePath);
+        catch (Exception failure)
+        {
+            App.WriteDiagnostic(DiagnosticEvent.PatchSetupFailed, failure);
+            MessageBox.Show(this, "Patch setup could not be completed. Your existing patch was not changed.\n\n" + failure.Message +
+                "\n\nUse Error reports → Save report to share technical details (APP-1418).", "Patch setup failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
         if (Path.GetFullPath(outputDirectory).TrimEnd(Path.DirectorySeparatorChar).Equals(Path.GetFullPath(dataPath).TrimEnd(Path.DirectorySeparatorChar), StringComparison.OrdinalIgnoreCase) && File.Exists(Path.Combine(outputDirectory, "Skyrim.esm")) &&
             MessageBox.Show(this, "This is Skyrim's Data folder. A separate Vortex staging mod folder or MO2 mod folder is safer: direct writes may be tracked as external changes by Vortex. Continue writing here?", "Output directly in Skyrim Data", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
-            return;
-        if ((File.Exists(outputPluginPath) || File.Exists(outputDistributionPath)) &&
-            MessageBox.Show(this, "A generated patch already exists in this folder. Merge this run into it? Existing entries for the plugins you selected will be updated; all other outfits and distribution rules will be kept.", "Merge existing patch", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
             return;
 
         try
@@ -514,7 +523,7 @@ public partial class MainWindow : Window
             SavePreferences();
             ActionProgress.IsIndeterminate = false;
             ActionProgress.Visibility = Visibility.Collapsed;
-            StatusText.Text = $"Generated {result.OutfitCount} outfit(s) and {result.DistributionCount} distribution rule(s) in {outputDirectory}";
+            StatusText.Text = $"Updated {result.UpdatedOutfitCount} outfit(s), kept {result.PreservedOutfitCount} unchanged · {result.DistributionCount} rules in the complete patch.";
             RefreshInventory();
             MainTabs.SelectedIndex = 1;
             var runtimeNote = result.Framework == "SPID"
@@ -525,11 +534,11 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            App.WriteDiagnostic("Patch generation failed", ex);
+            App.WriteDiagnostic(DiagnosticEvent.PatchGenerationFailed, ex);
             ActionProgress.IsIndeterminate = false;
             ActionProgress.Visibility = Visibility.Collapsed;
             StatusText.Text = "Patch generation failed; no validated patch was produced.";
-            MessageBox.Show($"Patch generation failed: {ex.Message}", "Patch generation failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"Patch generation failed: {ex.Message}\n\nError APP-1400 was recorded. Use Error reports → Save report to send technical details without personal paths or mod lists.", "Patch generation failed", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally { isGenerating = false; ScanButton.IsEnabled = true; UpdateSelectionSummary(); }
     }
@@ -585,7 +594,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            App.WriteDiagnostic("Could not read the generated patch library", ex);
+            App.WriteDiagnostic(DiagnosticEvent.PatchLibraryReadFailed, ex);
             ScanSummaryText.Text = $"{scannedPlugins.Count} wearable plugin candidate(s) · generated library needs attention";
             InventoryDetailsBox.Text = $"The generated patch library could not be read safely. Your existing output has been preserved.\n\n{ex.Message}\n\nRestore the previous backup, or choose a different output folder in Settings before generating a patch.";
             StatusText.Text = "The generated patch library needs attention. Open My patch for details.";
@@ -631,7 +640,7 @@ public partial class MainWindow : Window
         var path = preferences.OutputPath;
         if (!Directory.Exists(path)) { MessageBox.Show(this, "Choose an output folder by generating a patch first.", "Output folder not set", MessageBoxButton.OK, MessageBoxImage.Information); return; }
         try { Process.Start(new ProcessStartInfo(path) { UseShellExecute = true }); }
-        catch (Exception ex) { MessageBox.Show(this, ex.Message, "Could not open output folder", MessageBoxButton.OK, MessageBoxImage.Error); }
+        catch (Exception ex) { App.WriteDiagnostic(DiagnosticEvent.OutputFolderOpenFailed, ex); MessageBox.Show(this, ex.Message, "Could not open output folder", MessageBoxButton.OK, MessageBoxImage.Error); }
     }
 
     private void EditInventoryEntry_Click(object sender, RoutedEventArgs e)
@@ -646,9 +655,32 @@ public partial class MainWindow : Window
         foreach (var item in scannedPlugins) item.Selected = ReferenceEquals(item, plugin);
         PluginsGrid.Items.Refresh();
         MainTabs.SelectedIndex = 0;
+        requestedRepatchOutfits = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+        { [plugin.Plugin] = new[] { string.IsNullOrWhiteSpace(row.Entry.OutfitName) ? Path.GetFileNameWithoutExtension(plugin.Plugin) : row.Entry.OutfitName } };
         editingPatchedOutfit = true;
         try { Generate_Click(sender, e); }
-        finally { editingPatchedOutfit = false; }
+        finally { editingPatchedOutfit = false; requestedRepatchOutfits = null; }
+    }
+
+    private void RepatchAll_Click(object sender, RoutedEventArgs e)
+    {
+        if (scanCancellation != null || isGenerating) return;
+        if (inventoryRows.Count == 0) { StatusText.Text = "Choose an existing patch folder in Settings first."; return; }
+        var entries = inventoryRows.Select(row => row.Entry).ToList();
+        var sources = entries.Select(entry => entry.SourcePlugin).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var missing = sources.Where(source => !scannedPlugins.Any(plugin => plugin.CanPatch && plugin.Plugin.Equals(source, StringComparison.OrdinalIgnoreCase))).ToList();
+        if (missing.Count > 0)
+        {
+            MessageBox.Show(this, "Scan the correct profile and restore these source plugins before repatching everything:\n\n" + string.Join("\n", missing), "Source plugins unavailable", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        foreach (var plugin in scannedPlugins) plugin.Selected = sources.Contains(plugin.Plugin);
+        requestedRepatchOutfits = entries.GroupBy(entry => entry.SourcePlugin, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => (IReadOnlyList<string>)group.Select(entry => string.IsNullOrWhiteSpace(entry.OutfitName) ? Path.GetFileNameWithoutExtension(entry.SourcePlugin) : entry.OutfitName).Distinct(StringComparer.OrdinalIgnoreCase).ToList(), StringComparer.OrdinalIgnoreCase);
+        editingPatchedOutfit = true;
+        reuseSavedRepatch = true;
+        try { Generate_Click(sender, e); }
+        finally { editingPatchedOutfit = false; requestedRepatchOutfits = null; reuseSavedRepatch = false; }
     }
 
     private void RemoveInventoryEntry_Click(object sender, RoutedEventArgs e)
@@ -657,7 +689,7 @@ public partial class MainWindow : Window
         if (string.IsNullOrWhiteSpace(row.Entry.OutfitEditorId)) { MessageBox.Show(this, "This is a legacy patch without an inventory record. It can be inspected, but cannot be safely removed by source plugin.", "Legacy patch", MessageBoxButton.OK, MessageBoxImage.Information); return; }
         if (MessageBox.Show(this, $"Remove {row.SourcePlugin} from the generated patch? A backup will be saved first.", "Remove generated outfit", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
         try { PatchInventoryService.Remove(preferences.OutputPath, row.Entry); RefreshInventory(); StatusText.Text = $"Removed {row.SourcePlugin} from the generated patch."; }
-        catch (Exception ex) { MessageBox.Show(this, ex.Message, "Could not remove outfit", MessageBoxButton.OK, MessageBoxImage.Error); }
+        catch (Exception ex) { App.WriteDiagnostic(DiagnosticEvent.PatchRemoveFailed, ex); MessageBox.Show(this, ex.Message, "Could not remove outfit", MessageBoxButton.OK, MessageBoxImage.Error); }
     }
 
     private void RestoreBackup_Click(object sender, RoutedEventArgs e)
@@ -665,7 +697,7 @@ public partial class MainWindow : Window
         if (string.IsNullOrWhiteSpace(preferences.OutputPath)) { MessageBox.Show(this, "No output folder has been selected yet.", "Backup unavailable", MessageBoxButton.OK, MessageBoxImage.Information); return; }
         if (MessageBox.Show(this, "Restore the most recent saved patch files for this output folder? Current files will be replaced.", "Restore previous patch", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
         try { PatchInventoryService.RestoreLastBackup(preferences.OutputPath); RefreshInventory(); StatusText.Text = "Previous generated patch restored from backup."; }
-        catch (Exception ex) { MessageBox.Show(this, ex.Message, "Could not restore backup", MessageBoxButton.OK, MessageBoxImage.Error); }
+        catch (Exception ex) { App.WriteDiagnostic(DiagnosticEvent.PatchRestoreFailed, ex); MessageBox.Show(this, ex.Message, "Could not restore backup", MessageBoxButton.OK, MessageBoxImage.Error); }
     }
 
     private void ExportReport_Click(object sender, RoutedEventArgs e)
@@ -674,7 +706,7 @@ public partial class MainWindow : Window
         var dialog = new SaveFileDialog { Filter = "JSON report (*.json)|*.json", FileName = "SkyrimSPIDPatchGenerator-patch-report.json" };
         if (dialog.ShowDialog(this) != true) return;
         try { PatchInventoryService.ExportReport(preferences.OutputPath, dialog.FileName); StatusText.Text = "Patch report exported."; }
-        catch (Exception ex) { MessageBox.Show(this, ex.Message, "Export failed", MessageBoxButton.OK, MessageBoxImage.Error); }
+        catch (Exception ex) { App.WriteDiagnostic(DiagnosticEvent.PatchReportExportFailed, ex); MessageBox.Show(this, ex.Message, "Export failed", MessageBoxButton.OK, MessageBoxImage.Error); }
     }
 
     private async void ExportModArchive_Click(object sender, RoutedEventArgs e)
@@ -692,7 +724,7 @@ public partial class MainWindow : Window
             await Task.Run(() => PatchPackageService.Export(folder, dialog.FileName));
             StatusText.Text = "Installable mod ZIP ready. Install it through Vortex or MO2, enable the mod and its plugin, then deploy if using Vortex.";
         }
-        catch (Exception ex) { MessageBox.Show(this, ex.Message, "Could not package mod", MessageBoxButton.OK, MessageBoxImage.Error); StatusText.Text = "Mod packaging failed; your generated patch is unchanged."; }
+        catch (Exception ex) { App.WriteDiagnostic(DiagnosticEvent.PatchPackageFailed, ex); MessageBox.Show(this, ex.Message, "Could not package mod", MessageBoxButton.OK, MessageBoxImage.Error); StatusText.Text = "Mod packaging failed; your generated patch is unchanged."; }
         finally { isGenerating = false; ScanButton.IsEnabled = true; ActionProgress.IsIndeterminate = false; ActionProgress.Visibility = Visibility.Collapsed; UpdateSelectionSummary(); }
     }
 
@@ -701,7 +733,7 @@ public partial class MainWindow : Window
         var dialog = new SaveFileDialog { Filter = "Skyrim SPID Patch Generator settings (*.json)|*.json", FileName = "SkyrimSPIDPatchGenerator-settings.json" };
         if (dialog.ShowDialog(this) != true) return;
         try { PreferencesService.Save(dialog.FileName, PreferencesService.Clone(preferences)); StatusText.Text = "Preferences and reusable presets exported."; }
-        catch (Exception ex) { MessageBox.Show(this, ex.Message, "Export failed", MessageBoxButton.OK, MessageBoxImage.Error); }
+        catch (Exception ex) { App.WriteDiagnostic(DiagnosticEvent.PreferencesExportFailed, ex); MessageBox.Show(this, ex.Message, "Export failed", MessageBoxButton.OK, MessageBoxImage.Error); }
     }
 
     private void ImportPreferences_Click(object sender, RoutedEventArgs e)
@@ -725,7 +757,7 @@ public partial class MainWindow : Window
             if (Directory.Exists(dataPath)) ScanFolder();
             StatusText.Text = "Preferences and reusable presets imported.";
         }
-        catch (Exception ex) { MessageBox.Show(this, ex.Message, "Import failed", MessageBoxButton.OK, MessageBoxImage.Error); }
+        catch (Exception ex) { App.WriteDiagnostic(DiagnosticEvent.PreferencesImportFailed, ex); MessageBox.Show(this, ex.Message, "Import failed", MessageBoxButton.OK, MessageBoxImage.Error); }
     }
 
     private static int ChanceIndex(string value) => value switch { "100" => 0, "80" => 1, "50" => 2, "25" => 3, "10" => 4, "5" => 5, _ => 3 };

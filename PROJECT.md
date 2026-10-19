@@ -1,6 +1,10 @@
 # Skyrim SPID Patch Generator
 
-## Current update: 0.4.5
+## Current update: 0.4.6
+
+Typed privacy-safe diagnostic logging, a visible Error reports window, per-outfit repair/repatching, Repatch all with direct saved-setup review, remembered output reuse and indexed INI validation are included. See docs/ERROR_REPORTS_AND_REPATCHING.md. Build-only verification; no new runtime checks.
+
+## Previous update: 0.4.5
 
 Outfit filtering, installed-population audience presets, patch-selection context tools, separate already-patched hiding, model-path sex safeguards and an icon startup window are implemented. See docs/SMART_SCAN_AND_PRESETS.md for research, policy, source map and limits. Build-only verification; no new runtime checks were run. The app remains a preview.
 

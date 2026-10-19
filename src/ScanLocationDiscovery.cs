@@ -22,7 +22,7 @@ public static class ScanLocationDiscovery
                 .Where(module => module.ModuleName.Equals("usvfs_x64.dll", StringComparison.OrdinalIgnoreCase) || module.ModuleName.Equals("usvfs_x86.dll", StringComparison.OrdinalIgnoreCase))
                 .Select(module => Path.GetDirectoryName(module.FileName)).FirstOrDefault();
         }
-        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or NotSupportedException) { return null; }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or NotSupportedException) { App.WriteDiagnostic(DiagnosticEvent.Mo2ModuleProbeFailed, ex, DiagnosticLevel.Warning); return null; }
     }
 
     public static List<ScanLocation> Discover(AppPreferences preferences, string? installedGameData)
@@ -42,7 +42,7 @@ public static class ScanLocationDiscovery
                     if (File.Exists(config)) configs.Add(config);
                 }
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { App.WriteDiagnostic(DiagnosticEvent.Mo2ConfigProbeFailed, ex, DiagnosticLevel.Warning); }
         }
         var instanceRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ModOrganizer");
         try
@@ -54,7 +54,7 @@ public static class ScanLocationDiscovery
                     if (File.Exists(config)) configs.Add(config);
                 }
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { App.WriteDiagnostic(DiagnosticEvent.Mo2ConfigProbeFailed, ex, DiagnosticLevel.Warning); }
 
         foreach (var config in configs)
         {
@@ -85,7 +85,7 @@ public static class ScanLocationDiscovery
                     (attached ? "MO2's virtual filesystem is attached. Confirm this is the instance/profile used for this launch; command-line profile overrides may differ from the saved configuration." : "Launch this app through this MO2 instance to see its installed mods. A standalone scan cannot reproduce its virtual load order."),
                     attached, localInjection));
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { App.WriteDiagnostic(DiagnosticEvent.Mo2ConfigProbeFailed, ex, DiagnosticLevel.Warning); }
         }
         if (GameDataLocator.IsGameData(preferences.DataPath))
             locations.Add(new ScanLocation("Saved game Data folder", preferences.DataPath, preferences.PluginListPath, "Saved location. " + DescribeVisibility(preferences.DataPath, preferences.PluginListPath), true));

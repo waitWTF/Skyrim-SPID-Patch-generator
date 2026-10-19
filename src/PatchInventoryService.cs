@@ -40,6 +40,13 @@ public static class PatchInventoryService
     private static PatchManifest ReadLegacy(string outputDirectory)
     {
         var manifest = new PatchManifest();
+        var outfitEditorIds = new Dictionary<uint, string>();
+        var pluginPath = PatchOutputTransaction.ManagedPath(outputDirectory, PatchGenerator.OutputPluginName);
+        if (File.Exists(pluginPath))
+        {
+            using var mod = SkyrimMod.CreateFromBinaryOverlay(new Noggog.FilePath(pluginPath), SkyrimRelease.SkyrimSE);
+            foreach (var outfit in mod.Outfits) outfitEditorIds[outfit.FormKey.ID] = outfit.EditorID ?? "";
+        }
         var iniPaths = new[]
         {
             (Path: PatchOutputTransaction.ManagedPath(outputDirectory, PatchGenerator.OutputIniName), Framework: "SPID"),
@@ -74,10 +81,8 @@ public static class PatchInventoryService
                 var outfitName = i + 1 < lines.Length && lines[i + 1].StartsWith("; Outfit: ", StringComparison.Ordinal)
                     ? lines[i + 1][10..] : Path.GetFileNameWithoutExtension(plugin);
                 var outfitEditorId = "";
-                var pluginPath = PatchOutputTransaction.ManagedPath(outputDirectory, PatchGenerator.OutputPluginName);
-                if (File.Exists(pluginPath))
+                if (outfitEditorIds.Count > 0)
                 {
-                    using var mod = SkyrimMod.CreateFromBinaryOverlay(new Noggog.FilePath(pluginPath), SkyrimRelease.SkyrimSE);
                     var row = sectionLines.FirstOrDefault(line => framework == "SPID" ? line.StartsWith("Outfit = ", StringComparison.Ordinal) : line.Contains("outfitDefault=", StringComparison.Ordinal));
                     if (row is not null)
                     {
@@ -86,9 +91,9 @@ public static class PatchInventoryService
                             var form = framework == "SPID" ? DistributionRuleCompiler.ParseSpidForm(row[(row.IndexOf('=') + 1)..].Trim().Split('|')[0]) :
                                 DistributionRuleCompiler.ParseSkyPatcherForm(row.Split(':').Single(field => field.StartsWith("outfitDefault=", StringComparison.Ordinal))[14..]);
                             if (form.Plugin.Equals(PatchGenerator.OutputPluginName, StringComparison.OrdinalIgnoreCase))
-                                outfitEditorId = mod.Outfits.FirstOrDefault(outfit => outfit.FormKey.ID == form.Id)?.EditorID ?? "";
+                                outfitEditorId = outfitEditorIds.GetValueOrDefault(form.Id, "");
                         }
-                        catch (InvalidDataException) { /* Old malformed rules remain visible for diagnosis; generation validates them. */ }
+                        catch (InvalidDataException error) { App.WriteDiagnostic(DiagnosticEvent.LegacyRuleReadFailed, error, DiagnosticLevel.Warning); }
                     }
                 }
                 manifest.Entries.Add(new PatchManifestEntry
@@ -185,7 +190,7 @@ public static class PatchInventoryService
         }
         finally
         {
-            try { Directory.Delete(tempRoot, true); } catch { }
+            try { Directory.Delete(tempRoot, true); } catch (Exception cleanup) { App.WriteDiagnostic(DiagnosticEvent.TemporaryCleanupFailed, cleanup, DiagnosticLevel.Warning); }
         }
     }
 

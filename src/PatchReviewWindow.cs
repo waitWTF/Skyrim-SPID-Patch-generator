@@ -8,7 +8,7 @@ namespace WearableDistributor;
 public sealed class PatchReviewWindow : Window
 {
     public PatchReviewWindow(IEnumerable<PluginPatchOptions> configurations, Func<DistributionTargetRule, int> countMatches,
-        Func<DistributionTargetRule, PluginPatchOptions, int> countConflicts, Func<DistributionTargetRule, int> countInstalledConflicts, string framework)
+        Func<DistributionTargetRule, PluginPatchOptions, int> countConflicts, Func<DistributionTargetRule, int> countInstalledConflicts, string framework, string? outputDirectory = null)
     {
         UiTheme.Apply(this);
         Title = "Skyrim SPID Patch Generator · Review patch";
@@ -24,6 +24,11 @@ public sealed class PatchReviewWindow : Window
         header.Children.Add(new TextBlock { Text = "03  /  REVIEW", Foreground = UiTheme.Brush("AccentBrush"), FontSize = 12, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 5) });
         header.Children.Add(new TextBlock { Text = "Ready to generate?", FontSize = 26, FontWeight = FontWeights.SemiBold });
         header.Children.Add(UiTheme.Caption("Review who gets each outfit and check the notes. Select a row to inspect all its details."));
+        if (!string.IsNullOrWhiteSpace(outputDirectory))
+        {
+            header.Children.Add(UiTheme.Caption("Output: " + outputDirectory));
+            header.Children.Add(UiTheme.Caption("Only the listed named outfits are updated. Other outfits are kept. Selected broken rules are rebuilt, and the complete output must validate before a backed-up update is installed."));
+        }
         var stats = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
         stats.Children.Add(Statistic(configs.Count.ToString(CultureInfo.InvariantCulture), "outfit setups"));
         stats.Children.Add(Statistic(configs.Select(config => config.Source.Plugin).Distinct(StringComparer.OrdinalIgnoreCase).Count().ToString(CultureInfo.InvariantCulture), "source plugins"));

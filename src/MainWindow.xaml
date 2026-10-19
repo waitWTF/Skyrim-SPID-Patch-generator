@@ -98,7 +98,7 @@
               <TextBlock Text="Choose your mods. Decide who wears them. Build one patch." Foreground="{DynamicResource MutedBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,8,0,0" />
             </StackPanel>
           </Border>
-          <TextBlock Text="0.4.5 · DEVELOPMENT PREVIEW" FontSize="9" Foreground="{DynamicResource MutedBrush}" Margin="5,0,0,6" />
+          <TextBlock Text="0.4.6 · DEVELOPMENT PREVIEW" FontSize="9" Foreground="{DynamicResource MutedBrush}" Margin="5,0,0,6" />
           <TextBlock Text="Skyrim Special Edition / Anniversary" FontSize="10" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="5,0,0,0" />
         </StackPanel>
       </DockPanel>
@@ -116,10 +116,11 @@
         </Grid.ColumnDefinitions>
         <StackPanel VerticalAlignment="Center">
           <TextBlock Text="MAKE YOUR WORLD WEAR IT" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" />
-          <TextBlock Text="Skyrim SPID Patch Generator" FontSize="25" FontWeight="SemiBold" Margin="0,3,0,5" />
+          <TextBlock Text="Skyrim SPID Patch Generator" FontSize="25" FontWeight="SemiBold" Margin="0,3,0,5" TextWrapping="Wrap" />
           <TextBlock x:Name="ActivePathText" Text="Set up your Skyrim or mod staging folder in Settings." Foreground="{DynamicResource MutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
         </StackPanel>
         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="15,0,0,0">
+          <Button Content="Error reports" Click="ShowErrorReports_Click" ToolTip="Save a shareable error report without personal paths, usernames, settings or mod lists" />
           <Button x:Name="CancelScanButton" Content="Cancel scan" Click="CancelScan_Click" Visibility="Collapsed" />
           <Button x:Name="ScanButton" Content="Scan for outfits" Click="Scan_Click" Padding="17,10" ToolTip="Read installed plugins and discover outfits and NPC groups" />
         </StackPanel>
@@ -260,11 +261,12 @@
               <WrapPanel>
                 <Button Content="Refresh" Click="RefreshInventory_Click" />
                 <Button Content="Open folder" Click="OpenOutput_Click" />
-                <Button Content="Edit selected" Click="EditInventoryEntry_Click" />
+                <Button Content="Edit / repatch selected" Click="EditInventoryEntry_Click" />
+                <Button Content="Repatch all" Click="RepatchAll_Click" ToolTip="Refresh all saved outfits with this scan. Go straight to review when saved choices are valid, or open setup at an outfit needing attention." />
                 <Button Content="Remove outfit" Click="RemoveInventoryEntry_Click" />
                 <Button Content="Restore backup" Click="RestoreBackup_Click" />
                 <Button Content="Installable ZIP…" Click="ExportModArchive_Click" />
-                <Button Content="Export report" Click="ExportReport_Click" />
+                <Button Content="Export patch contents" Click="ExportReport_Click" ToolTip="Exports outfit/plugin details. Use Error reports for privacy-safe technical support." />
               </WrapPanel>
             </StackPanel>
             <DataGrid x:Name="PatchInventoryGrid" Grid.Row="1" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" SelectionMode="Single" SelectionChanged="InventorySelectionChanged">
@@ -385,7 +387,8 @@
                   <TextBlock Text="Scan diagnostics" Style="{StaticResource SectionHeaderStyle}" />
                   <TextBlock Text="Review missing masters, unreadable plugins and load-order notes here before generating a patch." Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,7,0,10" />
                   <TextBox x:Name="ScanDiagnosticsBox" Text="No scan report yet." Height="140" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" />
-                  <Button Content="Export scan report…" Click="ExportScanReport_Click" HorizontalAlignment="Left" Margin="0,10,0,0" />
+                  <Button Content="Shareable error report…" Click="ExportScanReport_Click" HorizontalAlignment="Left" Margin="0,10,0,0" />
+                  <TextBlock Text="Local scan details stay on screen. Shared error reports exclude paths and installed plugin names." Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,7,0,0" />
                 </StackPanel>
               </Border>
             </StackPanel>

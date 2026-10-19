@@ -62,7 +62,7 @@ public sealed class WearableScanService
         result.HasProfileLoadOrder = !string.IsNullOrWhiteSpace(preferences.PluginListPath);
         if (result.HasProfileLoadOrder)
         {
-            foreach (var missing in order.Where(name => !paths.ContainsKey(name))) result.Diagnostics.Add($"Missing active plugin: {missing}. Its records cannot be used until the scan folder contains it.");
+            foreach (var missing in order.Where(name => !paths.ContainsKey(name))) { App.WriteDiagnostic(DiagnosticEvent.MissingActivePlugin, level: DiagnosticLevel.Warning); result.Diagnostics.Add($"Missing active plugin: {missing}. Its records cannot be used until the scan folder contains it."); }
             order = OfficialNames.Where(paths.ContainsKey).Concat(implicitOrder).Concat(order).Distinct(StringComparer.OrdinalIgnoreCase).Where(paths.ContainsKey).ToList();
         }
         else
@@ -79,7 +79,7 @@ public sealed class WearableScanService
                 using var mod = SkyrimMod.CreateFromBinaryOverlay(new Noggog.FilePath(paths[name]), SkyrimRelease.SkyrimSE);
                 headers[name] = mod.ModHeader.MasterReferences.Select(master => master.Master.FileName.String).ToList();
             }
-            catch (Exception ex) { result.Diagnostics.Add($"Cannot read {name}: {ex.Message}"); order.Remove(name); }
+            catch (Exception ex) { App.WriteDiagnostic(DiagnosticEvent.PluginHeaderReadFailed, ex); result.Diagnostics.Add($"Cannot read {name}: {ex.Message}"); order.Remove(name); }
         }
         if (!result.HasProfileLoadOrder) order = OrderByDependencies(order, headers, result.Diagnostics);
         if (!headers.ContainsKey("Skyrim.esm"))
@@ -89,7 +89,7 @@ public sealed class WearableScanService
         foreach (var name in order)
         {
             var issue = ValidateMasters(name, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
-            if (!string.IsNullOrWhiteSpace(issue)) result.Diagnostics.Add($"Skipped unusable plugin records: {name}: {issue}.");
+            if (!string.IsNullOrWhiteSpace(issue)) { App.WriteDiagnostic(DiagnosticEvent.InvalidMasterDependency, level: DiagnosticLevel.Warning); result.Diagnostics.Add($"Skipped unusable plugin records: {name}: {issue}."); }
             foreach (var master in headers[name]) if (positions.TryGetValue(master, out var index) && index > positions[name]) result.Diagnostics.Add($"Load order warning: {master} appears after dependent {name}.");
         }
         var inis = discovered.Where(path => Path.GetExtension(path).Equals(".ini", StringComparison.OrdinalIgnoreCase) && WearableFilterService.IsDistributionIni(path))
@@ -221,7 +221,7 @@ public sealed class WearableScanService
                 }
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex) { invalid[name] = "Plugin could not be fully parsed"; result.Diagnostics.Add($"Cannot scan {name}: {ex.Message}. Partial records were discarded."); }
+            catch (Exception ex) { App.WriteDiagnostic(DiagnosticEvent.PluginReadFailed, ex); invalid[name] = "Plugin could not be fully parsed"; result.Diagnostics.Add($"Cannot scan {name}: {ex.Message}. Partial records were discarded."); }
             done++;
         }
 
@@ -455,7 +455,7 @@ public sealed class WearableScanService
         {
             cancellationToken.ThrowIfCancellationRequested(); string[] files; string[] children;
             try { files = Directory.GetFiles(directory); children = Directory.GetDirectories(directory); }
-            catch (Exception ex) when (ex is UnauthorizedAccessException or IOException) { diagnostics.Add($"Skipped folder {directory}: {ex.Message}"); continue; }
+            catch (Exception ex) when (ex is UnauthorizedAccessException or IOException) { App.WriteDiagnostic(DiagnosticEvent.FolderReadFailed, ex, DiagnosticLevel.Warning); diagnostics.Add($"Skipped folder {directory}: {ex.Message}"); continue; }
             foreach (var file in files) if (IsPluginFile(file) || Path.GetExtension(file).Equals(".ini", StringComparison.OrdinalIgnoreCase)) yield return file;
             foreach (var child in children)
             {
@@ -465,11 +465,11 @@ public sealed class WearableScanService
                     if ((File.GetAttributes(child) & FileAttributes.ReparsePoint) != 0) { diagnostics.Add($"Skipped linked folder {child} to prevent recursive loops. Select it directly if needed."); continue; }
                     pending.Push(child);
                 }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { diagnostics.Add($"Skipped folder {child}: {ex.Message}"); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { App.WriteDiagnostic(DiagnosticEvent.FolderReadFailed, ex, DiagnosticLevel.Warning); diagnostics.Add($"Skipped folder {child}: {ex.Message}"); }
             }
         }
     }
-    private static string ReadText(string path, List<string> diagnostics) { try { return File.ReadAllText(path); } catch (Exception ex) { diagnostics.Add($"Cannot read INI {path}: {ex.Message}"); return ""; } }
+    private static string ReadText(string path, List<string> diagnostics) { try { return File.ReadAllText(path); } catch (Exception ex) { App.WriteDiagnostic(DiagnosticEvent.IniReadFailed, ex, DiagnosticLevel.Warning); diagnostics.Add($"Cannot read INI {path}: {ex.Message}"); return ""; } }
     private static bool IsTestEditorId(string editorId) => System.Text.RegularExpressions.Regex.IsMatch(
         NpcTargetingService.Humanize(editorId), @"(^|\W)(?:test|testing|dummy|dev)(?:\W|$)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
     private static bool IsPluginFile(string path) => Path.GetExtension(path).ToLowerInvariant() is ".esp" or ".esm" or ".esl";

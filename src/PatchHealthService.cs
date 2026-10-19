@@ -28,12 +28,13 @@ public static class PatchHealthService
                     outfitIdsByEditorId[outfit.EditorID!] = outfit.FormKey.ID;
             }
             catch (Exception ex) when (ex is IOException or ArgumentException or InvalidOperationException)
-            { pluginIssue = "The generated ESP could not be read: " + ex.Message; }
+            { App.WriteDiagnostic(DiagnosticEvent.PatchHealthFailed, ex, DiagnosticLevel.Warning); pluginIssue = "The generated ESP could not be read: " + ex.Message; }
         }
         var scanned = scannedPlugins?.ToDictionary(plugin => plugin.Plugin, StringComparer.OrdinalIgnoreCase);
         string? merchandiseIssue = null;
         try { MerchantStockService.Validate(outputDirectory, manifest); }
-        catch (Exception ex) when (ex is IOException or InvalidOperationException or ArgumentException) { merchandiseIssue = ex.Message; }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException or ArgumentException) { App.WriteDiagnostic(DiagnosticEvent.PatchHealthFailed, ex, DiagnosticLevel.Warning); merchandiseIssue = ex.Message; }
+        var distributionFiles = new Dictionary<string, GeneratedDistributionIndex>(StringComparer.OrdinalIgnoreCase);
         foreach (var entry in manifest.Entries)
         {
             PatchEntryHealth health;
@@ -45,7 +46,7 @@ public static class PatchHealthService
                 health = new("Legacy details", "This older patch has incomplete inventory details. Repatch the source plugin to refresh its record links.");
             else if (!outfitIds.Contains(entry.OutfitEditorId))
                 health = new("Missing outfit", "This inventory entry no longer has a matching outfit record in the ESP. Restore or repatch it.");
-            else if (DistributionIssue(outputDirectory, entry, outfitIdsByEditorId) is { } distributionIssue)
+            else if (DistributionIssue(outputDirectory, entry, outfitIdsByEditorId, distributionFiles) is { } distributionIssue)
                 health = distributionIssue;
             else if (scanned is not null && !scanned.ContainsKey(entry.SourcePlugin))
                 health = new("Source not scanned", "The generated files exist, but the source outfit plugin is not in the current scan. Check the active profile and scan folder before using this output.");
@@ -57,15 +58,22 @@ public static class PatchHealthService
                 (scanned is null ? " Source plugins have not been compared with a current scan." : " Included parts match the current source scan.") +
                 " This is a file-health check, not an in-game distribution test.");
             result[entry] = health;
+            if (health.Status is "Missing / unreadable ESP" or "Missing INI" or "Missing outfit")
+                App.WriteDiagnostic(DiagnosticEvent.PatchHealthFailed, level: DiagnosticLevel.Warning);
         }
         return result;
     }
 
-    private static PatchEntryHealth? DistributionIssue(string directory, PatchManifestEntry entry, IReadOnlyDictionary<string, uint> outfitIds)
+    private static PatchEntryHealth? DistributionIssue(string directory, PatchManifestEntry entry, IReadOnlyDictionary<string, uint> outfitIds, Dictionary<string, GeneratedDistributionIndex> distributionFiles)
     {
-        try { PatchGenerator.ValidateInventoryDistribution(directory, entry, outfitIds); return null; }
+        try
+        {
+            if (!distributionFiles.TryGetValue(entry.DistributionPath, out var index))
+                distributionFiles[entry.DistributionPath] = index = new GeneratedDistributionIndex(PatchOutputTransaction.ManagedPath(directory, entry.DistributionPath));
+            PatchGenerator.ValidateInventoryDistribution(directory, entry, outfitIds, index); return null;
+        }
         catch (Exception ex) when (ex is InvalidDataException or IOException or InvalidOperationException or ArgumentException)
-        { return new("Rules need repair", ex.Message); }
+        { App.WriteDiagnostic(DiagnosticEvent.PatchHealthFailed, ex, DiagnosticLevel.Warning); return new("Rules need repair", ex.Message); }
     }
 
     private static bool HasRemovedPart(PatchManifestEntry entry, PluginEntry source)

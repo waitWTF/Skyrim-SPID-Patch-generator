@@ -29,6 +29,7 @@ public sealed class PatchOptionsWindow : Window
     private readonly Action<string, SavedDistributionOptions> savePreset;
     private readonly Action<string> removeSavedOptions;
     private readonly Action<string> removePreset;
+    private readonly Action<IReadOnlyDictionary<string, SavedDistributionOptions>>? saveBatch;
     private readonly Dictionary<PluginPatchOptions, string> restorationNotes = [];
     private int currentIndex;
     private bool changingStep;
@@ -44,11 +45,26 @@ public sealed class PatchOptionsWindow : Window
     public IReadOnlyList<PluginPatchOptions> Options => options.Where(config => !IsSkipped(config)).ToList();
     public IReadOnlyList<PluginPatchOptions> SkippedOptions => options.Where(IsSkipped).ToList();
 
+    internal bool CanReviewSavedSetup()
+    {
+        // Never silently approve a new suggestion, a stale audience, or an incompatible restored setting.
+        for (var i = 0; i < pages.Count; i++)
+        {
+            var config = pages[i].Config;
+            if (!savedOptions.ContainsKey(GetSavedKey(config)) || restorationNotes.ContainsKey(config)) { ShowPage(i); return false; }
+            pages[i].Commit();
+            if (!pages[i].Validate()) { ShowPage(i); return false; }
+        }
+        return true;
+    }
+
     public PatchOptionsWindow(IEnumerable<PluginEntry> plugins, IEnumerable<KeywordChoice> keywords, string defaultChance, string framework,
         IReadOnlyDictionary<string, SavedDistributionOptions> savedOptions, Action<string, SavedDistributionOptions> saveOptions,
         IReadOnlyDictionary<string, SavedDistributionOptions>? presets = null, Action<string, SavedDistributionOptions>? savePreset = null,
         Action<string>? removeSavedOptions = null, Action<string>? removePreset = null, IEnumerable<NpcTargetProfile>? npcProfiles = null,
-        ISet<string>? skippedOutfits = null, IEnumerable<MerchantTarget>? merchantTargets = null)
+        ISet<string>? skippedOutfits = null, IEnumerable<MerchantTarget>? merchantTargets = null,
+        IReadOnlyDictionary<string, IReadOnlyList<string>>? requestedOutfits = null,
+        Action<IReadOnlyDictionary<string, SavedDistributionOptions>>? saveBatch = null)
     {
         availableKeywords = keywords.DistinctBy(item => item.TargetKind + "|" + item.FormId, StringComparer.OrdinalIgnoreCase).ToList();
         var scannedNpcs = npcProfiles?.ToList() ?? [];
@@ -61,10 +77,21 @@ public sealed class PatchOptionsWindow : Window
         this.savePreset = savePreset ?? ((_, _) => { });
         this.removeSavedOptions = removeSavedOptions ?? (_ => { });
         this.removePreset = removePreset ?? (_ => { });
+        this.saveBatch = saveBatch;
         this.skippedOutfits = skippedOutfits ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         this.merchantTargets = merchantTargets?.ToList() ?? [];
         foreach (var plugin in plugins)
         {
+            if (requestedOutfits != null && requestedOutfits.TryGetValue(plugin.Plugin, out var names))
+            {
+                foreach (var name in names.Distinct(StringComparer.OrdinalIgnoreCase))
+                {
+                    var key = name.Equals(Path.GetFileNameWithoutExtension(plugin.Plugin), StringComparison.OrdinalIgnoreCase) ? plugin.Plugin : plugin.Plugin + "|outfit|" + name;
+                    savedOptions.TryGetValue(key, out var requestedSaved);
+                    AddInitialConfiguration(plugin, name, requestedSaved);
+                }
+                continue;
+            }
             savedOptions.TryGetValue(plugin.Plugin, out var saved);
             AddInitialConfiguration(plugin, Path.GetFileNameWithoutExtension(plugin.Plugin), saved);
             var prefix = plugin.Plugin + "|outfit|";
@@ -88,7 +115,7 @@ public sealed class PatchOptionsWindow : Window
             // A deliberately empty or stale saved setup must never silently become a broader suggestion.
             TargetRules = saved is not null ? restored : SuggestAudiences(plugin.Plugin)
         };
-        if (missing > 0) restorationNotes[config] = $"{missing} saved audience(s) could not be restored completely. Their targets may have changed or been removed. Choose replacement audiences below.";
+        if (missing > 0) { App.WriteDiagnostic(DiagnosticEvent.OutfitValidationFailed, level: DiagnosticLevel.Warning); restorationNotes[config] = $"{missing} saved audience(s) could not be restored completely. Their targets may have changed or been removed. Choose replacement audiences below."; }
         var required = OutfitGenderPolicy.RequiredGender(config.Pieces);
         if (required is "Female" or "Male" && config.Gender != "Any" && config.Gender != required)
             restorationNotes[config] = (restorationNotes.GetValueOrDefault(config) ?? "") + $" Saved {config.Gender} selection is incompatible with {required}-only outfit parts and has been corrected.";
@@ -148,7 +175,7 @@ public sealed class PatchOptionsWindow : Window
         var buttons = new StackPanel { Orientation = Orientation.Horizontal };
         var cancel = UiTheme.Button("Close setup"); cancel.MinWidth = 100; cancel.IsCancel = true;
         cancel.ToolTip = "Close without generating. Your setup choices are saved.";
-        cancel.Click += (_, _) => { SaveAllPages(); DialogResult = false; };
+        cancel.Click += (_, _) => DialogResult = false;
         backButton = UiTheme.Button("← Back"); backButton.MinWidth = 90;
         backButton.Click += (_, _) => { CommitCurrentPage(); ShowPage(currentIndex - 1); };
         skipButton = UiTheme.Button("Skip outfit"); skipButton.MinWidth = 100;
@@ -447,7 +474,7 @@ public sealed class PatchOptionsWindow : Window
             var required = OutfitGenderPolicy.RequiredGender(config.Pieces);
             var incompatible = required is "Female" or "Male" && preset.Gender != "Any" && preset.Gender != required;
             gender.SelectedItem = required is "Female" or "Male" ? required : config.Gender;
-            if (incompatible) MessageBox.Show(this, $"This preset requests {preset.Gender} NPCs, but the outfit has {required}-only parts. NPC sex has been kept at {required}.", "Outfit sex restriction", MessageBoxButton.OK, MessageBoxImage.Warning);
+            if (incompatible) { App.WriteDiagnostic(DiagnosticEvent.OutfitSexMismatch, level: DiagnosticLevel.Warning); MessageBox.Show(this, $"This preset requests {preset.Gender} NPCs, but the outfit has {required}-only parts. NPC sex has been kept at {required}.", "Outfit sex restriction", MessageBoxButton.OK, MessageBoxImage.Warning); }
             feedback.Text = missing > 0 ? $"{missing} preset audience(s) are unavailable in this scan. Choose replacement audiences." : "Audience preset applied. Outfit parts are unchanged.";
             feedback.Visibility = Visibility.Visible; RefreshAudiences(); SaveCurrent();
         };
@@ -482,12 +509,13 @@ public sealed class PatchOptionsWindow : Window
         tools.Children.Add(UiTheme.Caption("Use a separate named outfit for another color or set with different parts or an audience of its own."));
         if (!config.OutfitName.Equals(Path.GetFileNameWithoutExtension(config.Source.Plugin), StringComparison.OrdinalIgnoreCase))
         {
-            var removeVariant = UiTheme.Button("Remove this named outfit"); removeVariant.HorizontalAlignment = HorizontalAlignment.Left;
+            var removeVariant = UiTheme.Button("Remove this saved setup"); removeVariant.HorizontalAlignment = HorizontalAlignment.Left;
             removeVariant.Click += (_, _) =>
             {
-                if (MessageBox.Show(this, $"Remove '{config.OutfitName}' from this patch setup?", "Remove named outfit", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+                if (MessageBox.Show(this, $"Remove '{config.OutfitName}' from saved setup choices? Any generated outfit stays installed. Use My patch → Remove outfit to remove it from the generated patch.", "Remove saved setup", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
                 var index = pages.FindIndex(page => ReferenceEquals(page.Config, config));
                 options.Remove(config); pages.RemoveAt(index); removeSavedOptions(GetSavedKey(config));
+                if (pages.Count == 0) { DialogResult = false; return; }
                 ShowPage(Math.Clamp(index - 1, 0, pages.Count - 1));
             };
             tools.Children.Add(removeVariant);
@@ -518,7 +546,7 @@ public sealed class PatchOptionsWindow : Window
                 if (!merchantTargets.Any(target => target.Category == category)) problems.Add($"No confirmed {category} stock containers found. Rescan or untick that category.");
             if (hasNpcScan && config.TargetRules.Any(rule => targeting.CountMatches(rule, config.Gender) == 0)) problems.Add("One or more saved audiences match no eligible NPCs. Remove or replace those audiences.");
             feedback.Text = string.Join(" ", problems); feedback.Visibility = problems.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
-            if (problems.Count > 0) scroll.ScrollToTop();
+            if (problems.Count > 0) { App.WriteDiagnostic(DiagnosticEvent.OutfitValidationFailed, level: DiagnosticLevel.Warning); scroll.ScrollToTop(); }
             UpdateSummary(); return problems.Count == 0;
         }
         return new PageState(config, scroll, () => { pieceGrid.CommitEdit(DataGridEditingUnit.Cell, true); pieceGrid.CommitEdit(DataGridEditingUnit.Row, true); CommitFields(); }, Validate);
@@ -538,7 +566,7 @@ public sealed class PatchOptionsWindow : Window
             var selected = choices.SelectedItems.Cast<AdvancedChoice>().Select(item => CloneChoice(item.Choice)).ToList();
             if (selected.Count == 0) return;
             var rule = new DistributionTargetRule { Collection = NpcTargetingService.AllCollection, Group = "Custom audience", Filters = selected };
-            if (hasNpcScan && targeting.CountMatches(rule, config.Gender) == 0) { feedback.Text = "Those combined targets match no eligible NPCs. Choose another combination."; feedback.Visibility = Visibility.Visible; return; }
+            if (hasNpcScan && targeting.CountMatches(rule, config.Gender) == 0) { App.WriteDiagnostic(DiagnosticEvent.AudienceValidationFailed, level: DiagnosticLevel.Warning); feedback.Text = "Those combined targets match no eligible NPCs. Choose another combination."; feedback.Visibility = Visibility.Visible; return; }
             if (config.TargetRules.Any(existing => RuleSignature(existing) == RuleSignature(rule))) return;
             config.TargetRules.Add(rule); feedback.Visibility = Visibility.Collapsed; refresh(); save();
         };
@@ -621,7 +649,12 @@ public sealed class PatchOptionsWindow : Window
     }
 
     private void CommitCurrentPage() { if (pages.Count > 0) { pages[currentIndex].Commit(); SavePage(pages[currentIndex].Config); } }
-    private void SaveAllPages() { foreach (var page in pages) { page.Commit(); SavePage(page.Config); } }
+    private void SaveAllPages()
+    {
+        foreach (var page in pages) page.Commit();
+        if (saveBatch is not null) saveBatch(pages.ToDictionary(page => GetSavedKey(page.Config), page => SaveConfiguration(page.Config, true), StringComparer.OrdinalIgnoreCase));
+        else foreach (var page in pages) SavePage(page.Config);
+    }
     private void SavePage(PluginPatchOptions config) => saveOptions(GetSavedKey(config), SaveConfiguration(config, true));
     private static SavedDistributionOptions SaveConfiguration(PluginPatchOptions config, bool includePieces) => new()
     {

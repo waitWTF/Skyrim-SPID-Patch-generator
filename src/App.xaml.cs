@@ -1,36 +1,37 @@
-using System.IO;
-using System.Reflection;
 using System.Windows;
+using System.Diagnostics;
 
 namespace WearableDistributor;
 
 public partial class App : Application
 {
-    private static readonly object LogLock = new();
     private bool reportingFailure;
 
     public App()
     {
         DispatcherUnhandledException += (_, args) =>
         {
-            var path = WriteDiagnostic("Unhandled UI exception", args.Exception);
+            var path = WriteDiagnostic(DiagnosticEvent.UnhandledUiError, args.Exception, DiagnosticLevel.Fatal);
             if (!reportingFailure)
             {
                 reportingFailure = true;
                 MessageBox.Show("Skyrim SPID Patch Generator encountered an unexpected error and must close.\n\n" +
-                    args.Exception.Message + (path is null ? "" : "\n\nDiagnostic details were saved to:\n" + path),
+                    "Error code: APP-1002" + (path is null ? "\n\nA log could not be saved to disk." : "\n\nA shareable log was saved automatically:\n" + path),
                     "Skyrim SPID Patch Generator · Unexpected error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             // Preserve failure semantics. A corrupt application state must not continue generating patches.
             args.Handled = false;
         };
-        AppDomain.CurrentDomain.UnhandledException += (_, args) => WriteDiagnostic("Unhandled process exception", args.ExceptionObject as Exception);
-        TaskScheduler.UnobservedTaskException += (_, args) => WriteDiagnostic("Unobserved background task exception", args.Exception);
+        AppDomain.CurrentDomain.UnhandledException += (_, args) => WriteDiagnostic(DiagnosticEvent.UnhandledProcessError, args.ExceptionObject as Exception, DiagnosticLevel.Fatal);
+        TaskScheduler.UnobservedTaskException += (_, args) => WriteDiagnostic(DiagnosticEvent.UnobservedTaskError, args.Exception);
+        PresentationTraceSources.DataBindingSource.Listeners.Clear();
+        PresentationTraceSources.DataBindingSource.Listeners.Add(new SafeBindingListener());
+        PresentationTraceSources.DataBindingSource.Switch.Level = SourceLevels.Error;
     }
 
     protected override void OnStartup(StartupEventArgs e)
     {
-        WriteDiagnostic("Application started · " + (Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "unknown version"));
+        WriteDiagnostic(DiagnosticEvent.ApplicationStarted, level: DiagnosticLevel.Information);
         base.OnStartup(e);
         var splash = new StartupWindow();
         splash.Show();
@@ -49,20 +50,19 @@ public partial class App : Application
         }));
     }
 
-    internal static string? WriteDiagnostic(string message, Exception? exception = null)
+    protected override void OnExit(ExitEventArgs e)
     {
-        try
-        {
-            var preferenceOverride = Environment.GetEnvironmentVariable("WEARABLE_DISTRIBUTOR_SETTINGS_DIR");
-            var directory = Path.Combine(string.IsNullOrWhiteSpace(preferenceOverride)
-                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WearableDistributor")
-                : preferenceOverride, "Logs");
-            Directory.CreateDirectory(directory);
-            var path = Path.Combine(directory, "application-" + DateTime.UtcNow.ToString("yyyy-MM-dd") + ".log");
-            lock (LogLock) File.AppendAllText(path, DateTime.UtcNow.ToString("O") + " · " + message + Environment.NewLine + (exception is null ? "" : exception + Environment.NewLine));
-            return path;
-        }
-        catch (IOException) { return null; }
-        catch (UnauthorizedAccessException) { return null; }
+        WriteDiagnostic(DiagnosticEvent.ApplicationStopped, level: DiagnosticLevel.Information);
+        base.OnExit(e);
+    }
+
+    internal static string? WriteDiagnostic(DiagnosticEvent eventId, Exception? exception = null, DiagnosticLevel level = DiagnosticLevel.Error) => SupportLog.Record(eventId, exception, level);
+
+    private sealed class SafeBindingListener : TraceListener
+    {
+        public override void Write(string? message) => SupportLog.Record(DiagnosticEvent.UiBindingFailed);
+        public override void WriteLine(string? message) => SupportLog.Record(DiagnosticEvent.UiBindingFailed);
+        public override void TraceEvent(TraceEventCache? eventCache, string source, TraceEventType eventType, int id, string? message) => SupportLog.Record(DiagnosticEvent.UiBindingFailed);
+        public override void TraceEvent(TraceEventCache? eventCache, string source, TraceEventType eventType, int id, string? format, params object?[]? args) => SupportLog.Record(DiagnosticEvent.UiBindingFailed);
     }
 }

@@ -8,13 +8,23 @@
 
 Skyrim SPID Patch Generator is a Windows desktop app for Skyrim Special Edition / Anniversary Edition. It scans installed plugins for wearable armor, clothing and accessories, groups them by source plugin, and guides you through choosing **who wears what**. It generates an outfit ESP and the matching **SPID or SkyPatcher INI** without making you write distribution rules yourself.
 
-**0.4.5 development preview** · Windows x64 · .NET 10 Desktop Runtime · MIT license
+**0.4.6 development preview** · Windows x64 · .NET 10 Desktop Runtime · MIT license
 
 Previously called **Wearable Distributor**. Start `SkyrimSPIDPatchGenerator.exe`. Existing settings, backups and generated `WearableDistributor.*` patch filenames are retained for compatibility; they do not need renaming.
 
 [Downloads](https://github.com/waitWTF/Skyrim-SPID-Patch-generator/releases) · [Issues and ideas](https://github.com/waitWTF/Skyrim-SPID-Patch-generator/issues) · [Changelog](RELEASE_NOTES.md) · [Source code](https://github.com/waitWTF/Skyrim-SPID-Patch-generator)
 
 > **Preview status:** generated files have validation checks, but successful outfit distribution has not yet been confirmed in a live Skyrim session. Use a separate test profile before relying on the output in a main playthrough. Images below use synthetic demo records; they are not in-game results or a list of bundled outfit mods.
+
+## New in 0.4.6: shareable error reports and easier repatching
+
+**Error reports** is always available at the top of the main window. Open it to preview and **Save report**, **Copy latest error**, refresh the report, or open the safe log folder. Reports contain app version, fixed error/reason codes, HRESULT values and application method tokens. They exclude personal paths, usernames, exact timestamps, installed mod names/lists, settings, raw exception messages, screenshots and game logs. Nothing is uploaded automatically. Previous `application-*.log` files can contain paths and are never included. Local scan details stay on screen; the former scan-report export now opens the shareable error-report window. Settings exports and **Export patch contents** are separate user-data features and are not support logs.
+
+**My patch → Edit / repatch selected** opens just that named outfit. **Repatch all** uses saved choices and goes straight to a combined review when they remain valid; setups needing attention open in the wizard. The saved output folder is reused, and the review shows its destination before writing. Other variants from the same plugin are retained. Removing a saved setup does not uninstall an existing outfit—use **My patch → Remove outfit** for that.
+
+Selected entries with missing, duplicate or incomplete distribution sections can now be rebuilt without the old pre-merge validation rejecting the repair itself. A missing shared NPC INI requires regenerating all entries that need it. Untouched damaged entries still block the final update. Existing readable outfit records keep their FormIDs, and the full staged ESP/INI/inventory/merchandise set must validate before backup and commit. Unsupported corruption or an unreadable/missing ESP still requires restoring a backup or using a new output folder. INI validation indexes each file once per operation, and legacy migration reads the generated ESP once rather than once per outfit.
+
+See [report privacy, retention and repatching details](docs/ERROR_REPORTS_AND_REPATCHING.md). Build verification only; no new automated, runtime UI or in-game checks were run for 0.4.6. Native failures before .NET starts, forced termination and unrecoverable resource exhaustion may not reach a managed logger.
 
 ## New in 0.4.5: outfit discovery and distribution presets
 
@@ -108,7 +118,7 @@ See which outfits have already been patched, their engine, chance, audience and 
 | Readable targeting | Collection → group → optional roles/races. Choices come from that group's scanned population. |
 | Saved setups | Remembers parts, audiences, sex and chance; supports reusable audience presets and named outfit variants. |
 | Incremental patching | Add another source plugin while retaining previous plugins' outfits. Repatching preserves stable generated outfit IDs. |
-| Progress and diagnostics | Background scans, cancellation, progress indicators, missing-master checks and exportable scan reports. |
+| Progress and diagnostics | Background scans, cancellation, progress indicators, local scan details and shareable error reports. |
 | Recovery and packaging | Output validation, checksummed backups, patch-health information and generated mod ZIP export. |
 
 Smart filtering is a convenience, not a perfect classifier. Reveal filtered candidates if an outfit is missing. Manual inclusion cannot bypass missing/inactive master requirements.
@@ -207,11 +217,11 @@ Keep the ESP, selected engine's INI and manifest together. The installable ZIP i
 - **Other outfits take priority:** other distributors and game behavior can compete. Template-inherited inventory, especially with SkyPatcher, still needs in-game verification.
 - **Output is damaged:** inspect patch-health details and backup recovery. Old backups without checksum metadata cannot be restored automatically by this preview.
 
-Settings/logs are under `%LOCALAPPDATA%\WearableDistributor`; generated-output backups use its `Backups` folder. Reports may contain paths/mod names: review before sharing.
+Settings are under `%LOCALAPPDATA%\WearableDistributor`; generated-output backups use its `Backups` folder. New automatic error logs use `SupportLogs`. Click **Error reports → Save report** for sharing. Older `Logs/application-*.log` files, settings exports and patch-content exports can contain private paths or mod details and are excluded from the shareable report.
 
 ## For modders and contributors
 
-Corrections, improvements, forks and alternative implementations are welcome. [Open an issue](https://github.com/waitWTF/Skyrim-SPID-Patch-generator/issues) with ideas or problems. Include app version, game runtime, manager, scan-folder type, profile-list use and a redacted error/report. Do not attach another author's plugin/assets without permission.
+Corrections, improvements, forks and alternative implementations are welcome. [Open an issue](https://github.com/waitWTF/Skyrim-SPID-Patch-generator/issues) with ideas or problems. Describe what you clicked and attach **Error reports → Save report**. You can also state your manager and game version if relevant. Do not attach another author's plugin/assets without permission.
 
 Useful contribution areas: NPC/template resolution, wearable classification, runtime verification, accessibility, manager integration and UI usability.
 
