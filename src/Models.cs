@@ -122,6 +122,7 @@ public sealed class AppPreferences
 {
     public int SchemaVersion { get; set; } = 2;
     public string DataPath { get; set; } = "";
+    public string BaseGameDataPath { get; set; } = "";
     public string PluginListPath { get; set; } = "";
     public string OutputPath { get; set; } = "";
     public string Framework { get; set; } = "SPID";

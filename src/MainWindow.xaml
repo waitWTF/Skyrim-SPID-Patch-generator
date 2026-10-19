@@ -98,7 +98,7 @@
               <TextBlock Text="Choose your mods. Decide who wears them. Build one patch." Foreground="{DynamicResource MutedBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,8,0,0" />
             </StackPanel>
           </Border>
-          <TextBlock Text="0.4.3 · GUARD PROTECTION" FontSize="9" Foreground="{DynamicResource MutedBrush}" Margin="5,0,0,6" />
+          <TextBlock Text="0.4.4 · DEVELOPMENT PREVIEW" FontSize="9" Foreground="{DynamicResource MutedBrush}" Margin="5,0,0,6" />
           <TextBlock Text="Skyrim Special Edition / Anniversary" FontSize="10" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="5,0,0,0" />
         </StackPanel>
       </DockPanel>
@@ -273,8 +273,15 @@
                       <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <TextBox x:Name="DataPathBox" MinWidth="120" Padding="10,8" VerticalAlignment="Center" />
-                    <Button Grid.Column="1" Content="Find Skyrim" Click="FindData_Click" />
+                    <Button Grid.Column="1" Content="Smart detect…" Click="FindData_Click" ToolTip="Find MO2 instances, game Data and configured profile lists" />
                     <Button Grid.Column="2" Content="Browse…" Click="BrowseData_Click" />
+                  </Grid>
+                  <TextBlock Text="Game Data folder override (optional)" FontWeight="SemiBold" />
+                  <TextBlock Text="If scanning a mods folder, choose the game's Data folder containing Skyrim.esm here. Leave blank for automatic detection. For MO2, launch through MO2 and use the Data folder for that instance's game." Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,5,0,7" />
+                  <Grid Margin="0,0,0,14">
+                    <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                    <TextBox x:Name="BaseGameDataPathBox" MinWidth="120" Padding="10,8" VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Content="Browse…" Click="BrowseBaseGameData_Click" />
                   </Grid>
                   <TextBlock Text="Active profile list (optional)" FontWeight="SemiBold" />
                   <TextBlock Text="Choose plugins.txt to use enabled plugins and profile order. A loadorder.txt supplies order but does not identify disabled plugins." Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,5,0,7" />
@@ -370,3 +377,5 @@
     </Grid>
   </Grid>
 </Window>
+
+

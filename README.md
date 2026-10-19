@@ -8,13 +8,23 @@
 
 Skyrim SPID Patch Generator is a Windows desktop app for Skyrim Special Edition / Anniversary Edition. It scans installed plugins for wearable armor, clothing and accessories, groups them by source plugin, and guides you through choosing **who wears what**. It generates an outfit ESP and the matching **SPID or SkyPatcher INI** without making you write distribution rules yourself.
 
-**0.4.3 development preview** · Windows x64 · .NET 10 Desktop Runtime · MIT license
+**0.4.4 development preview** · Windows x64 · .NET 10 Desktop Runtime · MIT license
 
 Previously called **Wearable Distributor**. Start `SkyrimSPIDPatchGenerator.exe`. Existing settings, backups and generated `WearableDistributor.*` patch filenames are retained for compatibility; they do not need renaming.
 
 [Downloads](https://github.com/waitWTF/Skyrim-SPID-Patch-generator/releases) · [Issues and ideas](https://github.com/waitWTF/Skyrim-SPID-Patch-generator/issues) · [Changelog](RELEASE_NOTES.md) · [Source code](https://github.com/waitWTF/Skyrim-SPID-Patch-generator)
 
 > **Preview status:** generated files have validation checks, but successful outfit distribution has not yet been confirmed in a live Skyrim session. Use a separate test profile before relying on the output in a main playthrough. Images below use synthetic demo records; they are not in-game results or a list of bundled outfit mods.
+
+## Smart folder detection (0.4.4)
+
+Open **Settings → Smart detect…**. The app looks for MO2 instances and their configured game/profile paths, checks for `Skyrim.esm`, and reports how many enabled profile plugins are visible. Select the matching location to fill the scan folder and profile list together. Detection runs automatically when a saved scan folder is missing, or an MO2 launch would scan a non-Data folder.
+
+**MO2:** launch the app through the correct MO2 instance first. A standalone program cannot see virtual mods simply because it found an MO2 configuration. Detection reads the profile saved in MO2's configuration; if you use a command-line profile override or another active profile, select its actual `plugins.txt` manually. Multiple candidates require a choice instead of silently switching installations.
+
+**Vortex:** deploy first and choose the installed game's Data location. Manual staging scans remain available; use **Game Data folder override** if base-game discovery fails. The override must contain `Skyrim.esm`. Missing and unreadable base masters now produce separate errors instead of an apparently successful zero-NPC scan.
+
+No output folder is guessed, and detection does not change MO2, load order or game files. The 0.4.4 build compiled successfully; its new discovery flow has not been tested against the reporting user's setup or in-game. Earlier screenshots show the 0.4.1 interface.
 
 ## New in 0.4.3: protect uniformed NPCs
 

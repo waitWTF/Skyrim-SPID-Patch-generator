@@ -19,6 +19,7 @@ public static class PreferencesService
         if (value.SchemaVersion > 3) throw new InvalidDataException("These settings were created by a newer app. Update Skyrim SPID Patch Generator before importing them.");
         value.SchemaVersion = 2;
         value.DataPath = (value.DataPath ?? "").Trim(); value.PluginListPath = (value.PluginListPath ?? "").Trim();
+        value.BaseGameDataPath = (value.BaseGameDataPath ?? "").Trim();
         value.OutputPath = (value.OutputPath ?? "").Trim(); value.BackupOutputPath ??= "";
         value.Framework = value.Framework?.Equals("SkyPatcher", StringComparison.OrdinalIgnoreCase) == true ? "SkyPatcher" : "SPID";
         value.DefaultChance = int.TryParse(value.DefaultChance?.Trim().TrimEnd('%'), out var chance) && chance is >= 1 and <= 100 ? chance.ToString() : "25";

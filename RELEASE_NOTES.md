@@ -1,3 +1,14 @@
+# 0.4.4 development preview — 2026-10-19
+
+- Added Settings → Smart detect to find MO2 instances, their configured game Data and profile list, and installed Skyrim locations. Multiple choices show their paths and plugin-visibility evidence before selection.
+- Detects MO2's attached USVFS DLL. Finding an MO2 configuration while running standalone does not make its virtual mods visible; launch through MO2 to use that location.
+- Supports nearby portable MO2 configurations, registered LocalAppData instances, custom base/profile directories and Qt-escaped game paths. Configured profile names can differ from MO2 command-line overrides: review the selected profile list.
+- Startup opens detection when the saved scan folder is missing, or points to a non-Data folder while MO2 is attached. Existing valid saved locations remain reusable.
+- Added an optional Game Data folder override for staging/custom setups, and separate actionable errors when Skyrim.esm is missing or unreadable. Implicit masters are still included independently of plugins.txt.
+- Scan diagnostics now show base-game Data, profile list and whether MO2's virtual filesystem is attached. Choosing a detected location clears stale scan results before rescanning.
+- Retains guard protection and the app-specific MO2 startup compatibility setting. Rescan and regenerate existing entries to refresh their recipient rules.
+- Release build succeeded. No new tests, commenter-setup reproduction or in-game validation was performed for this update. This addresses a discovered detection gap; the reported missing-master case is not yet confirmed resolved.
+
 # 0.4.3 development preview — 2026-10-18
 
 - Removed guards and related uniformed protectors from NPC distribution audiences, including broad groups, inherited alternatives and restored choices.

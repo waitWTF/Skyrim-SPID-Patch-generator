@@ -37,6 +37,17 @@ public sealed class WearableScanService
         progress?.Report(new ScanProgress("Finding installed plugins", 0, 0));
         var discovered = EnumerateFiles(root, cancellationToken, result.Diagnostics).ToList();
         var paths = SelectPluginPaths(root, discovered.Where(IsPluginFile), result.Diagnostics);
+        if (!string.IsNullOrWhiteSpace(preferences.BaseGameDataPath))
+        {
+            if (!GameDataLocator.IsGameData(preferences.BaseGameDataPath))
+                throw new DirectoryNotFoundException("The game Data folder override must contain Skyrim.esm. Select the actual game's Data folder in Settings; a mod folder or MO2 profiles folder is not sufficient.");
+            baselineDataPath = preferences.BaseGameDataPath;
+        }
+        else baselineDataPath = GameDataLocator.Find(root, preferences.PluginListPath, baselineDataPath);
+        result.Diagnostics.Add($"Plugin scan folder: {root}");
+        result.Diagnostics.Add($"Base game Data: {baselineDataPath ?? "not found"}");
+        result.Diagnostics.Add($"MO2 virtual filesystem: {(ScanLocationDiscovery.IsMo2Attached() ? "attached" : "not detected")}");
+        result.Diagnostics.Add($"Profile plugin list: {(string.IsNullOrWhiteSpace(preferences.PluginListPath) ? "not selected" : preferences.PluginListPath)}");
         if (!string.IsNullOrWhiteSpace(baselineDataPath) && Directory.Exists(baselineDataPath))
             foreach (var name in OfficialNames)
             {
@@ -44,6 +55,8 @@ public sealed class WearableScanService
                 if (!paths.ContainsKey(name) && File.Exists(file)) paths[name] = file;
             }
         var implicitOrder = ReadImplicitPluginOrder(root, baselineDataPath, paths, result.Diagnostics);
+        if (!paths.ContainsKey("Skyrim.esm"))
+            throw new FileNotFoundException("Skyrim.esm was not found. Scan the game's Data folder through MO2, or set the game Data folder override in Settings to the folder containing Skyrim.esm. The profile's plugins.txt normally omits this implicit master; do not add it manually or disable master validation.");
         var order = ReadProfilePluginOrder(preferences.PluginListPath, result.Diagnostics);
         order.RemoveAll(name => name.Equals(PatchGenerator.OutputPluginName, StringComparison.OrdinalIgnoreCase));
         result.HasProfileLoadOrder = !string.IsNullOrWhiteSpace(preferences.PluginListPath);
@@ -69,6 +82,8 @@ public sealed class WearableScanService
             catch (Exception ex) { result.Diagnostics.Add($"Cannot read {name}: {ex.Message}"); order.Remove(name); }
         }
         if (!result.HasProfileLoadOrder) order = OrderByDependencies(order, headers, result.Diagnostics);
+        if (!headers.ContainsKey("Skyrim.esm"))
+            throw new InvalidDataException("Skyrim.esm was found but could not be read. Check the game Data path, file access and MO2 virtual Data. " + string.Join(" ", result.Diagnostics.Where(line => line.StartsWith("Cannot read Skyrim.esm:", StringComparison.OrdinalIgnoreCase))));
         var positions = order.Select((name, index) => (name, index)).ToDictionary(item => item.name, item => item.index, StringComparer.OrdinalIgnoreCase);
         var invalid = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var name in order)

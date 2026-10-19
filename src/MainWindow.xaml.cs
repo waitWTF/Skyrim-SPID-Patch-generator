@@ -27,6 +27,7 @@ public partial class MainWindow : Window
     private bool activePluginFilterApplied;
     private CancellationTokenSource? scanCancellation;
     private bool isGenerating;
+    private bool isDiscoveringLocations;
     private string lastScanReport = "No scan report yet.";
     private bool settingsRecoveryRequired;
 
@@ -46,6 +47,7 @@ public partial class MainWindow : Window
         Closed += (_, _) => scanCancellation?.Cancel();
         LoadPreferences();
         DataPathBox.Text = preferences.DataPath;
+        BaseGameDataPathBox.Text = preferences.BaseGameDataPath;
         OutputPathBox.Text = preferences.OutputPath;
         PluginListPathBox.Text = preferences.PluginListPath;
         DefaultFrameworkBox.SelectedIndex = preferences.Framework == "SkyPatcher" ? 1 : 0;
@@ -56,15 +58,8 @@ public partial class MainWindow : Window
         ActivePathText.Text = string.IsNullOrWhiteSpace(dataPath) ? "Choose your Skyrim Data or mod staging folder in Settings." : dataPath;
         UpdateSelectionSummary();
         if (Environment.GetEnvironmentVariable("WEARABLE_DISTRIBUTOR_NO_AUTOSCAN") == "1" || settingsRecoveryRequired) { RefreshInventory(); return; }
-        if (Directory.Exists(dataPath)) ScanFolder();
-        else if (TryFindDataFolder(out var discovered))
-        {
-            dataPath = discovered;
-            DataPathBox.Text = discovered;
-            preferences.DataPath = discovered;
-            SavePreferences();
-            ScanFolder();
-        }
+        if (Directory.Exists(dataPath) && (!ScanLocationDiscovery.IsMo2Attached() || GameDataLocator.IsGameData(dataPath))) ScanFolder();
+        else Loaded += (_, _) => FindData_Click(this, new RoutedEventArgs());
     }
 
     private void LoadPreferences()
@@ -95,8 +90,11 @@ public partial class MainWindow : Window
         }
     }
 
-    private static bool TryFindDataFolder(out string path)
+    private bool TryFindDataFolder(out string path, AppPreferences? settings = null)
     {
+        settings ??= preferences;
+        var contextual = GameDataLocator.Find(settings.DataPath, settings.PluginListPath, settings.BaseGameDataPath);
+        if (contextual is not null) { path = contextual; return true; }
         var roots = new List<string>
         {
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Steam", "steamapps", "common", "Skyrim Special Edition", "Data"),
@@ -119,7 +117,7 @@ public partial class MainWindow : Window
                 roots.Add(Path.Combine(match.Groups[1].Value.Replace("\\\\", "\\"), "steamapps", "common", "Skyrim Special Edition", "Data"));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { App.WriteDiagnostic("Could not read optional Steam library locations", ex); }
-        path = roots.FirstOrDefault(Directory.Exists) ?? "";
+        path = roots.FirstOrDefault(GameDataLocator.IsGameData) ?? "";
         return !string.IsNullOrEmpty(path);
     }
 
@@ -136,6 +134,12 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog(this) == true) PluginListPathBox.Text = dialog.FileName;
     }
 
+    private void BrowseBaseGameData_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFolderDialog { Title = "Choose the game Data folder containing Skyrim.esm" };
+        if (dialog.ShowDialog(this) == true) BaseGameDataPathBox.Text = dialog.FolderName;
+    }
+
     private void BrowseOutput_Click(object sender, RoutedEventArgs e)
     {
         if (scanCancellation != null || isGenerating) return;
@@ -146,19 +150,45 @@ public partial class MainWindow : Window
         StatusText.Text = "Output folder selected. The patch library now shows generated outfits in this folder.";
     }
 
-    private void FindData_Click(object sender, RoutedEventArgs e)
+    private async void FindData_Click(object sender, RoutedEventArgs e)
     {
-        if (scanCancellation != null || isGenerating) return;
-        if (!TryFindDataFolder(out var discovered))
+        if (scanCancellation != null || isGenerating || isDiscoveringLocations) return;
+        isDiscoveringLocations = true;
+        ScanButton.IsEnabled = false; GenerateButton.IsEnabled = false;
+        ActionProgress.Visibility = Visibility.Visible; ActionProgress.IsIndeterminate = true;
+        StatusText.Text = "Finding MO2 instances, game Data and profile plugin visibility…";
+        ScanLocation? selected = null;
+        try
         {
-            MessageBox.Show(this, "I couldn't find Skyrim's Data folder in the usual Steam or GOG locations. Browse to it manually, or choose your Vortex staging folder.", "Skyrim folder not found", MessageBoxButton.OK, MessageBoxImage.Information);
-            return;
+            var snapshot = PreferencesService.Clone(preferences);
+            snapshot.DataPath = DataPathBox.Text.Trim(); snapshot.PluginListPath = PluginListPathBox.Text.Trim();
+            snapshot.BaseGameDataPath = BaseGameDataPathBox.Text.Trim();
+            var locations = await Task.Run(() =>
+            {
+                TryFindDataFolder(out var fallback, snapshot);
+                return ScanLocationDiscovery.Discover(snapshot, fallback);
+            });
+            var dialog = new ScanLocationWindow(locations) { Owner = this };
+            if (dialog.ShowDialog() == true) selected = dialog.SelectedLocation;
+            if (selected == null) { StatusText.Text = "Folder detection canceled. You can still browse manually in Settings."; return; }
+            DataPathBox.Text = preferences.DataPath = dataPath = selected.DataPath;
+            // Use the game Data as the scan root, never an MO2 mods folder with ambiguous winners.
+            BaseGameDataPathBox.Text = preferences.BaseGameDataPath = "";
+            PluginListPathBox.Text = preferences.PluginListPath = selected.ProfilePath;
+            scannedPlugins.Clear(); availableKeywords.Clear(); npcProfiles.Clear(); merchantTargets.Clear(); scannedDistributionRules.Clear();
+            RefreshPluginList();
+            SavePreferences();
+            lastScanReport = "Detected scan location:\n" + selected.Explanation;
+            ScanDiagnosticsBox.Text = lastScanReport;
         }
-        DataPathBox.Text = discovered;
-        preferences.DataPath = discovered;
-        dataPath = discovered;
-        SavePreferences();
-        ScanFolder();
+        catch (Exception ex) { App.WriteDiagnostic("Folder discovery failed", ex); StatusText.Text = "Folder detection failed: " + ex.Message + ". Browse manually in Settings."; }
+        finally
+        {
+            isDiscoveringLocations = false; ScanButton.IsEnabled = true;
+            ActionProgress.IsIndeterminate = false; ActionProgress.Visibility = Visibility.Collapsed;
+            UpdateSelectionSummary();
+        }
+        if (selected != null) ScanFolder();
     }
 
     private void SavePreferences_Click(object sender, RoutedEventArgs e)
@@ -166,6 +196,7 @@ public partial class MainWindow : Window
         if (scanCancellation != null || isGenerating) return;
         settingsRecoveryRequired = false;
         preferences.DataPath = DataPathBox.Text.Trim();
+        preferences.BaseGameDataPath = BaseGameDataPathBox.Text.Trim();
         preferences.PluginListPath = PluginListPathBox.Text.Trim();
         preferences.OutputPath = OutputPathBox.Text.Trim();
         dataPath = preferences.DataPath;
@@ -183,6 +214,7 @@ public partial class MainWindow : Window
     {
         if (scanCancellation != null || isGenerating) return;
         dataPath = DataPathBox.Text.Trim();
+        preferences.BaseGameDataPath = BaseGameDataPathBox.Text.Trim();
         preferences.PluginListPath = PluginListPathBox.Text.Trim();
         if (!Directory.Exists(dataPath))
         {
@@ -197,7 +229,7 @@ public partial class MainWindow : Window
 
     private async void ScanFolder()
     {
-        if (scanCancellation != null || isGenerating) return;
+        if (scanCancellation != null || isGenerating || isDiscoveringLocations) return;
         var cancellation = new CancellationTokenSource();
         scanCancellation = cancellation;
         var requestedRoot = dataPath;
@@ -264,7 +296,7 @@ public partial class MainWindow : Window
         if (SelectionCountText == null) return;
         var count = scannedPlugins.Count(plugin => plugin.Selected && plugin.CanPatch && !preferences.IgnoredPlugins.Contains(plugin.Plugin) && (!plugin.IsFiltered || preferences.IncludedPlugins.Contains(plugin.Plugin)));
         SelectionCountText.Text = $"{count} outfit{(count == 1 ? "" : "s")} selected";
-        GenerateButton.IsEnabled = scanCancellation == null && !isGenerating && count > 0;
+        GenerateButton.IsEnabled = scanCancellation == null && !isGenerating && !isDiscoveringLocations && count > 0;
     }
     private void PluginSelectionChanged(object sender, RoutedEventArgs e) => UpdateSelectionSummary();
     private void ExportScanReport_Click(object sender, RoutedEventArgs e)
@@ -640,6 +672,7 @@ public partial class MainWindow : Window
             preferences = PreferencesService.Load(dialog.FileName);
             settingsRecoveryRequired = false;
             DataPathBox.Text = preferences.DataPath; dataPath = preferences.DataPath;
+            BaseGameDataPathBox.Text = preferences.BaseGameDataPath;
             OutputPathBox.Text = preferences.OutputPath;
             PluginListPathBox.Text = preferences.PluginListPath;
             DefaultFrameworkBox.SelectedIndex = preferences.Framework == "SkyPatcher" ? 1 : 0;
