@@ -32,6 +32,21 @@ public partial class App : Application
     {
         WriteDiagnostic("Application started · " + (Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "unknown version"));
         base.OnStartup(e);
+        var splash = new StartupWindow();
+        splash.Show();
+        // Let WPF render the icon before loading preferences and creating the main workspace.
+        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ApplicationIdle, new Action(() =>
+        {
+            var workspace = new MainWindow();
+            MainWindow = workspace;
+            workspace.ContentRendered += OnReady;
+            workspace.Show();
+            void OnReady(object? sender, EventArgs args)
+            {
+                workspace.ContentRendered -= OnReady;
+                splash.Close();
+            }
+        }));
     }
 
     internal static string? WriteDiagnostic(string message, Exception? exception = null)

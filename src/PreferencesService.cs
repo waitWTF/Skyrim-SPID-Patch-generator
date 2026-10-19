@@ -25,6 +25,14 @@ public static class PreferencesService
         value.DefaultChance = int.TryParse(value.DefaultChance?.Trim().TrimEnd('%'), out var chance) && chance is >= 1 and <= 100 ? chance.ToString() : "25";
         value.IgnoredPlugins = new HashSet<string>((value.IgnoredPlugins ?? []).Where(ValidPlugin), StringComparer.OrdinalIgnoreCase);
         value.IncludedPlugins = new HashSet<string>((value.IncludedPlugins ?? []).Where(ValidPlugin), StringComparer.OrdinalIgnoreCase);
+        value.DisabledPlugins = new HashSet<string>((value.DisabledPlugins ?? []).Where(ValidPlugin), StringComparer.OrdinalIgnoreCase);
+        // Earlier versions could bulk-include every filtered plugin. Reconfirm those overrides once under the new policy.
+        // Outfit setups, manual hiding and generated patches are retained.
+        if (value.SmartFilterRevision < WearableFilterService.Revision)
+        {
+            value.IncludedPlugins.Clear();
+            value.SmartFilterRevision = WearableFilterService.Revision;
+        }
         value.AdditionalExclusions = (value.AdditionalExclusions ?? []).Where(term => !string.IsNullOrWhiteSpace(term)).Select(term => term.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         value.DistributionSettings = NormalizeSettings(value.DistributionSettings);
         value.DistributionPresets = NormalizeSettings(value.DistributionPresets);

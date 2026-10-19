@@ -51,7 +51,7 @@ Optional merchandise requires SkyPatcher even when NPC outfits use SPID; keep it
 Enable SkyPatcher container patching (iEnableContainerPatching=1 in your installed SkyPatcher.ini) to use merchandise.
 Existing WearableDistributor.esp/INI/settings names are retained for compatibility. Do not rename generated records/files by hand.
 Source and documentation: https://github.com/waitWTF/Skyrim-SPID-Patch-generator
-This follow-up was built and UI-rendered. The repository includes verification checks; the new merchandise feature has not been verified in Skyrim.
+This follow-up was compiled. New scan classification, preset/UI interactions and in-game distribution were not runtime-tested for 0.4.5. See the research/policy document and release notes.
 '@ | Set-Content -LiteralPath (Join-Path $appPath 'START-HERE.txt') -Encoding UTF8
     $appZip = Join-Path $outputPath "SkyrimSPIDPatchGenerator-v$version-preview-win-x64-$timestamp.zip"
     $sourceZip = "$bundlePath.zip"

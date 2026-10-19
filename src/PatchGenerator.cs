@@ -234,6 +234,7 @@ public static class PatchGenerator
             throw new InvalidOperationException("An outfit name cannot contain line breaks.");
         if (configuration.Gender is not ("Any" or "Male" or "Female"))
             throw new InvalidOperationException("Choose Any, Male, or Female for NPC sex.");
+        if (OutfitGenderPolicy.ValidationIssue(configuration) is { } sexIssue) throw new InvalidOperationException(sexIssue);
         foreach (var piece in configuration.Pieces.Where(piece => piece.Include))
         {
             DistributionRuleCompiler.ValidatePluginName(piece.Plugin);

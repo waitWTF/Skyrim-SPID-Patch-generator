@@ -98,7 +98,7 @@
               <TextBlock Text="Choose your mods. Decide who wears them. Build one patch." Foreground="{DynamicResource MutedBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,8,0,0" />
             </StackPanel>
           </Border>
-          <TextBlock Text="0.4.4 · DEVELOPMENT PREVIEW" FontSize="9" Foreground="{DynamicResource MutedBrush}" Margin="5,0,0,6" />
+          <TextBlock Text="0.4.5 · DEVELOPMENT PREVIEW" FontSize="9" Foreground="{DynamicResource MutedBrush}" Margin="5,0,0,6" />
           <TextBlock Text="Skyrim Special Edition / Anniversary" FontSize="10" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="5,0,0,0" />
         </StackPanel>
       </DockPanel>
@@ -162,24 +162,55 @@
                   <Button Content="Invert" Style="{StaticResource QuietAction}" Click="InvertSelection_Click" />
                 </StackPanel>
               </Grid>
-              <Expander Header="Filters and selection tools" Margin="0,8,0,0">
+              <WrapPanel Margin="0,9,0,0">
+                <Button Content="Enable selected" Style="{StaticResource QuietAction}" Click="EnableSelected_Click" ToolTip="Include highlighted rows in patch setup. Does not activate game plugins." />
+                <Button Content="Disable selected" Style="{StaticResource QuietAction}" Click="DisableSelected_Click" ToolTip="Leave highlighted rows out of patch setup. Does not deactivate game plugins." />
+                <Button Content="Hide selected" Style="{StaticResource QuietAction}" Click="IgnorePlugin_Click" ToolTip="Remember these plugins as hidden until you restore them." />
+              </WrapPanel>
+              <Expander Header="Hidden outfits and filter tools" Margin="0,8,0,0">
                 <StackPanel Margin="0,8,0,2">
                   <WrapPanel>
                     <CheckBox x:Name="ShowFilteredBox" Content="Show hidden candidates" Margin="0,4,20,4" Checked="RefreshPluginList" Unchecked="RefreshPluginList" ToolTip="Inspect plugins held back by the smart filter" />
                     <CheckBox x:Name="ShowIgnoredBox" Content="Show my exclusions" Margin="0,4,10,4" Checked="RefreshPluginList" Unchecked="RefreshPluginList" />
+                    <CheckBox x:Name="ShowPatchedBox" Content="Show already patched outfits" Margin="0,4,10,4" Checked="RefreshPluginList" Unchecked="RefreshPluginList" ToolTip="Successfully patched outfits are hidden automatically. My patch always lists their details." />
                   </WrapPanel>
                   <WrapPanel Margin="0,5,0,0">
-                    <Button Content="Enable highlighted" Style="{StaticResource QuietAction}" Click="EnableSelected_Click" />
-                    <Button Content="Disable highlighted" Style="{StaticResource QuietAction}" Click="DisableSelected_Click" />
                     <Button Content="Include hidden candidate" Style="{StaticResource QuietAction}" Click="IncludeFiltered_Click" />
-                    <Button Content="Remember exclusion" Style="{StaticResource QuietAction}" Click="IgnorePlugin_Click" />
-                    <Button Content="Restore exclusion" Style="{StaticResource QuietAction}" Click="RestorePlugin_Click" />
+                    <Button Content="Unhide selected" Style="{StaticResource QuietAction}" Click="RestorePlugin_Click" />
                   </WrapPanel>
                 </StackPanel>
               </Expander>
             </StackPanel>
             <Grid Grid.Row="1">
-              <DataGrid x:Name="PluginsGrid" AutoGenerateColumns="False" CanUserAddRows="False" SelectionMode="Extended" IsReadOnly="False" EnableRowVirtualization="True" EnableColumnVirtualization="True">
+              <DataGrid x:Name="PluginsGrid" AutoGenerateColumns="False" CanUserAddRows="False" SelectionMode="Extended" IsReadOnly="False" EnableRowVirtualization="True" EnableColumnVirtualization="True" PreviewMouseRightButtonDown="PluginRightClick">
+                <DataGrid.ContextMenu>
+                  <ContextMenu Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource TextBrush}" BorderBrush="{DynamicResource BorderBrush}">
+                    <ContextMenu.Resources>
+                      <Style TargetType="MenuItem">
+                        <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+                        <Setter Property="Template">
+                          <Setter.Value>
+                            <ControlTemplate TargetType="MenuItem">
+                              <Border x:Name="MenuHighlight" Padding="12,8" Background="Transparent" CornerRadius="4">
+                                <ContentPresenter ContentSource="Header" RecognizesAccessKey="True" />
+                              </Border>
+                              <ControlTemplate.Triggers>
+                                <Trigger Property="IsHighlighted" Value="True"><Setter TargetName="MenuHighlight" Property="Background" Value="{DynamicResource RaisedBrush}" /></Trigger>
+                                <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.45" /></Trigger>
+                              </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                          </Setter.Value>
+                        </Setter>
+                      </Style>
+                    </ContextMenu.Resources>
+                    <MenuItem Header="Enable selected for patch" Click="EnableSelected_Click" />
+                    <MenuItem Header="Disable selected for patch" Click="DisableSelected_Click" />
+                    <Separator />
+                    <MenuItem Header="Hide selected" Click="IgnorePlugin_Click" />
+                    <MenuItem Header="Unhide selected" Click="RestorePlugin_Click" />
+                    <MenuItem Header="Include filtered candidate" Click="IncludeFiltered_Click" />
+                  </ContextMenu>
+                </DataGrid.ContextMenu>
                 <DataGrid.Columns>
                   <DataGridTemplateColumn Header="Use" Width="48">
                     <DataGridTemplateColumn.CellTemplate>

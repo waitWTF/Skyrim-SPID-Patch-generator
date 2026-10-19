@@ -1,11 +1,14 @@
-Skyrim SPID Patch Generator 0.4.4-preview
+Skyrim SPID Patch Generator - Windows x64 preview
 
-Extract the whole ZIP and keep all companion files together. Requires .NET 10 Desktop Runtime x64.
-Run SkyrimSPIDPatchGenerator.exe. For MO2 launch through its executable list.
-Settings -> Smart detect... finds game/MO2 locations and configured profile lists. Review paths and plugin visibility, especially if using a profile override.
-Standalone detection does not expose MO2's virtual mods. Vortex users should deploy before scanning game Data.
-For custom staging setups choose the Game Data override containing Skyrim.esm if required.
-Choose a separate output mod folder yourself. Rescan and regenerate existing outfit entries to update recipients; untouched merged entries are retained.
-The previous MO2 CET compatibility and uniformed NPC protection are retained. Merchandise requires SkyPatcher container support even with SPID NPC output.
-Build succeeded. New discovery flow has not been runtime-tested against the commenter's setup; no new in-game validation is claimed.
-Source and release notes: https://github.com/waitWTF/Skyrim-SPID-Patch-generator
+Extract this entire ZIP into a normal folder. Keep the EXE, DLLs, and JSON files together.
+Requires Microsoft .NET 10 Desktop Runtime x64: https://dotnet.microsoft.com/download/dotnet/10.0
+Start SkyrimSPIDPatchGenerator.exe. The program can be added as an executable tool in MO2 or Vortex.
+For MO2, launch it through MO2 and scan virtual Data. For Vortex, scan deployed Data or staging.
+Use a separate output mod folder. Enable the generated ESP, its required source plugins, and your chosen distribution engine.
+Rescan/repatch after changing your NPC mods or profile. Generated recipient lists are a scan snapshot.
+Do not put SPID and SkyPatcher output for this app in the same output folder.
+Optional merchandise requires SkyPatcher even when NPC outfits use SPID; keep its generated container INI installed.
+Enable SkyPatcher container patching (iEnableContainerPatching=1 in your installed SkyPatcher.ini) to use merchandise.
+Existing WearableDistributor.esp/INI/settings names are retained for compatibility. Do not rename generated records/files by hand.
+Source and documentation: https://github.com/waitWTF/Skyrim-SPID-Patch-generator
+This follow-up was compiled. New scan classification, preset/UI interactions and in-game distribution were not runtime-tested for 0.4.5. See the research/policy document and release notes.

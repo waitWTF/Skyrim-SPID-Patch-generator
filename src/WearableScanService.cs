@@ -108,6 +108,10 @@ public sealed class WearableScanService
         var vendorReferences = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var vendors = new Dictionary<string, VendorSnapshot>(StringComparer.OrdinalIgnoreCase);
         var listNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var armorModels = new Dictionary<string, (List<string> Addons, string Template, bool Playable, string Slots)>(StringComparer.OrdinalIgnoreCase);
+        var addonModels = new Dictionary<string, (bool Male, bool Female)>(StringComparer.OrdinalIgnoreCase);
+        var outfitItems = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        var itemEditorIds = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var done = 0;
         foreach (var name in order)
         {
@@ -161,24 +165,51 @@ public sealed class WearableScanService
                     foreach (var quest in mod.Quests)
                         stage.Quests[Form(quest.FormKey)] = quest.IsDeleted ? null : quest.EnumerateFormLinks().Where(link => !link.FormKey.IsNull).Select(link => Form(link.FormKey)).ToList();
                 }
-                var pieces = mod.Armors.Where(armor => !armor.IsDeleted && armor.FormKey.ModKey.Equals(mod.ModKey)).Select(armor => new WearableRecord
+                // Snapshot data before committing it: a parser failure must not leave half an override behind.
+                var stagedArmor = mod.Armors.ToDictionary(armor => Form(armor.FormKey), armor =>
+                    (Deleted: armor.IsDeleted, Addons: armor.Armature.Select(link => Form(link.FormKey)).ToList(), Template: Form(armor.TemplateArmor.FormKeyNullable ?? FormKey.Null), Playable: !armor.MajorFlags.HasFlag(Armor.MajorFlag.NonPlayable), Slots: armor.BodyTemplate?.FirstPersonFlags.ToString() ?? ""), StringComparer.OrdinalIgnoreCase);
+                var stagedAddons = mod.ArmorAddons.ToDictionary(addon => Form(addon.FormKey), addon =>
+                    (Deleted: addon.IsDeleted, Male: !string.IsNullOrWhiteSpace(addon.WorldModel?.Male?.File.GivenPath), Female: !string.IsNullOrWhiteSpace(addon.WorldModel?.Female?.File.GivenPath)), StringComparer.OrdinalIgnoreCase);
+                var stagedOutfits = mod.Outfits.ToDictionary(outfit => Form(outfit.FormKey), outfit =>
+                    (Deleted: outfit.IsDeleted, Items: (outfit.Items ?? []).Select(link => Form(link.FormKey)).ToList()), StringComparer.OrdinalIgnoreCase);
+                foreach (var list in mod.LeveledItems)
+                    stagedOutfits[Form(list.FormKey)] = (list.IsDeleted, (list.Entries ?? []).Where(entry => entry.Data != null).Select(entry => Form(entry.Data!.Reference.FormKey)).ToList());
+                var stagedEditorIds = mod.Armors.Cast<ISkyrimMajorRecordGetter>().Concat(mod.Outfits).Concat(mod.LeveledItems)
+                    .Where(record => !string.IsNullOrWhiteSpace(record.EditorID)).Select(record => (Form: Form(record.FormKey), Id: record.EditorID!, record.IsDeleted)).ToList();
+                var pieces = mod.Armors.Where(armor => !armor.IsDeleted && !armor.MajorFlags.HasFlag(Armor.MajorFlag.NonPlayable) && armor.FormKey.ModKey.Equals(mod.ModKey)).Select(armor => new WearableRecord
                 {
                     Plugin = name, LocalId = armor.FormKey.ID, EditorId = armor.EditorID ?? "", Name = armor.Name?.String ?? armor.EditorID ?? "Unnamed armor",
                     Slots = armor.BodyTemplate?.FirstPersonFlags.ToString() ?? "", SourcePath = paths[name]
                 }).Where(item => !WearableFilterService.IsExcludedRecord(item)).ToList();
                 var weapons = pieces.Count == 0 ? [] : mod.Weapons.Where(weapon => !weapon.IsDeleted && weapon.FormKey.ModKey.Equals(mod.ModKey) && !weapon.MajorFlags.HasFlag(Weapon.MajorFlag.NonPlayable))
                     .Select(weapon => new WearableRecord { Plugin = name, LocalId = weapon.FormKey.ID, EditorId = weapon.EditorID ?? "", Name = weapon.Name?.String ?? weapon.EditorID ?? "Weapon", Category = "Weapon", SourcePath = paths[name] }).ToList();
+                var reason = "";
+                if (pieces.Count > 0)
+                {
+                    reason = implicitOrder.Contains(name, StringComparer.OrdinalIgnoreCase) ? "Creation Club / official resource listing" : WearableFilterService.GetFilterReason(paths[name], preferences.AdditionalExclusions, []);
+                    if (string.IsNullOrWhiteSpace(reason)) reason = WearableFilterService.GetContentReason(name, pieces.Count,
+                        mod.Npcs.Count(record => !record.IsDeleted && record.FormKey.ModKey == mod.ModKey),
+                        mod.Spells.Count(record => !record.IsDeleted && record.FormKey.ModKey == mod.ModKey),
+                        mod.Perks.Count(record => !record.IsDeleted && record.FormKey.ModKey == mod.ModKey),
+                        mod.Worldspaces.Count(record => !record.IsDeleted && record.FormKey.ModKey == mod.ModKey));
+                    if (!string.IsNullOrWhiteSpace(validationIssue)) reason = Append(reason, validationIssue);
+                    if (!preferences.IncludeAccessories && pieces.All(WearableFilterService.IsAccessoryOnly)) reason = Append(reason, "Accessory-only items (enable in Preferences to scan these)");
+                }
                 // Commit only after the entire plugin was parsed. A late parser error cannot leave partial winning overrides behind.
                 Apply(npcs, stage.Npcs); Apply(races, stage.Races); Apply(targets, stage.Targets); Apply(packages, stage.Packages);
                 Apply(placed, stage.Placed); Apply(quests, stage.Quests); Apply(leveled, stage.Leveled);
                 Apply(containers, stage.Containers); Apply(vendorReferences, stage.VendorReferences); Apply(vendors, stage.Vendors); Apply(listNames, stage.ListNames);
+                if (string.IsNullOrWhiteSpace(validationIssue))
+                {
+                    foreach (var (id, item) in stagedArmor) { if (item.Deleted) armorModels.Remove(id); else armorModels[id] = (item.Addons, item.Template, item.Playable, item.Slots); }
+                    foreach (var (id, item) in stagedAddons) { if (item.Deleted) addonModels.Remove(id); else addonModels[id] = (item.Male, item.Female); }
+                    foreach (var (id, item) in stagedOutfits) { if (item.Deleted) outfitItems.Remove(id); else outfitItems[id] = item.Items; }
+                    foreach (var item in stagedEditorIds) { if (item.IsDeleted) itemEditorIds.Remove(item.Form); else itemEditorIds[item.Form] = item.Id; }
+                }
                 if (pieces.Count > 0)
                 {
-                    var reason = WearableFilterService.GetFilterReason(paths[name], preferences.AdditionalExclusions, inis);
-                    if (!string.IsNullOrWhiteSpace(validationIssue)) reason = Append(reason, validationIssue);
-                    if (!preferences.IncludeAccessories && pieces.All(WearableFilterService.IsAccessoryOnly)) reason = Append(reason, "Accessory-only items (enable in Preferences to scan these)");
                     result.Plugins.Add(new PluginEntry { Plugin = name, SourcePath = paths[name], Pieces = pieces, Weapons = weapons, FilterReason = reason, ValidationIssue = validationIssue,
-                        Selected = string.IsNullOrWhiteSpace(validationIssue) && (string.IsNullOrWhiteSpace(reason) || preferences.IncludedPlugins.Contains(name)) && !preferences.IgnoredPlugins.Contains(name) });
+                        Selected = string.IsNullOrWhiteSpace(validationIssue) && (string.IsNullOrWhiteSpace(reason) || preferences.IncludedPlugins.Contains(name)) && !preferences.IgnoredPlugins.Contains(name) && !preferences.DisabledPlugins.Contains(name) });
                 }
                 result.LoadOrder.Add(name);
                 void Remember(ISkyrimMajorRecordGetter record, string kind, string category)
@@ -194,6 +225,52 @@ public sealed class WearableScanService
             done++;
         }
 
+        progress?.Report(new ScanProgress("Checking outfit models and existing distributions", done, order.Count));
+        var externalDistributions = inis.Where(file => !WearableFilterService.IsOwnDistribution(file.Path)).ToList();
+        var supplied = externalDistributions.SelectMany(file => WearableFilterService.SuppliedForms(file.Text)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var suppliedNames = externalDistributions.SelectMany(file => WearableFilterService.SuppliedEditorIds(file.Text)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        supplied.UnionWith(itemEditorIds.Where(pair => suppliedNames.Contains(pair.Value)).Select(pair => pair.Key));
+        var distributedSources = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var checkedItems = new HashSet<string>(StringComparer.OrdinalIgnoreCase); var suppliedQueue = new Queue<string>(supplied);
+        while (suppliedQueue.TryDequeue(out var suppliedId))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!checkedItems.Add(suppliedId)) continue;
+            if (armorModels.ContainsKey(suppliedId)) distributedSources.Add(suppliedId.Split('~', 2).Last());
+            if (outfitItems.TryGetValue(suppliedId, out var items)) foreach (var item in items) suppliedQueue.Enqueue(item);
+        }
+        foreach (var plugin in result.Plugins)
+        {
+            if (plugin.CanPatch)
+            {
+                foreach (var piece in plugin.Pieces)
+                    if (armorModels.TryGetValue(piece.FormId, out var armor)) piece.Slots = armor.Slots;
+                plugin.Pieces.RemoveAll(piece => !armorModels.TryGetValue(piece.FormId, out var armor) || !armor.Playable || WearableFilterService.IsExcludedRecord(piece));
+            }
+            if (distributedSources.Contains(plugin.Plugin) && string.IsNullOrWhiteSpace(plugin.FilterReason))
+            {
+                plugin.FilterReason = "Installed outfit distribution references this plugin (coverage may be partial)";
+                plugin.Selected &= preferences.IncludedPlugins.Contains(plugin.Plugin);
+            }
+            foreach (var piece in plugin.Pieces)
+            {
+                var addons = ResolveArmorAddons(piece.FormId, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+                if (addons.Count > 0 && addons.All(addonModels.ContainsKey))
+                {
+                    var male = addons.Any(id => addonModels[id].Male); var female = addons.Any(id => addonModels[id].Female);
+                    piece.SupportedGender = male && female ? "Both" : female ? "Female" : male ? "Male" : "Unknown";
+                    piece.GenderEvidence = piece.SupportedGender == "Unknown" ? "No worn model paths found" : "Effective ArmorAddon third-person model paths";
+                }
+                if (piece.SupportedGender == "Unknown" && OutfitGenderPolicy.KnownRestriction(plugin.Plugin) is "Female" or "Male")
+                {
+                    piece.SupportedGender = OutfitGenderPolicy.KnownRestriction(plugin.Plugin);
+                    piece.GenderEvidence = "User-confirmed Lunar Claw outfit family; model support could not be resolved";
+                }
+            }
+        }
+        result.Plugins.RemoveAll(plugin => plugin.CanPatch && plugin.Pieces.Count == 0);
+        result.Diagnostics.Add($"Outfit smart filter revision {WearableFilterService.Revision}: {result.Plugins.Count(plugin => !plugin.IsFiltered)} standard candidates; {result.Plugins.Count(plugin => plugin.IsFiltered)} hidden candidates. Existing-distribution checks use supplied outfit/item operands, not comments or NPC filter references. Partial coverage can be restored manually.");
+        result.Diagnostics.Add("Wearable worn-model sex evidence: " + string.Join(", ", result.Plugins.SelectMany(plugin => plugin.Pieces).GroupBy(piece => piece.SupportedGender).OrderBy(group => group.Key).Select(group => group.Key + "=" + group.Count())) + ". Model paths do not verify mesh files or body/race compatibility.");
         progress?.Report(new ScanProgress("Resolving NPC templates and target groups", done, order.Count));
         var references = placed.Values.Concat(quests.Values.SelectMany(list => list)).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var reachable = new HashSet<string>(references, StringComparer.OrdinalIgnoreCase); var pending = new Queue<string>(references);
@@ -260,6 +337,13 @@ public sealed class WearableScanService
         if (variable > 0) result.Diagnostics.Add($"{variable} eligible NPC bases have multiple leveled-template outcomes. Role/race/sex selections include a base only when every possible outcome matches.");
         progress?.Report(new ScanProgress("Scan complete", order.Count, order.Count));
         return result;
+
+        List<string> ResolveArmorAddons(string id, HashSet<string> visiting)
+        {
+            if (!visiting.Add(id) || !armorModels.TryGetValue(id, out var armor)) return [];
+            if (armor.Addons.Count > 0) return armor.Addons;
+            return ResolveArmorAddons(armor.Template, visiting);
+        }
 
         string ValidateMasters(string name, HashSet<string> visiting)
         {

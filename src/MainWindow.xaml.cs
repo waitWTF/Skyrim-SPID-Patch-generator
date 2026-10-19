@@ -30,6 +30,7 @@ public partial class MainWindow : Window
     private bool isDiscoveringLocations;
     private string lastScanReport = "No scan report yet.";
     private bool settingsRecoveryRequired;
+    private bool editingPatchedOutfit;
 
     public MainWindow()
     {
@@ -294,11 +295,37 @@ public partial class MainWindow : Window
     private void UpdateSelectionSummary()
     {
         if (SelectionCountText == null) return;
-        var count = scannedPlugins.Count(plugin => plugin.Selected && plugin.CanPatch && !preferences.IgnoredPlugins.Contains(plugin.Plugin) && (!plugin.IsFiltered || preferences.IncludedPlugins.Contains(plugin.Plugin)));
+        var count = scannedPlugins.Count(IsSelectedForPatch);
         SelectionCountText.Text = $"{count} outfit{(count == 1 ? "" : "s")} selected";
         GenerateButton.IsEnabled = scanCancellation == null && !isGenerating && !isDiscoveringLocations && count > 0;
     }
-    private void PluginSelectionChanged(object sender, RoutedEventArgs e) => UpdateSelectionSummary();
+    private bool IsSelectedForPatch(PluginEntry plugin) => plugin.Selected && plugin.CanPatch && (editingPatchedOutfit ||
+        !preferences.IgnoredPlugins.Contains(plugin.Plugin) && (!plugin.IsFiltered || preferences.IncludedPlugins.Contains(plugin.Plugin)) &&
+        (plugin.PatchStatus != "Patched" || ShowPatchedBox.IsChecked == true));
+
+    private void PluginSelectionChanged(object sender, RoutedEventArgs e)
+    {
+        if (sender is CheckBox { DataContext: PluginEntry plugin })
+        {
+            if (plugin.Selected)
+            {
+                preferences.DisabledPlugins.Remove(plugin.Plugin);
+                if (plugin.IsFiltered) preferences.IncludedPlugins.Add(plugin.Plugin);
+            }
+            else preferences.DisabledPlugins.Add(plugin.Plugin);
+            SavePreferences();
+        }
+        UpdateSelectionSummary();
+    }
+
+    private void PluginRightClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        // Keep a multi-selection when its member is clicked; target a new row when it isn't selected.
+        var current = e.OriginalSource as DependencyObject;
+        while (current != null && current is not DataGridRow) current = current is System.Windows.Media.Visual || current is System.Windows.Media.Media3D.Visual3D
+            ? System.Windows.Media.VisualTreeHelper.GetParent(current) : LogicalTreeHelper.GetParent(current);
+        if (current is DataGridRow row && !row.IsSelected) { PluginsGrid.SelectedItems.Clear(); row.IsSelected = true; }
+    }
     private void ExportScanReport_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new SaveFileDialog { Filter = "Scan report (*.txt)|*.txt", FileName = "SkyrimSPIDPatchGenerator-scan-report.txt" };
@@ -314,19 +341,22 @@ public partial class MainWindow : Window
         var query = SearchBox.Text.Trim();
         var showIgnored = ShowIgnoredBox.IsChecked == true;
         var showFiltered = ShowFilteredBox.IsChecked == true;
+        var showPatched = ShowPatchedBox?.IsChecked == true;
         visiblePlugins.Clear();
-        foreach (var plugin in scannedPlugins.OrderBy(item => item.Plugin, StringComparer.OrdinalIgnoreCase).Where(item => (showFiltered || !item.IsFiltered || preferences.IncludedPlugins.Contains(item.Plugin)) &&
-                     (showIgnored || !preferences.IgnoredPlugins.Contains(item.Plugin)) &&
+        foreach (var plugin in scannedPlugins.OrderBy(item => item.Plugin, StringComparer.OrdinalIgnoreCase).Where(item =>
+                     (preferences.IgnoredPlugins.Contains(item.Plugin) ? showIgnored : item.PatchStatus == "Patched" ? showPatched :
+                         showFiltered || !item.IsFiltered || preferences.IncludedPlugins.Contains(item.Plugin)) &&
                      (string.IsNullOrWhiteSpace(query) || item.Plugin.Contains(query, StringComparison.OrdinalIgnoreCase))))
             visiblePlugins.Add(plugin);
         UpdateSelectionSummary();
+        if (ShowPatchedBox != null) ShowPatchedBox.Content = $"Show already patched outfits ({scannedPlugins.Count(item => item.PatchStatus == "Patched")})";
     }
 
     private void SearchBox_TextChanged(object sender, TextChangedEventArgs e) => RefreshPluginList();
 
     private void SelectAll_Click(object sender, RoutedEventArgs e)
     {
-        foreach (var plugin in visiblePlugins.Where(item => item.CanPatch && !preferences.IgnoredPlugins.Contains(item.Plugin))) plugin.Selected = plugin.CanPatch;
+        foreach (var plugin in visiblePlugins.Where(item => item.CanPatch && !preferences.IgnoredPlugins.Contains(item.Plugin) && (!item.IsFiltered || preferences.IncludedPlugins.Contains(item.Plugin)))) plugin.Selected = true;
         PluginsGrid.Items.Refresh();
         UpdateSelectionSummary();
     }
@@ -340,7 +370,7 @@ public partial class MainWindow : Window
 
     private void InvertSelection_Click(object sender, RoutedEventArgs e)
     {
-        foreach (var plugin in visiblePlugins.Where(item => item.CanPatch && !preferences.IgnoredPlugins.Contains(item.Plugin))) plugin.Selected = !plugin.Selected;
+        foreach (var plugin in visiblePlugins.Where(item => item.CanPatch && !preferences.IgnoredPlugins.Contains(item.Plugin) && (!item.IsFiltered || preferences.IncludedPlugins.Contains(item.Plugin)))) plugin.Selected = !plugin.Selected;
         PluginsGrid.Items.Refresh();
         UpdateSelectionSummary();
     }
@@ -355,6 +385,7 @@ public partial class MainWindow : Window
         {
             preferences.IncludedPlugins.Add(plugin.Plugin);
             preferences.IgnoredPlugins.Remove(plugin.Plugin);
+            preferences.DisabledPlugins.Remove(plugin.Plugin);
             plugin.Selected = plugin.CanPatch;
         }
         SavePreferences();
@@ -365,7 +396,13 @@ public partial class MainWindow : Window
     private void SetSelectedRows(bool enabled)
     {
         foreach (PluginEntry plugin in PluginsGrid.SelectedItems)
-            if (plugin.CanPatch && !preferences.IgnoredPlugins.Contains(plugin.Plugin)) plugin.Selected = enabled;
+            if (plugin.CanPatch && !preferences.IgnoredPlugins.Contains(plugin.Plugin))
+            {
+                plugin.Selected = enabled;
+                if (enabled) { preferences.DisabledPlugins.Remove(plugin.Plugin); if (plugin.IsFiltered) preferences.IncludedPlugins.Add(plugin.Plugin); }
+                else preferences.DisabledPlugins.Add(plugin.Plugin);
+            }
+        SavePreferences();
         PluginsGrid.Items.Refresh();
         UpdateSelectionSummary();
     }
@@ -380,7 +417,7 @@ public partial class MainWindow : Window
         }
         SavePreferences();
         RefreshPluginList();
-        StatusText.Text = "Plugin exclusion saved. Turn on ‘Show remembered exclusions’ and use Restore selected exclusion(s) to bring one back.";
+        StatusText.Text = "Hidden choices saved. Reveal ‘Show my exclusions’, then use Unhide selected to restore them.";
     }
 
     private void RestorePlugin_Click(object sender, RoutedEventArgs e)
@@ -389,7 +426,7 @@ public partial class MainWindow : Window
         foreach (PluginEntry plugin in PluginsGrid.SelectedItems)
         {
             preferences.IgnoredPlugins.Remove(plugin.Plugin);
-            plugin.Selected = plugin.CanPatch;
+            plugin.Selected = plugin.CanPatch && !preferences.DisabledPlugins.Contains(plugin.Plugin) && (!plugin.IsFiltered || preferences.IncludedPlugins.Contains(plugin.Plugin));
         }
         SavePreferences();
         RefreshPluginList();
@@ -401,8 +438,7 @@ public partial class MainWindow : Window
         if (scanCancellation != null || isGenerating) return;
         PluginsGrid.CommitEdit(DataGridEditingUnit.Cell, true);
         PluginsGrid.CommitEdit(DataGridEditingUnit.Row, true);
-        var selected = scannedPlugins.Where(plugin => plugin.Selected && plugin.CanPatch && !preferences.IgnoredPlugins.Contains(plugin.Plugin) &&
-            (!plugin.IsFiltered || preferences.IncludedPlugins.Contains(plugin.Plugin))).ToList();
+        var selected = scannedPlugins.Where(IsSelectedForPatch).ToList();
         if (selected.Count == 0) { MessageBox.Show("Select at least one plugin to patch.", "No plugins selected"); return; }
         var outputDirectory = "";
         var framework = preferences.Framework;
@@ -537,6 +573,7 @@ public partial class MainWindow : Window
             if (PluginsGrid is not null) PluginsGrid.Items.Refresh();
             ScanSummaryText.Text = $"{scannedPlugins.Count} wearable plugin candidate(s) · {scannedPlugins.Sum(plugin => plugin.PieceCount)} wearable record(s) · 0 patched";
             InventoryDetailsBox.Text = "Choose an output folder after generating a patch. The overview will list each source plugin, selected pieces, audiences, chance, and framework.";
+            RefreshPluginList();
             return;
         }
         PatchManifest manifest;
@@ -552,6 +589,7 @@ public partial class MainWindow : Window
             ScanSummaryText.Text = $"{scannedPlugins.Count} wearable plugin candidate(s) · generated library needs attention";
             InventoryDetailsBox.Text = $"The generated patch library could not be read safely. Your existing output has been preserved.\n\n{ex.Message}\n\nRestore the previous backup, or choose a different output folder in Settings before generating a patch.";
             StatusText.Text = "The generated patch library needs attention. Open My patch for details.";
+            RefreshPluginList();
             return;
         }
         var patchedPlugins = manifest.Entries.Select(entry => entry.SourcePlugin).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -559,6 +597,7 @@ public partial class MainWindow : Window
         {
             var entries = manifest.Entries.Where(entry => entry.SourcePlugin.Equals(plugin.Plugin, StringComparison.OrdinalIgnoreCase)).ToList();
             plugin.PatchStatus = entries.Count == 0 ? "Not patched" : entries.All(entry => health[entry].Status == "Ready") ? "Patched" : "Needs review";
+            if (plugin.PatchStatus == "Patched") plugin.Selected = false;
         }
         PluginsGrid.Items.Refresh();
         ScanSummaryText.Text = $"{scannedPlugins.Count} wearable plugin candidate(s) · {scannedPlugins.Sum(plugin => plugin.PieceCount)} wearable record(s) · {patchedPlugins.Count} plugin(s) already patched";
@@ -579,6 +618,7 @@ public partial class MainWindow : Window
             InventoryDetailsBox.Text = File.Exists(Path.Combine(output, PatchGenerator.OutputPluginName))
                 ? "The output folder has a patch but no Skyrim SPID Patch Generator inventory manifest. New patches include the inventory automatically; you can still inspect the ESP/INI files in the output folder."
                 : "No generated outfits are recorded for this output folder yet.";
+        RefreshPluginList();
     }
 
     private void InventorySelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -606,7 +646,9 @@ public partial class MainWindow : Window
         foreach (var item in scannedPlugins) item.Selected = ReferenceEquals(item, plugin);
         PluginsGrid.Items.Refresh();
         MainTabs.SelectedIndex = 0;
-        Generate_Click(sender, e);
+        editingPatchedOutfit = true;
+        try { Generate_Click(sender, e); }
+        finally { editingPatchedOutfit = false; }
     }
 
     private void RemoveInventoryEntry_Click(object sender, RoutedEventArgs e)

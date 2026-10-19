@@ -1,5 +1,9 @@
 # Skyrim SPID Patch Generator
 
+## Current update: 0.4.5
+
+Outfit filtering, installed-population audience presets, patch-selection context tools, separate already-patched hiding, model-path sex safeguards and an icon startup window are implemented. See docs/SMART_SCAN_AND_PRESETS.md for research, policy, source map and limits. Build-only verification; no new runtime checks were run. The app remains a preview.
+
 Windows WPF application for Skyrim SE/AE. Version 0.4.4-preview.
 
 ## Purpose

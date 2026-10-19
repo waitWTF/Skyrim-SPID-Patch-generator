@@ -12,6 +12,9 @@ public sealed class WearableRecord
     public string Category { get; set; } = "Clothing";
     public bool Include { get; set; } = true;
     public string SourcePath { get; set; } = "";
+    // Unknown is deliberately different from support for both sexes. These are record/model hints, not mesh validation.
+    public string SupportedGender { get; set; } = "Unknown";
+    public string GenderEvidence { get; set; } = "";
     public string Variant
     {
         get
@@ -130,6 +133,8 @@ public sealed class AppPreferences
     public bool IncludeAccessories { get; set; }
     public HashSet<string> IgnoredPlugins { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public HashSet<string> IncludedPlugins { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public HashSet<string> DisabledPlugins { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public int SmartFilterRevision { get; set; }
     public List<string> AdditionalExclusions { get; set; } = [];
     public Dictionary<string, SavedDistributionOptions> DistributionSettings { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string, SavedDistributionOptions> DistributionPresets { get; set; } = new(StringComparer.OrdinalIgnoreCase);

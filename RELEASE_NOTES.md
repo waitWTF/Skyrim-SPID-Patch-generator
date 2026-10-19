@@ -1,3 +1,14 @@
+# 0.4.5 development preview — 2026-10-19
+
+- Reworked outfit defaults using Nexus outfit/SPID examples and local plugin evidence. Fixed hyphenated Creation Club filenames; added perk/magic/body system filters, source-content heuristics and numeric body-slot parsing. Source-owned playable clothing/armor can be included even for single-piece sets; large wardrobe collections with vendor NPCs are supported by a content-ratio heuristic.
+- Existing SPID/SkyPatcher detection now reads supplied outfit/item operands, including SPID EditorIDs, and follows outfit/leveled-item links. Ignores this app's output, comments and NPC-filter-only references. Detection is evidence of some coverage, not proof of complete coverage.
+- Added visible buttons and a dark right-click menu for enabling/disabling patch selection and remembered hiding. Enable/disable does not alter game plugin activation. Older inclusion overrides are reset once under the new filter policy; outfit setups and generated output are retained.
+- Restored automatic hiding of successfully patched outfits with a separate Show already patched outfits toggle; manual exclusions and smart candidates have their own reveal controls. My patch remains available for editing; damaged entries are marked for review.
+- Added a searchable grouped dropdown of common and installed-mod audience presets, recipient counts and bandit/forsworn/adventurer role variants. Only presets with actual eligible NPC matches appear. Mod-origin populations generate their own sections, including NPC mods with no hardcoded integration. Guards and uniformed protectors stay excluded.
+- Added worn-model sex metadata from effective ArmorAddon overrides/templates. Confirmed one-sex selections lock NPC sex; incompatible saved presets warn, mixed-sex-only parts block, and generation enforces the same rule. Unknown support stays explicit. User-confirmed Lunar Claw family restriction is a fallback when model data cannot resolve support.
+- Added an icon loading window using the embedded executable icon. Existing startup scanning, MO2 compatibility, patch merging and merchant output are retained.
+- Build verification only: no new automated tests, UI launch checks, full-modlist scan checks or in-game validation were run for this update. Model paths cannot establish actual mesh/body/race compatibility; script-only NPC spawns and semantic naming remain limitations.
+
 # 0.4.4 development preview — 2026-10-19
 
 - Added Settings → Smart detect to find MO2 instances, their configured game Data and profile list, and installed Skyrim locations. Multiple choices show their paths and plugin-visibility evidence before selection.

@@ -21,6 +21,10 @@ public sealed class NpcTargetingService
         ["Thieves"] = ["thief", "thieves", "thievesguild"], ["Assassins"] = ["assassin", "darkbrotherhood"],
         ["Vampires"] = ["vampire"], ["Wenches"] = ["wench", "wenches"], ["Witches"] = ["witch", "warlock"],
         ["Bards"] = ["bard"], ["Priests"] = ["priest", "cleric"], ["Khajiit"] = ["khajiit"],
+        ["Blacksmiths"] = ["blacksmith", "smith"], ["Innkeepers"] = ["innkeeper", "innserver", "barkeep", "barmaid"],
+        ["Servants"] = ["servant", "maid"], ["Miners"] = ["miner", "mining"],
+        ["Lumberjacks"] = ["lumberjack", "woodcutter"], ["Nobles"] = ["noble", "nobles", "jarl"],
+        ["Flower Girls"] = ["dibellan", "courtesan"],
         ["Argonians"] = ["argonian"], ["Orcs"] = ["orc", "orsimer"], ["Nords"] = ["nord"],
         ["Elves"] = ["elf", "elves", "altmer", "bosmer", "dunmer", "highelf", "woodelf", "darkelf"]
     };
@@ -135,6 +139,7 @@ public sealed class NpcTargetingService
         // Occupations must follow occupation records or actual AI package evidence, never the NPC's name.
         if (group == "Farmers" && occupationTags.Contains("Farmer")) return true;
         if (group == "Wenches" && (HasWenchEvidence(profile.EditorId) || MatchesWords(profile.Name, ["wench", "wenches"]))) return true;
+        if (group == "Adventurers" && !IsOfficialPlugin(profile.Plugin) && !IsNegativeEvidence(profile.EditorId) && MatchesWords(profile.EditorId, ["adventurer", "explorer"])) return true;
         return forms.Any(form => byForm.TryGetValue(form, out var choice) &&
             (choice.TargetKind is "Faction" or "Class" or "Keyword" or "Race") && !IsNegativeEvidence(choice.EditorId) &&
             (HasAlias(form, aliases) || group == "Wenches" && HasWenchEvidence(choice.EditorId)) &&

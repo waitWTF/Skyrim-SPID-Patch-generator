@@ -8,13 +8,27 @@
 
 Skyrim SPID Patch Generator is a Windows desktop app for Skyrim Special Edition / Anniversary Edition. It scans installed plugins for wearable armor, clothing and accessories, groups them by source plugin, and guides you through choosing **who wears what**. It generates an outfit ESP and the matching **SPID or SkyPatcher INI** without making you write distribution rules yourself.
 
-**0.4.4 development preview** · Windows x64 · .NET 10 Desktop Runtime · MIT license
+**0.4.5 development preview** · Windows x64 · .NET 10 Desktop Runtime · MIT license
 
 Previously called **Wearable Distributor**. Start `SkyrimSPIDPatchGenerator.exe`. Existing settings, backups and generated `WearableDistributor.*` patch filenames are retained for compatibility; they do not need renaming.
 
 [Downloads](https://github.com/waitWTF/Skyrim-SPID-Patch-generator/releases) · [Issues and ideas](https://github.com/waitWTF/Skyrim-SPID-Patch-generator/issues) · [Changelog](RELEASE_NOTES.md) · [Source code](https://github.com/waitWTF/Skyrim-SPID-Patch-generator)
 
 > **Preview status:** generated files have validation checks, but successful outfit distribution has not yet been confirmed in a live Skyrim session. Use a separate test profile before relying on the output in a main playthrough. Images below use synthetic demo records; they are not in-game results or a list of bundled outfit mods.
+
+## New in 0.4.5: outfit discovery and distribution presets
+
+- **Cleaner defaults:** CC names with hyphens, Ordinator/perk overhauls, magic systems, body frameworks, followers and world expansions are held back. Small standalone sets stay eligible; no author allowlist or minimum set size is required. Large clothing collections with a few vendor NPCs can remain eligible.
+- **Existing distributions:** inspects actual supplied item/outfit operands and follows outfit/leveled-item references. Comments and NPC target filters no longer hide unrelated outfit plugins. Coverage can be partial; reveal a candidate and include it manually if appropriate. The app does not hide an outfit simply because an optional SPID addon exists online.
+- **Selection controls:** use the visible **Enable selected**, **Disable selected** and **Hide selected** buttons, or right-click selected rows. These control patch setup, not the game's plugin activation. Disabled and manually hidden choices are remembered.
+- **Three separate hidden views:** smart-filter candidates, your own exclusions, and already-patched outfits. Successfully patched outfits automatically leave the standard library; **My patch** keeps their details and editing controls. Entries needing review are not treated as completed.
+- **Quick distribution presets:** one searchable, grouped dropdown for common audiences and each installed NPC-adding plugin. Examples include Bandits and their Archers/Chiefs/Mages, Forsworn, Farmers, Mages, Necromancers, Adventurers, traders and workers. Mod sections, including Immersive Wenches/Flower Girls when usable, are built from actual eligible NPCs in the scan. Empty presets are omitted. Counts follow the selected NPC sex.
+- **Outfit sex safeguards:** inspects effective ArmorAddon worn-model paths and armor templates. Confirmed one-sex parts lock NPC sex; mixed incompatible parts block generation. A user-confirmed Lunar Claw family hint is used when model support cannot be resolved. Unknown support is labelled, never inferred just from CBBE/HIMBO/3BA names. Model paths do not prove mesh, race or body compatibility.
+- **Startup:** the embedded app icon appears in a small loading window before the workspace opens. Saved-path scanning continues to discover installed NPC populations at launch.
+
+**Upgrade note:** old manual smart-filter inclusion overrides are cleared once so broad overrides cannot bring CC/frameworks back automatically. Saved outfit setups, generated patches and personal hiding choices are preserved. Re-include any legitimate candidates you still want. Existing patches require rescan/regeneration to adopt new recipient/sex settings; opening the new EXE does not rewrite them.
+
+The 0.4.5 code builds successfully. New UI interactions, classification results on a full installed modlist, and in-game distribution have **not** been runtime-tested in this update. See [research, policy and limitations](docs/SMART_SCAN_AND_PRESETS.md). Documentation screenshots below show 0.4.1.
 
 ## Smart folder detection (0.4.4)
 
