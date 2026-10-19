@@ -1,0 +1,22 @@
+<Project>
+  <!-- Normal build/publish output stays unchanged. The release script opts in
+       to a direct apphost whose managed entry point lives under Runtime/.
+       This is the SDK's native host, not a second-process wrapper. -->
+  <Target Name="CreateReleaseLayoutHost" AfterTargets="Publish"
+          DependsOnTargets="_GetAppHostPaths;_GetAppHostCreationConfiguration"
+          Condition="'$(ReleaseLayoutRoot)' != ''">
+    <Error Condition="'$(RuntimeIdentifier)' != 'win-x64' or '$(SelfContained)' == 'true' or '$(PublishSingleFile)' == 'true'"
+           Text="The release layout requires a framework-dependent, non-single-file win-x64 publish." />
+    <Error Condition="'$(CETCompat)' != 'false'" Text="The release host must retain the application's MO2 CET compatibility setting." />
+    <Error Condition="!Exists('$(ReleaseLayoutRoot)/Runtime/$(AssemblyName).dll')"
+           Text="Publish application files into ReleaseLayoutRoot/Runtime before creating the release host." />
+    <MakeDir Directories="$(ReleaseLayoutRoot)" />
+    <CreateAppHost AppHostSourcePath="$(AppHostSourcePath)"
+                   AppHostDestinationPath="$(ReleaseLayoutRoot)/$(AssemblyName).exe"
+                   AppBinaryName="Runtime/$(AssemblyName).dll"
+                   IntermediateAssembly="$(TargetPath)"
+                   WindowsGraphicalUserInterface="true"
+                   DisableCetCompat="true" />
+    <Delete Files="$(ReleaseLayoutRoot)/Runtime/$(AssemblyName).exe" />
+  </Target>
+</Project>

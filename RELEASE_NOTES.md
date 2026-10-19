@@ -1,3 +1,12 @@
+# 0.4.7 development preview — 2026-10-19
+
+- Reorganized the Windows download into one `Skyrim SPID Patch Generator` folder: the EXE and START-HERE are at the top, required libraries/configuration are in Runtime, and README/changelog/license/guides are in Documentation.
+- The root EXE is a direct .NET apphost targeting Runtime/SkyrimSPIDPatchGenerator.dll, with the original icon/version resources and MO2 CET compatibility opt-out retained. No second-process launcher, scripts or administrator requirement were added. Requires .NET 10 Desktop Runtime x64 as before.
+- Updated release packaging to produce enclosing folders for both Windows and source ZIPs, include MSBuild layout targets in source archives, and check required archive members. Ordinary developer build/publish output keeps its normal layout.
+- Included the root executable's folder in bounded location discovery so the library relocation does not remove an existing nearby-MO2 discovery origin. Settings, backups, error logs and generated patch filenames/locations are unchanged.
+- Updated installation/upgrade guidance and corrected outdated README wording about retaining other named variants when repatching.
+- Extract into a fresh folder and update the EXE path in MO2/Vortex. Keep Runtime beside the EXE; copying the EXE alone will not work. Build/package verification only; no automated tests, direct app launches, MO2/Vortex launch checks or Skyrim tests were run for this layout update.
+
 # 0.4.6 development preview — 2026-10-19
 
 - Added a main-window Error reports button with preview, Save report, Copy latest error and Open log folder. Automatic bounded logs cover app-level handled/unhandled failures, background-task exceptions, WPF binding errors, scan parsing, preferences, output transactions/rollback, cleanup and validation failures.

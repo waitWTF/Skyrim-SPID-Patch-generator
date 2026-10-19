@@ -1,6 +1,10 @@
 # Skyrim SPID Patch Generator
 
-## Current update: 0.4.6
+## Current update: 0.4.7
+
+The Windows download has one enclosing folder with a root EXE, Runtime libraries and Documentation. The SDK-generated root apphost loads Runtime/SkyrimSPIDPatchGenerator.dll directly and retains CETCompat=false. Source bundles have their own enclosing folder; app/ uses the same layout. Settings/output paths stay unchanged. See docs/APP_LAYOUT.md. Build/package verification only; the changed layout has not been launch-tested.
+
+## Previous update: 0.4.6
 
 Typed privacy-safe diagnostic logging, a visible Error reports window, per-outfit repair/repatching, Repatch all with direct saved-setup review, remembered output reuse and indexed INI validation are included. See docs/ERROR_REPORTS_AND_REPATCHING.md. Build-only verification; no new runtime checks.
 
@@ -8,7 +12,7 @@ Typed privacy-safe diagnostic logging, a visible Error reports window, per-outfi
 
 Outfit filtering, installed-population audience presets, patch-selection context tools, separate already-patched hiding, model-path sex safeguards and an icon startup window are implemented. See docs/SMART_SCAN_AND_PRESETS.md for research, policy, source map and limits. Build-only verification; no new runtime checks were run. The app remains a preview.
 
-Windows WPF application for Skyrim SE/AE. Version 0.4.4-preview.
+Windows WPF application for Skyrim SE/AE. Version 0.4.7-preview.
 
 ## Purpose
 Scan installed wearable plugins, choose NPC audiences in a guided installer-style workflow, and manually generate an outfit plugin with SPID or SkyPatcher rules. Optional merchant stock uses SkyPatcher container rules.
@@ -18,7 +22,7 @@ Scan installed wearable plugins, choose NPC audiences in a guided installer-styl
 - tests/: synthetic integration checks.
 - tools/: release packaging and isolated UI documentation renderer.
 - docs/: architecture, verification guidance, review notes and demo screenshots.
-- app/: framework-dependent Windows x64 build; keep all accompanying files together.
+- app/: framework-dependent Windows x64 build; root EXE plus Runtime/ and Documentation/. Keep the whole folder together.
 
 ## Design priorities
 Readable installed NPC groups; optional roles and races; saved choices; incremental patch merging; stable generated IDs; review before writing; recoverable output transactions; installable mod ZIP exports; Vortex/MO2 compatibility.

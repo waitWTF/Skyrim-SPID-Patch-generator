@@ -8,7 +8,7 @@
 
 Skyrim SPID Patch Generator is a Windows desktop app for Skyrim Special Edition / Anniversary Edition. It scans installed plugins for wearable armor, clothing and accessories, groups them by source plugin, and guides you through choosing **who wears what**. It generates an outfit ESP and the matching **SPID or SkyPatcher INI** without making you write distribution rules yourself.
 
-**0.4.6 development preview** · Windows x64 · .NET 10 Desktop Runtime · MIT license
+**0.4.7 development preview** · Windows x64 · .NET 10 Desktop Runtime · MIT license
 
 Previously called **Wearable Distributor**. Start `SkyrimSPIDPatchGenerator.exe`. Existing settings, backups and generated `WearableDistributor.*` patch filenames are retained for compatibility; they do not need renaming.
 
@@ -16,7 +16,23 @@ Previously called **Wearable Distributor**. Start `SkyrimSPIDPatchGenerator.exe`
 
 > **Preview status:** generated files have validation checks, but successful outfit distribution has not yet been confirmed in a live Skyrim session. Use a separate test profile before relying on the output in a main playthrough. Images below use synthetic demo records; they are not in-game results or a list of bundled outfit mods.
 
-## New in 0.4.6: shareable error reports and easier repatching
+## New in 0.4.7: a tidy application folder
+
+The Windows ZIP now extracts into one main folder:
+
+```text
+Skyrim SPID Patch Generator/
+├── SkyrimSPIDPatchGenerator.exe
+├── START-HERE.txt
+├── Runtime/          Required application libraries and configuration
+└── Documentation/    README, changelog, license and guides
+```
+
+Start the EXE at the top, or point MO2/Vortex to it. Keep the whole folder together. Extract this update into a **fresh folder** rather than mixing it into an older flat installation. Existing settings, logs, backups and generated patches keep their current locations. The source-and-app ZIP has its own enclosing folder with the ready-to-run app in `app/` and developer files alongside it.
+
+The root EXE directly loads the app from `Runtime/`; it does not launch a second wrapper process. The existing app-specific MO2 CET compatibility setting is retained. This release was built and packaged; the changed layout has **not** been launch-tested directly or through MO2/Vortex. See [application layout details](docs/APP_LAYOUT.md).
+
+## Also included: shareable error reports and easier repatching
 
 **Error reports** is always available at the top of the main window. Open it to preview and **Save report**, **Copy latest error**, refresh the report, or open the safe log folder. Reports contain app version, fixed error/reason codes, HRESULT values and application method tokens. They exclude personal paths, usernames, exact timestamps, installed mod names/lists, settings, raw exception messages, screenshots and game logs. Nothing is uploaded automatically. Previous `application-*.log` files can contain paths and are never included. Local scan details stay on screen; the former scan-report export now opens the shareable error-report window. Settings exports and **Export patch contents** are separate user-data features and are not support logs.
 
@@ -157,7 +173,7 @@ Skyrim does not need to be running while you use the app. Legendary Edition and 
 ## Download and first setup
 
 1. Download the Windows app ZIP from [Releases](https://github.com/waitWTF/Skyrim-SPID-Patch-generator/releases) when an asset is available. Source-and-app bundles contain the EXE in `app/`. If no compiled asset has been uploaded, build from source below.
-2. **Extract the entire ZIP** into a normal folder. Keep the EXE, DLLs and JSON files together. Do not run inside the archive or copy only the EXE.
+2. **Extract the entire ZIP** into a normal folder. Open `Skyrim SPID Patch Generator` and keep its `Runtime` and `Documentation` subfolders beside the EXE. Do not run inside the archive or copy only the EXE. For an upgrade, use a fresh folder and update any MO2/Vortex shortcut to the new top-level EXE.
 3. Start `SkyrimSPIDPatchGenerator.exe`.
 4. In **Settings**, choose the scan folder, distribution engine, default chance and a separate output mod folder.
 5. Supply your active profile's `plugins.txt` when available. It identifies enabled plugins and order. `loadorder.txt` supplies order but cannot identify disabled plugins.
@@ -201,7 +217,7 @@ The app does not directly manage either manager's profiles, deployment or plugin
 
 Use the **same output folder**. Later generations merge new source plugins into the existing ESP, rules and inventory. You do not need to select every previous plugin again.
 
-Repatching a source plugin replaces its configured variants and removes obsolete variants for that plugin. Explicitly skipped outfits are preserved, including an existing variant when another variant of that plugin is updated. To delete an existing outfit, use **My patch → Remove outfit**.
+Repatching replaces only the selected named outfits. Other variants from the same source plugin and explicitly skipped outfits are preserved. To delete an existing outfit, use **My patch → Remove outfit**.
 
 Keep the ESP, selected engine's INI and manifest together. The installable ZIP includes generated files and instructions; it does **not** bundle third-party meshes, textures or source plugins.
 

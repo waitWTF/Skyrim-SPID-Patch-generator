@@ -30,7 +30,7 @@ public static class ScanLocationDiscovery
         var locations = new List<ScanLocation>();
         var configs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var injectedDirectory = InjectedDirectory();
-        foreach (var origin in new[] { injectedDirectory, Path.GetDirectoryName(preferences.PluginListPath), preferences.DataPath, Environment.CurrentDirectory, AppContext.BaseDirectory })
+        foreach (var origin in new[] { injectedDirectory, Path.GetDirectoryName(preferences.PluginListPath), preferences.DataPath, Environment.CurrentDirectory, Path.GetDirectoryName(Environment.ProcessPath), AppContext.BaseDirectory })
         {
             if (string.IsNullOrWhiteSpace(origin)) continue;
             try

@@ -2,9 +2,9 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
-    <Version>0.4.6</Version>
-    <AssemblyVersion>0.4.6.0</AssemblyVersion>
-    <FileVersion>0.4.6.0</FileVersion>
+    <Version>0.4.7</Version>
+    <AssemblyVersion>0.4.7.0</AssemblyVersion>
+    <FileVersion>0.4.7.0</FileVersion>
     <!-- MO2 2.5.2 / USVFS cannot inject into CET-enabled .NET apphosts.
          App-only compatibility opt-out; no Windows security settings are changed. -->
     <CETCompat>false</CETCompat>
@@ -23,4 +23,5 @@
   <ItemGroup>
     <Resource Include="assets\WearableDistributor.ico" />
   </ItemGroup>
+  <Import Project="..\tools\ReleaseLayout.targets" />
 </Project>

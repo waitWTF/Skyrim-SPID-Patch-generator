@@ -11,7 +11,7 @@ public static class GameDataLocator
         if (IsGameData(scanRoot)) return scanRoot;
         if (!string.IsNullOrWhiteSpace(scanRoot) && IsGameData(Path.Combine(scanRoot, "Data"))) return Path.Combine(scanRoot, "Data");
         var candidates = new List<string>();
-        foreach (var origin in new[] { scanRoot, Path.GetDirectoryName(profileList), Environment.CurrentDirectory, AppContext.BaseDirectory })
+        foreach (var origin in new[] { scanRoot, Path.GetDirectoryName(profileList), Environment.CurrentDirectory, Path.GetDirectoryName(Environment.ProcessPath), AppContext.BaseDirectory })
         {
             if (string.IsNullOrWhiteSpace(origin)) continue;
             try
