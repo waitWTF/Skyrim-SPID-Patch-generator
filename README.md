@@ -2,7 +2,7 @@
 
 A Windows desktop tool for turning installed Skyrim SE/AE outfit mods into NPC outfits and/or trader merchandise, through a guided, scrollable setup.
 
-**Community project, MIT licensed, developed with substantial AI assistance.** Contributions, fixes and forks are welcome: [source code and downloads](https://github.com/waitWTF/Skyrim-SPID-Patch-generator).
+**Community project, MIT licensed, developed with substantial AI assistance.** Contributions, fixes and forks are welcome: [source code and downloads](https://github.com/waitWTF/Skyrim-SPID-Patch-generator/releases).
 
 ## Install and start
 
