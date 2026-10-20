@@ -16,10 +16,11 @@ public static class PreferencesService
 
     public static AppPreferences Normalize(AppPreferences value)
     {
-        if (value.SchemaVersion > 4) throw new InvalidDataException("These settings were created by a newer app. Update Skyrim SPID Patch Generator before importing them.");
+        if (value.SchemaVersion > 6) throw new InvalidDataException("These settings were created by a newer app. Update Skyrim SPID Patch Generator before importing them.");
         value.SchemaVersion = 2;
         value.DataPath = (value.DataPath ?? "").Trim(); value.PluginListPath = (value.PluginListPath ?? "").Trim();
         value.BaseGameDataPath = (value.BaseGameDataPath ?? "").Trim();
+        value.PatchSearchFiles = new HashSet<string>((value.PatchSearchFiles ?? []).Where(path => !string.IsNullOrWhiteSpace(path)), StringComparer.OrdinalIgnoreCase);
         value.OutputPath = (value.OutputPath ?? "").Trim(); value.BackupOutputPath ??= "";
         value.Framework = value.Framework?.Equals("SkyPatcher", StringComparison.OrdinalIgnoreCase) == true ? "SkyPatcher" : "SPID";
         value.DefaultChance = int.TryParse(value.DefaultChance?.Trim().TrimEnd('%'), out var chance) && chance is >= 1 and <= 100 ? chance.ToString() : "25";
@@ -39,6 +40,7 @@ public static class PreferencesService
         value.DistributionPresets = NormalizeSettings(value.DistributionPresets);
         if (value.DistributionSettings.Values.Any(settings => settings.MerchantCategories.Count > 0)) value.SchemaVersion = 3;
         if (value.DistributionSettings.Values.Concat(value.DistributionPresets.Values).Any(settings => !settings.DistributeToNpcs)) value.SchemaVersion = 4;
+        value.SchemaVersion = value.DistributionSettings.Values.Concat(value.DistributionPresets.Values).Any(s => s.MatchVariants) ? 6 : 5;
         return value;
     }
 
@@ -73,6 +75,9 @@ public static class PreferencesService
             if (string.IsNullOrWhiteSpace(pair.Key) || pair.Value is null) continue;
             var settings = pair.Value;
             settings.OutfitName ??= "";
+            settings.PartPreset ??= "Custom";
+            settings.PreferredColor ??= "";
+            settings.PartChoices = (settings.PartChoices ?? []).Where(c => c is not null && !string.IsNullOrWhiteSpace(c.FormId) && WearableRecord.PartModes.Contains(c.Mode) && c.Chance is >= 1 and <= 99).DistinctBy(c => c.FormId, StringComparer.OrdinalIgnoreCase).ToList();
             settings.MerchantCategories = (settings.MerchantCategories ?? []).Where(MerchantStockService.Categories.Contains).Distinct().ToList();
             settings.Chance = int.TryParse(settings.Chance?.Trim().TrimEnd('%'), out var chance) && chance is >= 1 and <= 100 ? chance.ToString() : "25";
             settings.Gender = settings.Gender?.Equals("Female", StringComparison.OrdinalIgnoreCase) == true ? "Female" : settings.Gender?.Equals("Male", StringComparison.OrdinalIgnoreCase) == true ? "Male" : "Any";

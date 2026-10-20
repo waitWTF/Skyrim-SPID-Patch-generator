@@ -1,3 +1,127 @@
+# 0.4.10 preview — 2026-10-20
+
+- Matching variants: generate one color selector, complete color bundles, and one-choice garment lists. Recognized normal/torn/ripped/tattered versions become alternatives; one Required version is guaranteed after a successful overall outfit roll. The same garment's colored version is preferred in its branch; shared unmarked components remain available without mixing marked colors.
+- Keep all recognized colors available by default. Explicit color selection is retained. Recognized belts/ponchos/accessories get the chosen preset's optional chance; unknown coverage-critical garments stay required. Incomplete required color sets and unknown overlaps are blocked for review.
+- Prefer separate garments over combined Outfit/Full records when a matching modular alternative exists. Do not hide a sole combined outfit. Saved automatic presets can migrate for review; Custom choices stay explicit.
+- Recognize Rogue's square-bracketed Dark labels and normalize parenthesized/plain multi-word colors. Marked lewd variants and wigs remain excluded unless explicitly enabled.
+- Add a matching-variants checkbox, explain Required alternative groups, and synchronize the state/chance of included versions when editing a garment group. Review and patch health understand mutually exclusive variants.
+- Preserve nested lists and stable FormIDs on incremental patching; recursively prune only unused managed lists. Validate list flags, chance, entries, links and saved group membership before committing output. Schema 6 supports matching-variant metadata; schemas 1–5 remain readable.
+- Replace dense yellow error paragraphs with spaced summary messages, a readable heading and expandable/copyable part/file details. Detect built mesh files mistakenly placed under meshes/meshes and explain the output-root correction. Missing meshes still block unsafe generation.
+- General installed-data investigation found the same wrong BodySlide output root affecting 13 outfit mods. Their already-built files were repaired locally with backups; this asset/config repair is not bundled or applied automatically by the app.
+- Tests cover garment/color plans, actual generated list topology, corruption detection, merges, removals, saved state, missing meshes and WPF workflow/layout. See docs/RELEASE_VERIFICATION_0410.md for scope and limits. No new in-game visual test is claimed.
+
+---
+
+# 0.4.9 release build — 2026-10-20
+
+- Added worn-mesh availability checks for effective ArmorAddon paths, weighted _0/_1 pairs, loose files and BSA archive directories. Missing/empty/unsafe mesh paths block affected selected parts. Trader stock checks supported mesh paths independently of the NPC sex filter. Existing managed output health flags unavailable worn meshes. Staging/unreadable archives remain uncertain, rather than treating all absent loose files as missing.
+- Corrected color grouping for ordinary suffixes such as Armor Black / Boots Black, with the main garment determining the default color. Prevents mixing alternative colors into an NPC outfit. Existing slot conflict checks reject competing garments.
+- Legacy all-parts setups without explicit part choices select a matching Balanced set for review, retaining recipients/chance. The EXE cannot build/deploy missing outfit assets itself.
+- Compatibility fix: an older merchants-only entry may lack an empty NPC comment block. Validated shop rules and zero NPC references remain mergeable; unexpected NPC rules still fail validation.
+- Promoted the preset branch into the released application/output family. EXE name is SkyrimSPIDPatchGenerator.exe; existing WearableDistributor settings, ESP/INI names, backups and stable records are retained. Experimental outputs remain read-only and cannot be merged into released output.
+- Outfit library tabs: Armor & clothing, Mixed / hidden, Already patched. Classification uses equipment/support records; official/DLC/CC content is excluded. Discover generated patch contents independently of the selected output folder and inspect multiple output locations.
+- Scans start unchecked. Right-click Configure this outfit opens only the clicked plugin regardless of other checks. Configure checked (N) and the outside-view counter make batch scope explicit.
+- Clearer Add NPC group, Save & close, and Review & generate workflow; skipping and saved choices retained. Wizard pages are lazy; cached population/prepared dropdown evidence avoids repeated classification. Repatch handlers await setup before restoring temporary scope.
+- Part presets: Complete set, Balanced, Light accessories, Essentials only, color selection, headgear/wig exclusions, explicit lewd opt-in and editable required/optional/excluded states. Optional parts use generated outfit leveled items. Merchant stock percentages remain independent.
+- Loading icon startup correction and animated preparation indicator. Removed the experimental resize-cursor hook after the issue was traced to the user's Windows pointer scheme; normal Windows cursors are used.
+- Hardened damaged/null inventory and truncated-ESP discovery so one broken output does not hide other patch libraries. Strict write validation preserves previous outputs on failure.
+- Verification details and limits: docs/RELEASE_VERIFICATION_049.md. The reported invisibility was investigated using installed records/assets and a copy of an existing patch. No claim of a new in-game distribution test is made.
+
+## Local development iterations included in 0.4.9
+
+The following entries record the separate test builds, not public stable releases. Their historical verification notes apply to those iterations.
+
+# 0.4.9 preset test 7 — 2026-10-20 — UNRELEASED EXPERIMENT
+
+- Fixed all eligible plugins being checked automatically: scans now start with an empty batch.
+- Added right-click Configure this outfit, scoped to that row regardless of other checks, highlighting or search.
+- Configure checked (N) explicitly shows batch scope; the sidebar flags checked plugins outside the current search/tab.
+- Renamed Add audience to Add NPC group, with an explanation of existing NPC recipients. Added clearer Save & close and Review & generate actions.
+- Removed the unsuccessful test-6 cursor workaround after the user confirmed repairing the Windows pointer scheme resolved the issue in both versions.
+- Cached immutable NPC record-name evidence and collection/faction labels; protection labels no longer expand full recipient rules. Repatch handlers await setup before clearing temporary scope.
+- Test results and measurements: docs/TEST_RESULTS_TEST7.md. Kept as a separate local test build.
+
+---
+
+# 0.4.9 preset test 6 — 2026-10-20 — UNRELEASED EXPERIMENT
+
+- Candidate fix for the reported cursor disappearing only at resize borders/corners: explicitly select the corresponding Windows sizing cursor for each of the eight native sizing hit regions.
+- Fall back to the arrow if the resize resource cannot load; leave Windows handling intact if neither resource loads.
+- Ignore client controls, title bar, child-window messages, maximized/minimized windows and nonresizable windows. Detach hooks when windows close. No global cursor overrides or Windows settings changes.
+- Interface, distribution, patch-generation and scanning behavior unchanged. Visual confirmation of the reported disappearance remains pending.
+
+---
+
+# 0.4.9 preset test 5 — 2026-10-20 — UNRELEASED EXPERIMENT
+
+- Bug-fix/testing iteration; the test-4 interface, features and workflow remain unchanged.
+- Fixed null inventory collections/entries interrupting discovery of other output libraries. Incomplete metadata is flagged and inspected read-only; strict write loading rejects empty/incomplete entries before committing changes.
+- Fixed truncated/generated ESP parser errors escaping the per-library discovery boundary and hiding healthy patch locations.
+- Restored the UI harness's existing isolated-settings override and corrected assembly-qualified theme/icon resource paths. Source packages now include the regression tests.
+- Existing integration suite passes, plus 33 current regression scenarios, 18 WPF workflow checks and four small-window layout/accessibility checks. Direct desktop launch and read-only installed-data scan/cache measurement passed. Details and limits: docs/TEST_RESULTS_TEST5.md.
+- Live MO2 launch check was canceled/skipped at user request. Synthetic active-profile/implicit-master checks pass; existing CET compatibility preserved. No Windows security changes or Skyrim/SKSE/in-game tests.
+
+---
+
+# 0.4.9 preset test 4 — 2026-10-20 — UNRELEASED EXPERIMENT
+
+- Added Armor & clothing, Mixed / hidden and Already patched tabs. Equipment-only plugins remain visible after patching. Mixed mods can be explicitly included; manual exclusions remain reversible.
+- Replaced selection-list title heuristics with record-content classification. Equipment, textures/keywords, addons and connected crafting/enchantment/list/effect support are allowed; unrelated records and NPC/quest/world/gameplay additions hide a plugin by default. Bundled weapons are supported; weapon-only plugins are not outfit candidates.
+- Official Skyrim/update/DLC/CC/resource files are excluded from selection, including hidden views. Existing third-party SPID distribution coverage is informational and no longer hides an otherwise equipment-only plugin.
+- Generated patch discovery is independent of the current output destination. Inspect known generator ESP/INI/manifest files found in scan roots, game Data, detected Vortex staging locations and discovered MO2 instance mod libraries. Find patch files supports custom locations and remembers explicit files.
+- My patch aggregates separate output libraries and shows each patch location. Already patched sources are established from actual generated ESP outfit and optional leveled-item links, not remembered UI choices or master references. Manifestless outputs can be recovered for read-only viewing; incomplete file sets are flagged.
+- Released/recovered patch files are read-only in the separate experimental app. Editable entries route actions to their own experimental output location; Repatch all is scoped to that library. File presence does not establish profile activation, deployment or in-game behavior.
+- Added installed Vortex staging candidates to folder discovery. When Data contains only official content and no active profile is configured, scanning can fall back to a detected staging root, with explicit staging/disabled-content diagnostics.
+- Patch discovery/reading runs off the UI thread; reuse the scan's file discovery on initial inventory loading. Retained audience caches, animated loading indicator, startup correction and experimental part presets. Build labels now display the actual experimental version.
+- Compiled/packaged only. No automated tests, runtime app launches or in-game checks performed.
+
+---
+
+# 0.4.9 preset test 3 — 2026-10-20 — UNRELEASED EXPERIMENT
+
+- Fixed the startup InvalidCastException in LoadingIcon reported in build 0.4.9.2 (APP-1002, HRESULT 0x80004002). Geometry.Parse can return StreamGeometry; explicitly construct the PathGeometry required by the branch animation instead of casting.
+- Recoverable animation-start errors now stop the animation and record UI icon warning APP-1601, leaving the static icon available.
+- Experimental build script now installs completed builds into the requested the local experimental installation folder folder automatically. Previous application files are backed up, failed replacement attempts restore moved files, and a running installed test build is not overwritten. `-SkipInstall` supports packaging only.
+- Retained the first-opening audience preparation, shared per-scan cache, deferred outfit controls and all experimental preset features from test 2.
+- Compiled and packaged only; no automated tests or app/game launches performed.
+
+---
+
+# 0.4.9 preset test 2 — 2026-10-20 — UNRELEASED EXPERIMENT
+
+- Prepare NPC groups, roles, races, all three sex-specific preset lists, and readable advanced targets on a background worker when outfit setup first opens. Reuse the prepared data across pages and reopened setup windows for the same scan. A successful rescan invalidates it; no persistent disk cache is used.
+- Added an animated version of the app icon: light travels from the garment along the three distribution branches. Preparation displays the actual stage and elapsed time. Startup and main scan/generation progress use the same icon; reduced motion settings are respected.
+- Create outfit controls only when a page is visited. Saving unvisited pages uses their restored model data without constructing controls. Advanced target lists attach only when expanded.
+- Cache group membership, collection group labels, roles/races and audience matches. Match cache signatures include the current filters, group, collection and sex; selecting explicit NPCs starts matching from that bounded population while retaining all protection/template/collection checks.
+- Named group saves omit their expanded NPC audience IDs, keeping required role/race/individual refinements. Groups are resolved dynamically on restore, as before. Custom audiences retain explicit targets. This reduces repeated settings serialization during setup.
+- Reuse the prepared targeting service for patch review and overlap counting. Initial scanning is scheduled after the workspace renders; baseline-folder discovery runs on the scan worker.
+- Build/package only: no automated tests, app launches or measured timing comparisons. Large modlists can still take time during first preparation, scans and generation. Experimental separation from v0.4.8 remains unchanged.
+
+---
+
+# 0.4.9 preset test 1 — 2026-10-20 — UNRELEASED EXPERIMENT
+
+- Separate experimental app based on released 0.4.8. The release checkout and installed release are not replaced.
+- Added Complete set, Balanced (default), Light accessories, Essentials only and Custom buttons above the outfit parts list.
+- Added Required / Optional / Excluded states, a required checkbox, per-part inclusion percentage and a bulk optional-chance control.
+- Required parts are direct outfit items. Optional parts use one-entry Skyrim leveled lists with Chance None = 100 minus inclusion chance. Excluded parts are absent. The overall SPID distribution chance is unchanged and rolled once per generated outfit; no extra SPID outfit rules are generated per optional part.
+- Presets choose one compatible color/slot combination, retain main and uncertain clothing as required, exclude wigs and recognized lewd alternatives, and warn about modular clothing, missing main garments and omitted overlapping alternatives.
+- Added No headgear, No wigs, matching-color selection and Reset to Balanced controls.
+- Clearly named lewd variants are marked in the parts list. Normal presets/reset do not select them. An extra Use lewd variant button appears only where such records were detected, and requires explicit confirmation. Saved explicit opt-in is remembered for that setup. Detection uses names/EditorIDs; unmarked items are not certified non-lewd.
+- Saved setups and named duplicates retain part states, percentages, preferred color and explicit lewd opt-in. Preset/part changes appear in live Activity and My patch details.
+- Output read-back validates optional records, links and percentages. Repatching reuses stable optional records and prunes stale ones; removal and backup/export paths retain the complete ESP.
+- Independent EXE name, settings/log/backup root and output filenames prevent overwriting the released patch. Released output folders are refused; importing released settings clears a detected released output path.
+- Shop stock still gets one copy of every included part. Part percentages apply to NPC outfits only. SkyPatcher NPC assignment still requires 100% overall; optional piece lists do not add per-actor SkyPatcher distribution chance.
+- Built and packaged. No automated tests or app/MO2/Vortex/Skyrim launches were performed for this experimental build. File validation runs when users generate a patch.
+
+## Limits of this experiment
+
+Optional leveled-list items may be re-evaluated by game outfit/inventory resets. This experiment does not promise permanent per-actor optional choices or exact loot rates. Clothing dependencies and lewd appearance cannot be established from names/slots alone. Review warnings and source-mod requirements. Disable a released generated distribution mod while trying experimental output on the same recipients.
+
+---
+
+# Released baseline history (unchanged)
+
 # 0.4.8 development preview — 2026-10-19
 
 - Added independent tickboxes for NPC outfits and trader sales. Tick only trader sales to generate merchants-only stock, with no NPC audience, sex or chance required. The explanatory note is beside the checkbox. New setups start with neither destination selected; existing saved setups keep their destination choices. Available shop categories default on; unavailable categories are disabled unless an older saved choice needs attention.
@@ -106,3 +230,102 @@
 - Validates outfit records, item links, masters, SPID rule shape and chance, and SkyPatcher rule shape before committing output.
 - Added automated Windows integration checks for merging, repatching, named variants, removal, restore, legacy migration, SPID, and SkyPatcher.
 - Attempted an SKSE launch check; the launcher exited without a Skyrim game process, so live-game behavior remains unverified.
+
+
+---
+
+# Earlier recorded iterations
+
+Historical changes below are superseded by later versions. The old Guards preset was subsequently removed/protected.
+
+## 0.2.5 — historical preview
+
+# 0.2.5 preview — 2026-10-16
+
+- Merges newly generated outfits and distribution rules into the existing patch instead of overwriting previous selections.
+- Repatching a source plugin updates its generated outfit and rules while keeping other plugins intact.
+- Preserves existing plugin masters and adds masters needed by newly selected outfit pieces.
+- Uses stable outfit IDs so merged rules continue referencing the right outfit records.
+- Clarifies the merge behavior in the confirmation dialog.
+
+## 0.2.4 — historical preview
+
+# 0.2.4 preview — 2026-10-16
+
+- Saves distribution choices per source plugin between sessions: audience rules and group filters, chance, NPC sex, and excluded outfit pieces.
+- Restores saved targets only when they still exist in the current scan.
+- Saves the current wizard state when navigating, generating, canceling, or closing the setup window.
+- Retains the previous farmer targeting, icon startup, and generated outfit fixes.
+
+## 0.2.3 — historical preview
+
+# 0.2.3 preview — 2026-10-16
+
+- Improved the Farmers audience to resolve dynamically to farm factions and occupation records actually assigned to NPCs in the scanned plugins.
+- Excludes animal-only farm factions from the Farmers audience and prefers faction targets when present.
+- Filters the farmer role list to farming-related roles so unrelated combat classes are not shown.
+- Retains the 0.2.2 startup resource fix, embedded application icon, and Mutagen outfit item-list fix.
+
+## 0.2.2 — historical preview
+
+# 0.2.2 preview — 2026-10-16
+
+- Fixed startup failure by embedding the window icon as a WPF resource as well as the executable icon.
+- Keeps the Mutagen outfit item-list initialization fix from 0.2.1.
+- Keeps NPC-usage-based target discovery and mod-added group presets.
+- Requires the .NET 10 Desktop Runtime x64; this is a framework-dependent package.
+
+## 0.2.1 — historical preview
+
+# 0.2.1 preview — 2026-10-16
+
+- Fixed generated outfit construction by initializing Mutagen's required item list.
+- Filters distribution targets to records assigned to NPC records in the scanned plugins, across plugin boundaries.
+- Discovers recognizable mod-added NPC groups from actual assignments and exposes them in the audience selector.
+- Automatically selects the all-installed-mods collection when a discovered mod group is chosen.
+- Embeds the app icon in the Windows executable and main app window.
+- Live Skyrim validation across varied load orders is still needed.
+
+## 0.2.0 — historical preview
+
+# 0.2.0 preview — 2026-10-16
+
+- Reworked NPC targeting as a beginner-friendly guided audience picker with collection, familiar group presets, multi-select archetypes, and race filters.
+- Added common audiences including Bandits, Forsworn, Guards, Mages, Necromancers, Farmers, Merchants, Adventurers, Warriors, Hunters, and others.
+- Added separate audience rules so filters selected for one group do not bleed into another.
+- Kept advanced search for mod-added or unusual NPC records and per-plugin targeting.
+- Added the Wearable Distributor tunic-and-branches app icon to the app window and executable.
+- Live Skyrim validation across varied load orders is still needed.
+
+## 0.1.2 — historical preview
+
+# 0.1.2 preview — 2026-10-16
+
+- Removed the duplicate prototype project that only saved `generation-draft.json`; the repository now has one authoritative build path under `src/`.
+- Rebuilt the Windows x64 app from `src/WearableDistributor.csproj`.
+- Generate Patch writes `WearableDistributor.esp` and the selected SPID or SkyPatcher distribution file.
+- Existing smart scan, per-plugin setup wizard, and structural read-back validation remain included.
+- Added plugin-title role matching to preselect installed NPC target records, with a visible suggestion reason in the wizard.
+- Clarified that the scan root can be a Vortex staging folder and added a hint when only official Skyrim plugins were found.
+- Live Skyrim validation across different load orders is still needed.
+
+## 0.1.1 — historical preview
+
+# 0.1.1 preview — 2026-10-16
+
+- Removed the duplicate prototype project that only saved `generation-draft.json`; the repository now has one authoritative build path under `src/`.
+- Rebuilt the Windows x64 app from `src/WearableDistributor.csproj`.
+- Generate Patch writes `WearableDistributor.esp` and the selected SPID or SkyPatcher distribution file.
+- Existing smart scan, per-plugin setup wizard, and structural read-back validation remain included.
+- Live Skyrim validation across different load orders is still needed.
+
+## 0.1.0 — historical preview
+
+# 0.1.0 preview — 2026-10-16
+
+- First Windows x64 preview package with app executable and companion runtime files.
+- Smart scan and plugin selection controls.
+- Per-plugin distribution wizard for NPC groups, chance, sex, and outfit pieces.
+- SPID and SkyPatcher patch file generation.
+- Structural read-back checks for generated plugin and distribution files.
+- Live Skyrim validation across different load orders is still needed.

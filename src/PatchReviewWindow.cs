@@ -82,14 +82,14 @@ public sealed class PatchReviewWindow : Window
             if (!config.DistributeToNpcs)
             {
                 var stock = MerchantStockService.Build(config);
-                var blocked = included.Count == 0 || stock.Count == 0;
+                var blocked = included.Count == 0 || stock.Count == 0 || OutfitPartPresets.Errors(config).Count > 0;
                 rows.Add(new ReviewRow(config.OutfitName, $"{included.Count}/{config.Pieces.Count}", "Merchants only", "—", "N/A",
                     blocked ? "Select parts and traders" : "Ready · shop stock only",
                     $"Plugin: {config.Source.Plugin}\nTrader categories: {string.Join(", ", config.MerchantCategories)}\n" +
                     $"Stock containers: {stock.Select(rule => (rule.ContainerPlugin, rule.ContainerId)).Distinct().Count()}\n" +
                     $"Stock items: {stock.Select(rule => (rule.ItemPlugin, rule.ItemId)).Distinct().Count()}\n\n" +
                     "No NPC outfits are assigned. NPC chance, sex and audience choices are ignored. Different body slots/sex variants may be sold together. Requires SkyPatcher with container patching enabled; clothing traders receive no weapons.\n\nSelected parts:\n" +
-                    string.Join("\n", included.Select(piece => "• " + piece.Name)), true, blocked));
+                    string.Join("\n", included.Select(piece => "• " + piece.Name)) + "\n\n" + OutfitPartPresets.Summary(config) + "\n" + string.Join("\n", OutfitPartPresets.Errors(config)), true, blocked));
                 continue;
             }
             var slotWarnings = FindSlotOverlaps(config);
@@ -103,7 +103,9 @@ public sealed class PatchReviewWindow : Window
                 var matches = rule.NpcResolutionComplete ? rule.ResolvedNpcFormIds.Count : countMatches(rule);
                 rule.EstimatedNpcCount = matches;
                 var overlaps = countConflicts(rule, config); var installed = countInstalledConflicts(rule);
-                var notes = new List<string>();
+                var notes = OutfitPartPresets.Warnings(config.Pieces);
+                notes.Add(OutfitPartPresets.Summary(config));
+                notes.AddRange(OutfitPartPresets.Errors(config));
                 if (rule.ProtectedNpcCount > 0) notes.Add($"⚠ Protected NPCs: {rule.ProtectedNpcCount} member(s) have existing uniform protection. This explicit faction selection replaces their outfits and can remove their recognizable uniforms. Guards stay excluded.");
                 if (rule.Group == NpcTargetingService.UniqueGroup) notes.Add("⚠ " + NpcTargetingService.UniqueWarning);
                 if (config.MerchantCategories.Count > 0)
@@ -116,11 +118,11 @@ public sealed class PatchReviewWindow : Window
                 if (slotWarnings.Count > 0) notes.Add("Possible incompatible outfit parts:\n" + string.Join("\n", slotWarnings.Take(12)) + (slotWarnings.Count > 12 ? "\nMore overlapping combinations exist. Choose a compatible subset of parts." : ""));
                 var refinements = rule.Filters.Where(filter => filter.TargetKind != "Npc" || filter.Category == "NPC role").GroupBy(filter => filter.Category)
                     .Select(group => group.Key + ": " + string.Join(" OR ", group.Select(filter => NpcTargetingService.Humanize(filter.EditorId)).Distinct(StringComparer.OrdinalIgnoreCase)));
-                var details = $"Plugin: {config.Source.Plugin}\nCollection: {rule.Collection}\nNPC sex: {config.Gender}\nAudience: {rule.Group}\n" +
-                    string.Join("\n", refinements) + $"\n\nIncluded parts ({included.Count}):\n" + string.Join("\n", included.Select(piece => "• " + piece.Name + " · " + piece.Slots)) +
+                var details = OutfitPartPresets.Summary(config) + "\nOne version per required garment group after the overall outfit roll; shared accessories keep their optional chance.\n\n" + $"Plugin: {config.Source.Plugin}\nCollection: {rule.Collection}\nNPC sex: {config.Gender}\nAudience: {rule.Group}\n" +
+                    string.Join("\n", refinements) + $"\n\nIncluded parts ({included.Count}):\n" + string.Join("\n", included.Select(piece => "• " + piece.Name + " · " + piece.InclusionLabel + " · " + piece.Slots)) +
                     (notes.Count == 0 ? "\n\nNo issues found by the available checks." : "\n\nReview notes:\n" + string.Join("\n\n", notes));
                 var status = matches == 0 ? "No matching NPCs" : included.Count == 0 ? "No parts included" : rule.ProtectedNpcCount > 0 ? "⚠ Protected uniforms" : rule.Group == NpcTargetingService.UniqueGroup ? "⚠ Unique NPCs · quest/script caution" : slotWarnings.Count > 0 ? "Check overlapping body slots" : overlaps + installed > 0 ? "Check competing outfits" : matches > 500 ? "Broad audience" : config.MerchantCategories.Count > 0 ? "Ready + merchandise" : "Ready";
-                rows.Add(new ReviewRow(config.OutfitName, $"{included.Count}/{config.Pieces.Count}", rule.Group, matches.ToString(CultureInfo.InvariantCulture), config.Chance + "%", status, details, notes.Count > 0, matches == 0 || included.Count == 0));
+                rows.Add(new ReviewRow(config.OutfitName, $"{included.Count}/{config.Pieces.Count}", rule.Group, matches.ToString(CultureInfo.InvariantCulture), config.Chance + "%", status, details, notes.Count > 0, matches == 0 || included.Count == 0 || OutfitPartPresets.Errors(config).Count > 0));
             }
         }
         return rows;
@@ -134,6 +136,11 @@ public sealed class PatchReviewWindow : Window
 
     private static List<string> FindSlotOverlaps(PluginPatchOptions config)
     {
+        if (config.MatchVariants)
+        {
+            try { OutfitVariantPlan.Create(config); return []; }
+            catch (InvalidOperationException failure) { return [failure.Message]; }
+        }
         var pieces = config.Pieces.Where(piece => piece.Include).ToList(); var result = new List<string>();
         var parsed = pieces.Select(piece => OutfitPartSelection.BodySlots(piece.Slots)).ToList();
         var bySlot = new Dictionary<string, List<int>>(StringComparer.OrdinalIgnoreCase);

@@ -19,6 +19,7 @@ public static class ScanReviewChecks
     {
         var game = Path.Combine(root, "scan-review-implicit");
         var data = Path.Combine(game, "Data"); Directory.CreateDirectory(data);
+        new SkyrimMod(ModKey.FromNameAndExtension("Skyrim.esm"), SkyrimRelease.SkyrimSE).WriteToBinary(Path.Combine(data, "Skyrim.esm"));
         var resource = new SkyrimMod(ModKey.FromNameAndExtension("ccInstalledResource.esm"), SkyrimRelease.SkyrimSE);
         var keyword = resource.Keywords.AddNew("ImplicitResourceKeyword");
         resource.WriteToBinary(Path.Combine(data, resource.ModKey.FileName));
@@ -34,7 +35,7 @@ public static class ScanReviewChecks
         var profile = Path.Combine(game, "plugins.txt");
         File.WriteAllText(profile, "*DependentAdventurerArmor.esp\nDisabledArmor.esp\n");
         var result = new WearableScanService().Scan(data, new AppPreferences { PluginListPath = profile }, null, null, CancellationToken.None);
-        Check(result.LoadOrder.SequenceEqual(["ccInstalledResource.esm", "DependentAdventurerArmor.esp"]), "installed implicit .ccc resource precedes the active dependent and absent/disabled plugins stay excluded");
+        Check(result.LoadOrder.SequenceEqual(["Skyrim.esm", "ccInstalledResource.esm", "DependentAdventurerArmor.esp"]), "installed implicit .ccc resource precedes the active dependent and absent/disabled plugins stay excluded");
         Check(result.Plugins.Single().CanPatch, "an installed .ccc master omitted from plugins.txt does not invalidate its dependent armor plugin");
         Check(!result.Diagnostics.Any(line => line.Contains("Missing or inactive master", StringComparison.OrdinalIgnoreCase)), "implicit .ccc loading eliminates false missing-master diagnostics");
 
@@ -47,6 +48,7 @@ public static class ScanReviewChecks
     private static void CheckNestedLeveledTemplates(string root)
     {
         var folder = Path.Combine(root, "scan-review-templates"); Directory.CreateDirectory(folder);
+        new SkyrimMod(ModKey.FromNameAndExtension("Skyrim.esm"), SkyrimRelease.SkyrimSE).WriteToBinary(Path.Combine(folder, "Skyrim.esm"));
         var mod = new SkyrimMod(ModKey.FromNameAndExtension("LeveledTemplateFixture.esp"), SkyrimRelease.SkyrimSE);
         var actorType = mod.Keywords.AddNew("ActorTypeNPC");
         var nord = mod.Races.AddNew("NordRace"); nord.Flags = Race.Flag.Playable; nord.Keywords = [actorType.ToLink()];

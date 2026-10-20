@@ -17,13 +17,17 @@ public static class PatchInventoryService
         if (!File.Exists(path)) return ReadLegacy(outputDirectory);
         var manifest = JsonSerializer.Deserialize<PatchManifest>(File.ReadAllText(path), JsonOptions)
             ?? throw new InvalidDataException("The generated patch inventory is empty or unreadable. Restore a backup before generating another patch.");
-        if (manifest.SchemaVersion is < 1 or > 4 || manifest.Entries is null || manifest.Entries.Count > 10_000)
+        if (manifest.SchemaVersion is < 1 or > 6 || manifest.Entries is null || manifest.Entries.Count > 10_000)
             throw new InvalidDataException("The patch inventory has an unsupported schema or invalid entries. Restore a backup or open it with the version that created it.");
         if (!manifest.OutputPlugin.Equals(PatchGenerator.OutputPluginName, StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("The patch inventory names an unexpected generated plugin.");
         foreach (var entry in manifest.Entries)
         {
+            if (entry is null || string.IsNullOrWhiteSpace(entry.SourcePlugin) || string.IsNullOrWhiteSpace(entry.Framework) || string.IsNullOrWhiteSpace(entry.DistributionPath))
+                throw new InvalidDataException("The patch inventory contains an empty or incomplete entry. Restore a backup before regenerating.");
             entry.MerchantStock ??= [];
+            entry.PartChoices ??= [];
+            entry.VariantBranches ??= [];
             if (!entry.DistributeToNpcs && (entry.MerchantStock.Count == 0 || entry.DistributionRows != 0))
                 throw new InvalidDataException("A merchants-only entry must have shop stock and no NPC distribution rows.");
             DistributionRuleCompiler.ValidatePluginName(entry.SourcePlugin);
@@ -122,7 +126,7 @@ public static class PatchInventoryService
             PluginPresent = File.Exists(Path.Combine(outputDirectory, PatchGenerator.OutputPluginName)),
             Entries = manifest.Entries.Select(entry => new
             {
-                entry.SourcePlugin, entry.OutfitName, entry.Framework, entry.DistributionPath, entry.IncludedPieces, entry.ExcludedPieces, entry.RequiredMasters,
+                entry.SourcePlugin, entry.OutfitName, entry.PartPreset, entry.PartChoices, entry.MatchVariants, entry.VariantBranches, entry.Framework, entry.DistributionPath, entry.IncludedPieces, entry.ExcludedPieces, entry.RequiredMasters,
                 entry.Audiences, entry.Chance, entry.Gender, entry.DistributeToNpcs, entry.DistributionRows, entry.GeneratedAtUtc, entry.MerchantStock
             })
         };
@@ -171,6 +175,7 @@ public static class PatchInventoryService
             var outfit = mod.Outfits.FirstOrDefault(candidate => string.Equals(candidate.EditorID, entry.OutfitEditorId, StringComparison.OrdinalIgnoreCase));
             if (outfit is not null) mod.Outfits.Remove(outfit);
         }
+        OptionalPartLists.Prune(mod);
         manifest.GeneratedAtUtc = DateTime.UtcNow;
         var tempRoot = Path.Combine(outputDirectory, ".WearableDistributor-remove-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempRoot);

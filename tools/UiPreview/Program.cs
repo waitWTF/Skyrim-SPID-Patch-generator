@@ -19,14 +19,23 @@ internal static class Program
         Directory.CreateDirectory(settings);
         Environment.SetEnvironmentVariable("WEARABLE_DISTRIBUTOR_SETTINGS_DIR", settings);
         Environment.SetEnvironmentVariable("WEARABLE_DISTRIBUTOR_NO_AUTOSCAN", "1");
-        var app = new App();
+        var app = new Application();
         app.Resources.MergedDictionaries.Add(new ResourceDictionary
         {
-            Source = new Uri("/SkyrimSPIDPatchGenerator;component/UiTheme.xaml", UriKind.Relative)
+            Source = new Uri("/" + typeof(App).Assembly.GetName().Name + ";component/UiTheme.xaml", UriKind.Relative)
         });
         app.ShutdownMode = ShutdownMode.OnExplicitShutdown;
         var mode = args.FirstOrDefault() ?? "wizard";
         var (plugins, choices, profiles) = Sample();
+        if (mode == "workflow-checks")
+        {
+            app.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                try { WorkflowChecks.Run(plugins, choices, profiles); app.Shutdown(0); }
+                catch (Exception failure) { Console.Error.WriteLine(failure); app.Shutdown(1); }
+            }));
+            return app.Run();
+        }
         var saved = new Dictionary<string, SavedDistributionOptions>(StringComparer.OrdinalIgnoreCase);
         var documentation = args.Contains("--docs");
         var demoMerchants = new[] { new MerchantTarget("Skyrim.esm", 0x100, "DemoSmithStock", MerchantStockService.Blacksmiths), new MerchantTarget("Skyrim.esm", 0x101, "DemoGeneralStock", MerchantStockService.GeneralGoods), new MerchantTarget("Skyrim.esm", 0x102, "DemoClothingStock", MerchantStockService.Clothing) };
@@ -204,7 +213,7 @@ internal static class Program
         if (buttons.Count < 2) throw new InvalidOperationException("The expected navigation controls did not render.");
         var navigation = buttons.Where(button => (button.Content?.ToString() ?? "").Contains("Next") ||
             (button.Content?.ToString() ?? "").Contains("Review") || (button.Content?.ToString() ?? "").Contains("Generate") ||
-            (button.Content?.ToString() ?? "").Contains("Configure outfits") || (button.Content?.ToString() ?? "").Contains("Back")).ToList();
+            (button.Content?.ToString() ?? "").Contains("Configure checked") || (button.Content?.ToString() ?? "").Contains("Save & close") || (button.Content?.ToString() ?? "").Contains("Back")).ToList();
         if (navigation.Count == 0) throw new InvalidOperationException("No primary workflow control is visible.");
         foreach (var button in navigation)
         {

@@ -1,8 +1,7 @@
-# Build output and local files
 **/bin/
 **/obj/
-.vs/
+test-results/
+artifacts/
+preview-settings/
 *.user
 *.suo
-artifacts/
-publish-*/

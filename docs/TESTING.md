@@ -1,8 +1,6 @@
-# Verification and manual release checklist
+# Verification and development checks
 
-## Automated checks
-
-From the repository root on Windows with .NET 10 SDK:
+See [release verification](RELEASE_VERIFICATION_049.md) for v0.4.9 evidence and limits. Test artifacts use unique directories under test-results; settings/logs and backup roots are isolated. Never point fixture output at installed mods or live patches.
 
 ```powershell
 dotnet run --project tests/WearableDistributor.IntegrationChecks.csproj -c Release
@@ -38,7 +36,7 @@ The UI harness accepts:
 WearableDistributor.UiPreview.exe scan "path/to/Data" "path/to/plugins.txt" "path/to/report.txt"
 ```
 
-This reads plugin data and writes a report at the specified path. It does not generate or install a patch. Installed reports can contain local paths/mod names; review before sharing. The release audit found 948 plugins and 7,013 eligible candidate bases. One quest plugin failed Mutagen parsing and was skipped without committing partial records.
+This reads plugin data and writes a report at the specified path. It does not generate or install a patch. Installed reports can contain local paths/mod names; review before sharing. Installed audits depend on the current loadout; see RELEASE_VERIFICATION_049.md. A quest plugin in the investigated installation failed Mutagen parsing and was skipped without committing partial records.
 
 ## Disposable in-game profile
 
@@ -53,5 +51,5 @@ This reads plugin data and writes a report at the specified path. It does not ge
 9. Compare the selected chance across multiple fresh encounters. Other outfit distributors can compete, and separate outfits do not form a guaranteed percentage partition.
 10. Disable the generated mod and verify a test profile can return to its expected baseline.
 
-Previous SKSE start did not reach Skyrim, so steps 6–10 are outstanding. Do not describe this preview as in-game validated until those are observed.
+This release task did not launch Skyrim. Do not describe unobserved in-game outcomes as verified.
 

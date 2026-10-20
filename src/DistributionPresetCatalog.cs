@@ -8,20 +8,22 @@ public sealed class DistributionPresetCatalog(NpcTargetingService targeting)
     private readonly Dictionary<string, List<QuickAudiencePreset>> cache = new(StringComparer.OrdinalIgnoreCase);
     private static readonly string[] CommonGroups = ["Bandits", "Forsworn", "Mages", "Necromancers", "Vampires", "Witches", "Farmers", "Merchants", "Blacksmiths", "Innkeepers", "Servants", "Miners", "Lumberjacks", "Nobles", "Adventurers", "Hunters", "Thieves", "Assassins", "Warriors", "Bards", "Priests", "Wenches", "Flower Girls"];
 
-    public IReadOnlyList<QuickAudiencePreset> GetPresets(string gender)
+    public IReadOnlyList<QuickAudiencePreset> GetPresets(string gender, IProgress<string>? progress = null)
     {
         if (cache.TryGetValue(gender, out var existing)) return existing;
         var result = new List<QuickAudiencePreset>();
-        AddCollection(NpcTargetingService.AllCollection, "Common audiences · all installed NPCs", includeAll: false);
+        AddCollection(NpcTargetingService.AllCollection, "Common NPC groups · all installed NPCs", includeAll: false);
         foreach (var collection in targeting.GetCollections().Where(collection => collection != NpcTargetingService.AllCollection && collection != NpcTargetingService.OfficialCollection))
             AddCollection(collection, "Added by " + collection, includeAll: true);
         return cache[gender] = result;
 
         void AddCollection(string collection, string category, bool includeAll)
         {
+            progress?.Report($"Preparing {gender.ToLowerInvariant()} NPC groups · {collection}…");
             foreach (var group in CommonGroups.Concat(FactionAudienceCatalog.Groups).Append(NpcTargetingService.UniqueGroup))
             {
                 var rule = targeting.BuildRule(group, collection);
+                if (rule.Filters.Count == 0) continue;
                 var faction = FactionAudienceCatalog.IsKnown(group);
                 Add(faction ? group + " · All members" : group, rule, faction);
                 if (faction || group is "Bandits" or "Forsworn" or "Adventurers")

@@ -8,10 +8,23 @@ using Mutagen.Bethesda.Plugins;
 using Mutagen.Bethesda.Skyrim;
 using WearableDistributor;
 
-var root = Path.Combine(AppContext.BaseDirectory, "integration-work");
-if (Directory.Exists(root)) Directory.Delete(root, true);
+var root = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "test-results", "integration-" + DateTime.UtcNow.ToString("yyyyMMdd-HHmmss") + "-" + Guid.NewGuid().ToString("N")[..6]));
 Directory.CreateDirectory(root);
 Environment.SetEnvironmentVariable("LOCALAPPDATA", Path.Combine(root, "localapp"));
+Environment.SetEnvironmentVariable("WEARABLE_DISTRIBUTOR_SETTINGS_DIR", Path.Combine(root, "settings"));
+Console.WriteLine("Evidence: " + root);
+if (args.FirstOrDefault() == "variant-installed") { InstalledVariantAudit.Run(args[1], args[2], args.Skip(3).ToArray()); return; }
+if (args.FirstOrDefault() == "mesh-audit") { MeshRepairAudit.Run(args[1], args[2]); return; }
+if (args.FirstOrDefault() == "visibility")
+{
+    InstalledVisibilityAudit.Run(args[1], args[2]);
+    return;
+}
+if (args.FirstOrDefault() == "audit")
+{
+    InstalledAudit.Run(args[1], args[2]);
+    return;
+}
 try
 {
     var a = Configuration("MageCore.esp", 0x800, "Mages");
@@ -52,8 +65,8 @@ try
     Assert(PatchInventoryService.ReadManifest(root).Entries.Count == 3, "restore recovers inventory metadata");
 
     PatchGenerator.Generate([a], root, "SPID");
-    Assert(ReadOutfits(resultA.PluginPath) == 2, "repatching without an old variant removes its unused ESP record");
-    Assert(PatchInventoryService.ReadManifest(root).Entries.Count == 2, "repatching removes the obsolete variant from inventory");
+    Assert(ReadOutfits(resultA.PluginPath) == 3, "repatching one named outfit preserves an unselected sibling variant");
+    Assert(PatchInventoryService.ReadManifest(root).Entries.Count == 3, "repatching one named outfit preserves sibling inventory entries");
     PatchGenerator.Generate([a, darkVariant], root, "SPID");
 
     var withoutAudience = Configuration("UnsafeFallback.esp", 0x805, "Bandits");
@@ -90,14 +103,14 @@ try
     OutputReviewChecks.Run(root);
     OutfitSelectionChecks.Run();
 
+    MeshSafetyChecks.Run(root);
+    VariantChecks.Run(root);
+    CurrentRegressionChecks.Run(root);
     Console.WriteLine("All Wearable Distributor integration checks passed.");
 }
 finally
 {
-    try { Directory.Delete(root, true); } catch { }
-    var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Path.GetFullPath(root).ToUpperInvariant())))[..16];
-    var backupRoot = Path.Combine(Environment.GetEnvironmentVariable("LOCALAPPDATA")!, "WearableDistributor", "Backups", hash);
-    try { Directory.Delete(backupRoot, true); } catch { }
+    Console.WriteLine("Test artifacts retained in " + root);
 }
 
 static PluginPatchOptions Configuration(string plugin, uint localId, string group, string chance = "25")

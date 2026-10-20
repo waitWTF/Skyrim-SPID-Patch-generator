@@ -68,6 +68,7 @@ public static class ScannerChecks
 
     private static void CheckBinaryScan(string folder)
     {
+        new SkyrimMod(ModKey.FromNameAndExtension("Skyrim.esm"), SkyrimRelease.SkyrimSE).WriteToBinary(Path.Combine(folder, "Skyrim.esm"));
         var source = new SkyrimMod(ModKey.FromNameAndExtension("BaseWearables.esp"), SkyrimRelease.SkyrimSE);
         var actorKeyword = source.Keywords.AddNew("ActorTypeNPC");
         var race = source.Races.AddNew("AdultRace"); race.Flags = Race.Flag.Playable; race.Keywords = [actorKeyword.ToLink()];

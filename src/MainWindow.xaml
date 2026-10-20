@@ -1,4 +1,4 @@
-<Window x:Class="WearableDistributor.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Skyrim SPID Patch Generator" Icon="assets/WearableDistributor.ico" Height="820" Width="1240" MinHeight="660" MinWidth="1000" WindowStartupLocation="CenterScreen" Background="{DynamicResource AppBackgroundBrush}" Foreground="{DynamicResource TextBrush}" FontFamily="Segoe UI" FontSize="13" UseLayoutRounding="True">
+<Window x:Class="WearableDistributor.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:WearableDistributor" Title="Skyrim SPID Patch Generator" Icon="assets/WearableDistributor.ico" Height="820" Width="1240" MinHeight="660" MinWidth="1000" WindowStartupLocation="CenterScreen" Background="{DynamicResource AppBackgroundBrush}" Foreground="{DynamicResource TextBrush}" FontFamily="Segoe UI" FontSize="13" UseLayoutRounding="True">
   <Window.Resources>
     <Style x:Key="SidebarChoice" TargetType="RadioButton">
       <Setter Property="Margin" Value="0,3" />
@@ -98,7 +98,7 @@
               <TextBlock Text="Choose your mods. Decide who wears them. Build one patch." Foreground="{DynamicResource MutedBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,8,0,0" />
             </StackPanel>
           </Border>
-          <TextBlock Text="0.4.6 · DEVELOPMENT PREVIEW" FontSize="9" Foreground="{DynamicResource MutedBrush}" Margin="5,0,0,6" />
+          <TextBlock x:Name="BuildVersionText" Text="v0.4.10" FontSize="9" Foreground="{DynamicResource MutedBrush}" Margin="5,0,0,6" />
           <TextBlock Text="Skyrim Special Edition / Anniversary" FontSize="10" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="5,0,0,0" />
         </StackPanel>
       </DockPanel>
@@ -115,7 +115,7 @@
           <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
         <StackPanel VerticalAlignment="Center">
-          <TextBlock Text="MAKE YOUR WORLD WEAR IT" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" />
+          <TextBlock x:Name="ExperimentalHeaderText" Text="v0.4.10 · OUTFITS &amp; MERCHANDISE" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" />
           <TextBlock Text="Skyrim SPID Patch Generator" FontSize="25" FontWeight="SemiBold" Margin="0,3,0,5" TextWrapping="Wrap" />
           <TextBlock x:Name="ActivePathText" Text="Set up your Skyrim or mod staging folder in Settings." Foreground="{DynamicResource MutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
         </StackPanel>
@@ -136,7 +136,7 @@
             </Grid.RowDefinitions>
             <StackPanel Margin="0,0,0,13">
               <TextBlock Text="Outfit library" FontSize="20" FontWeight="SemiBold" />
-              <TextBlock Text="Choose the mods to configure. Your existing patch is kept when you add more." Foreground="{DynamicResource MutedBrush}" Margin="0,5,0,10" TextWrapping="Wrap" />
+              <TextBlock Text="Right-click an outfit → Configure this outfit. To configure several, tick their boxes and use Configure checked below." Foreground="{DynamicResource MutedBrush}" Margin="0,5,0,10" TextWrapping="Wrap" />
               <TextBlock Text="1  CHOOSE OUTFITS     →     2  CONFIGURE     →     3  REVIEW AND BUILD" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,14" />
               <Grid>
                 <Grid.ColumnDefinitions>
@@ -179,19 +179,13 @@
                 </ComboBox>
                 <TextBlock x:Name="ActionTargetsText" VerticalAlignment="Center" Margin="12,0,0,0" Foreground="{DynamicResource MutedBrush}" />
               </WrapPanel>
-              <Expander Header="Hidden outfits and filter tools" Margin="0,8,0,0">
-                <StackPanel Margin="0,8,0,2">
-                  <WrapPanel>
-                    <CheckBox x:Name="ShowFilteredBox" Content="Show hidden candidates" Margin="0,4,20,4" Checked="RefreshPluginList" Unchecked="RefreshPluginList" ToolTip="Inspect plugins held back by the smart filter" />
-                    <CheckBox x:Name="ShowIgnoredBox" Content="Show my exclusions" Margin="0,4,10,4" Checked="RefreshPluginList" Unchecked="RefreshPluginList" />
-                    <CheckBox x:Name="ShowPatchedBox" Content="Show already patched outfits" Margin="0,4,10,4" Checked="RefreshPluginList" Unchecked="RefreshPluginList" ToolTip="Successfully patched outfits are hidden automatically. My patch always lists their details." />
-                  </WrapPanel>
-                  <WrapPanel Margin="0,5,0,0">
-                    <Button Content="Include hidden candidate" Style="{StaticResource QuietAction}" Click="IncludeFiltered_Click" />
-                    <Button Content="Unhide selected" Style="{StaticResource QuietAction}" Click="RestorePlugin_Click" />
-                  </WrapPanel>
-                </StackPanel>
-              </Expander>
+              <TabControl x:Name="LibraryViews" Margin="0,12,0,0" Height="42" SelectedIndex="0" SelectionChanged="LibraryViewChanged">
+                <TabItem x:Name="EquipmentViewTab" Header="Armor &amp; clothing" />
+                <TabItem x:Name="MixedViewTab" Header="Mixed / hidden" />
+                <TabItem x:Name="PatchedViewTab" Header="Already patched" />
+              </TabControl>
+              <TextBlock x:Name="LibraryViewHint" Text="Armor/clothing plugins stay in this list even after patching. Mixed-content mods can be included from the next tab." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" FontSize="11" Margin="0,6,0,0" />
+
             </StackPanel>
             <Grid Grid.Row="1">
               <DataGrid x:Name="PluginsGrid" AutoGenerateColumns="False" CanUserAddRows="False" SelectionMode="Extended" IsReadOnly="False" EnableRowVirtualization="True" EnableColumnVirtualization="True" PreviewMouseRightButtonDown="PluginRightClick">
@@ -232,6 +226,8 @@
                         </Setter>
                       </Style>
                     </ContextMenu.Resources>
+                    <MenuItem Header="Configure this outfit…" Click="ConfigureContext_Click" />
+                    <Separator />
                     <MenuItem Header="Enable selected for patch" Click="EnableSelected_Click" />
                     <MenuItem Header="Disable selected for patch" Click="DisableSelected_Click" />
                     <Separator />
@@ -241,7 +237,7 @@
                   </ContextMenu>
                 </DataGrid.ContextMenu>
                 <DataGrid.Columns>
-                  <DataGridTemplateColumn Header="Use" Width="48">
+                  <DataGridTemplateColumn Header="Batch" Width="58">
                     <DataGridTemplateColumn.CellTemplate>
                       <DataTemplate>
                         <CheckBox IsChecked="{Binding Selected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding CanPatch}" ToolTip="{Binding ValidationIssue}" AutomationProperties.Name="{Binding Plugin}" HorizontalAlignment="Center" Click="PluginSelectionChanged" />
@@ -251,7 +247,7 @@
                   <DataGridTextColumn Header="OUTFIT / PLUGIN" Binding="{Binding Plugin}" Width="2*" IsReadOnly="True" />
                   <DataGridTextColumn Header="PIECES" Binding="{Binding PieceCount}" Width="65" IsReadOnly="True" />
                   <DataGridTextColumn Header="PATCH STATUS" Binding="{Binding PatchStatus}" Width="110" IsReadOnly="True" />
-                  <DataGridTextColumn Header="FILTER NOTE" Binding="{Binding FilterReason}" Width="*" IsReadOnly="True" />
+                  <DataGridTextColumn Header="FILTER NOTE" Binding="{Binding LibraryNote}" Width="*" IsReadOnly="True" />
                 </DataGrid.Columns>
               </DataGrid>
               <Border Background="{DynamicResource SurfaceBrush}" Margin="1,43,1,1" Padding="14">
@@ -266,8 +262,8 @@
                   </Style>
                 </Border.Style>
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="480">
-                  <TextBlock Text="Your next outfit starts here" FontSize="20" FontWeight="SemiBold" HorizontalAlignment="Center" />
-                  <TextBlock Text="Scan your deployed Data folder or mod staging folder to find wearable plugins. If the list stays empty, check the folder and reveal hidden candidates above." Foreground="{DynamicResource MutedBrush}" TextAlignment="Center" TextWrapping="Wrap" Margin="0,7,0,10" />
+                  <TextBlock Text="No outfits match this view" FontSize="20" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                  <TextBlock Text="Clear the search, check the other library tabs, or scan your deployed Data / installed mod staging folder. Official content is excluded from these lists." Foreground="{DynamicResource MutedBrush}" TextAlignment="Center" TextWrapping="Wrap" Margin="0,7,0,10" />
                   <Button Content="Choose folders in Settings" Click="NavigateSettings_Click" HorizontalAlignment="Center" />
                 </StackPanel>
               </Border>
@@ -285,9 +281,10 @@
             </Grid.RowDefinitions>
             <StackPanel Margin="0,0,0,12">
               <TextBlock Text="My patch" FontSize="20" FontWeight="SemiBold" />
-              <TextBlock Text="See what you have distributed, change an outfit, or recover the previous patch." Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,5,0,10" />
+              <TextBlock Text="Generated files discovered across your mod locations. Each entry shows its patch location; profile activation is not inferred." Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,5,0,10" />
               <WrapPanel>
                 <Button Content="Refresh" Click="RefreshInventory_Click" />
+                <Button Content="Find patch files…" Click="FindPatchFiles_Click" ToolTip="Add generated ESP, INI or manifest files from other mod folders/profiles. Multiple files can be selected." />
                 <Button Content="Open folder" Click="OpenOutput_Click" />
                 <Button Content="Edit / repatch selected" Click="EditInventoryEntry_Click" />
                 <Button Content="Repatch all" Click="RepatchAll_Click" ToolTip="Refresh all saved outfits with this scan. Go straight to review when saved choices are valid, or open setup at an outfit needing attention." />
@@ -301,6 +298,7 @@
               <DataGrid.Columns>
                 <DataGridTextColumn Header="OUTFIT / PLUGIN" Binding="{Binding SourcePlugin}" Width="2*" />
                 <DataGridTextColumn Header="PIECES" Binding="{Binding IncludedPieces}" Width="65" />
+                <DataGridTextColumn Header="PATCH LOCATION" Binding="{Binding OutputDirectory}" Width="1.5*" />
                 <DataGridTextColumn Header="ENGINE" Binding="{Binding Entry.Framework}" Width="90" />
                   <DataGridTextColumn Header="HEALTH" Binding="{Binding Health}" Width="115" />
                 <DataGridTextColumn Header="CHANCE" Binding="{Binding Chance}" Width="75" />
@@ -429,11 +427,14 @@
             <ColumnDefinition />
             <ColumnDefinition Width="Auto" />
           </Grid.ColumnDefinitions>
-          <StackPanel VerticalAlignment="Center">
+          <DockPanel VerticalAlignment="Center">
+            <local:LoadingIcon Width="38" Height="38" Margin="0,0,12,0" Visibility="{Binding Visibility, ElementName=ActionProgress}" />
+            <StackPanel VerticalAlignment="Center">
             <TextBlock x:Name="StatusText" Text="Choose your mod folder in Settings, then scan for outfits." TextWrapping="Wrap" Margin="0,0,16,0" FontSize="12" />
             <ProgressBar x:Name="ActionProgress" Height="5" Margin="0,9,20,0" Minimum="0" Maximum="100" Visibility="Collapsed" />
-          </StackPanel>
-          <Button x:Name="GenerateButton" Grid.Column="1" Content="Configure outfits  →" Click="Generate_Click" Style="{StaticResource PrimaryButtonStyle}" Padding="20,12" VerticalAlignment="Center" ToolTip="Set up selected outfits, review the result, and generate your patch" />
+            </StackPanel>
+          </DockPanel>
+          <Button x:Name="GenerateButton" Grid.Column="1" Content="Configure checked (0) →" Click="Generate_Click" Style="{StaticResource PrimaryButtonStyle}" Padding="20,12" VerticalAlignment="Center" ToolTip="Configure the checked batch. For one outfit, right-click its row and choose Configure this outfit." />
         </Grid>
       </Border>
     </Grid>

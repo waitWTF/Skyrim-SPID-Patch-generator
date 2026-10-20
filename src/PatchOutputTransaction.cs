@@ -18,7 +18,12 @@ internal static class PatchOutputTransaction
         PatchGenerator.OutputPluginName, PatchGenerator.OutputIniName, PatchGenerator.ManifestName, SkyPatcherIniPath, MerchantStockService.RelativePath
     };
 
-    internal static string NormalizeRoot(string directory) => Path.TrimEndingDirectorySeparator(Path.GetFullPath(directory));
+    internal static string NormalizeRoot(string directory)
+    {
+        var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(directory));
+        BuildInfo.CheckOutput(root);
+        return root;
+    }
 
     internal static string ManagedPath(string directory, string relativePath)
     {

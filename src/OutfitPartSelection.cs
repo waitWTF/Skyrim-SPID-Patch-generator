@@ -32,14 +32,18 @@ public static class OutfitPartSelection
         return result;
     }
 
-    public static IReadOnlyList<WearableRecord> FindCompatibleSet(IEnumerable<WearableRecord> candidates)
+    public static IReadOnlyList<WearableRecord> FindCompatibleSet(IEnumerable<WearableRecord> candidates, bool preferLewd = false)
     {
         var all = candidates.DistinctBy(piece => piece.FormId, StringComparer.OrdinalIgnoreCase).ToList();
-        var color = all.Select(piece => piece.Variant).FirstOrDefault(variant => variant != "Standard / unmarked");
+        var combined = CombinedAlternatives(all);
+        var color = all.OrderBy(piece => combined.Contains(piece.FormId)).ThenByDescending(piece => BodySlots(piece.Slots).Contains("Slot 32")).Select(piece => piece.Variant).FirstOrDefault(variant => variant != "Standard / unmarked");
         var sameColor = all.Where(piece => piece.Variant == "Standard / unmarked" || piece.Variant.Equals(color, StringComparison.OrdinalIgnoreCase));
         var parsed = sameColor.Select(piece => (Piece: piece, Slots: BodySlots(piece.Slots)))
             // Prefer the central garment before optional parts that reserve one of its slots.
             .OrderByDescending(item => item.Slots.Contains("Slot 32"))
+            .ThenBy(item => combined.Contains(item.Piece.FormId))
+            .ThenBy(item => OutfitPartPresets.IsOptional(item.Piece))
+            .ThenByDescending(item => preferLewd && item.Piece.IsLewd)
             .ThenBy(item => item.Piece.LocalId).ThenBy(item => item.Piece.Name, StringComparer.OrdinalIgnoreCase);
         var occupied = new HashSet<string>(StringComparer.OrdinalIgnoreCase); var chosen = new List<WearableRecord>();
         foreach (var (piece, slots) in parsed)
@@ -48,5 +52,24 @@ public static class OutfitPartSelection
             chosen.Add(piece); occupied.UnionWith(slots);
         }
         return chosen;
+    }
+
+    public static HashSet<string> CombinedAlternatives(IEnumerable<WearableRecord> candidates)
+    {
+        var all = candidates.ToList();
+        string Words(WearableRecord piece) => Regex.Replace(Regex.Replace(piece.Name, "([a-z])([A-Z])", "$1 $2"), @"[^a-zA-Z0-9]+", " ").Trim();
+        bool Combined(WearableRecord piece)
+        {
+            var words = Words(piece);
+            return Regex.IsMatch(words, @"\b(outfit|full|complete|combined|all in one)\b", RegexOptions.IgnoreCase) &&
+                !Regex.IsMatch(words, @"\b(top|upper|shirt|pants|shorts|trousers|skirt|bottom|lower|boots?|gloves?|hood|belt|ropes?)\b", RegexOptions.IgnoreCase);
+        }
+        string Family(WearableRecord piece) => Regex.Replace(Regex.Replace(Words(piece),
+            @"\b(outfit|full|complete|combined|all|in|one|set|armor|armour|top|upper|shirt|pants|shorts|trousers|skirt|bottom|lower|boots?|gloves?|hood|belt|ropes?|black|white|red|blue|green|purple|pink|yellow|orange|brown|grey|gray|gold|silver|dark|light)\b", "", RegexOptions.IgnoreCase), @"\s+", "").ToLowerInvariant();
+        return all.Where(piece => Combined(piece) && Family(piece).Length > 0 && all.Any(other => other != piece &&
+            !Combined(other) && other.Plugin.Equals(piece.Plugin, StringComparison.OrdinalIgnoreCase) && Family(other) == Family(piece) &&
+            (other.Variant == piece.Variant || other.Variant == "Standard / unmarked" || piece.Variant == "Standard / unmarked") &&
+            BodySlots(other.Slots).Overlaps(BodySlots(piece.Slots))))
+            .Select(piece => piece.FormId).ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 }

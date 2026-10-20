@@ -3,7 +3,7 @@ using System.IO;
 
 namespace WearableDistributor;
 
-public sealed record ScanLocation(string Label, string DataPath, string ProfilePath, string Explanation, bool Usable, bool IsInjectedMo2 = false)
+public sealed record ScanLocation(string Label, string DataPath, string ProfilePath, string Explanation, bool Usable, bool IsInjectedMo2 = false, string ModLibraryPath = "")
 {
     public override string ToString() => Label;
 }
@@ -69,6 +69,7 @@ public static class ScanLocationDiscovery
                 if (!GameDataLocator.IsGameData(data)) continue;
                 var basePath = Resolve(values.GetValueOrDefault("Settings/base_directory", directory), directory, directory);
                 var profiles = Resolve(values.GetValueOrDefault("Settings/profiles_directory", Path.Combine(basePath, "profiles")), directory, basePath);
+                var mods = Resolve(values.GetValueOrDefault("Settings/mod_directory", Path.Combine(basePath, "mods")), directory, basePath);
                 var profileName = values.GetValueOrDefault("General/selected_profile", "");
                 var profile = "";
                 // Profile names are directory names, never arbitrary paths from an INI.
@@ -83,7 +84,7 @@ public static class ScanLocationDiscovery
                 locations.Add(new ScanLocation($"MO2 · {Path.GetFileName(directory)} · {profileName}", data, profile,
                     $"Game Data: {data}\nMO2 configuration: {config}\nConfigured profile: {(profile.Length == 0 ? "not resolved; choose plugins.txt manually" : profile)}\n{visibility}\n" +
                     (attached ? "MO2's virtual filesystem is attached. Confirm this is the instance/profile used for this launch; command-line profile overrides may differ from the saved configuration." : "Launch this app through this MO2 instance to see its installed mods. A standalone scan cannot reproduce its virtual load order."),
-                    attached, localInjection));
+                    attached, localInjection, mods));
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { App.WriteDiagnostic(DiagnosticEvent.Mo2ConfigProbeFailed, ex, DiagnosticLevel.Warning); }
         }
@@ -91,8 +92,24 @@ public static class ScanLocationDiscovery
             locations.Add(new ScanLocation("Saved game Data folder", preferences.DataPath, preferences.PluginListPath, "Saved location. " + DescribeVisibility(preferences.DataPath, preferences.PluginListPath), true));
         if (installedGameData is not null && GameDataLocator.IsGameData(installedGameData))
             locations.Add(new ScanLocation("Installed Skyrim · Data", installedGameData, "", "Detected game installation. Suitable for deployed Vortex mods; launch through MO2 for virtual mods. " + DescribeVisibility(installedGameData, ""), true));
+        foreach (var staging in FindVortexStagingRoots(preferences))
+            locations.Add(new ScanLocation("Vortex · installed mods (staging)", staging, "",
+                "Installed mod files: " + staging + "\nIncludes staged/disabled mods. Deployment and profile activation are not established; use deployed Data for the effective game load order.", true, ModLibraryPath: staging));
         return locations.OrderByDescending(location => location.IsInjectedMo2)
             .DistinctBy(location => (location.DataPath.ToUpperInvariant(), location.ProfilePath.ToUpperInvariant(), location.Usable)).ToList();
+    }
+
+    public static IReadOnlyList<string> FindVortexStagingRoots(AppPreferences preferences)
+    {
+        var roots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var drive in DriveInfo.GetDrives().Where(drive => drive.DriveType == DriveType.Fixed && drive.IsReady))
+            foreach (var relative in new[] { @"Vortex Mods\skyrimse", @"Vortex Mods\Skyrim Special Edition", @"Games\Vortex Mods\skyrimse" })
+            {
+                var candidate = Path.Combine(drive.RootDirectory.FullName, relative);
+                if (Directory.Exists(candidate)) roots.Add(candidate);
+            }
+        if (!string.IsNullOrWhiteSpace(preferences.DataPath) && Directory.Exists(preferences.DataPath) && !GameDataLocator.IsGameData(preferences.DataPath)) roots.Add(preferences.DataPath);
+        return roots.ToList();
     }
 
     private static string DescribeVisibility(string data, string profile)

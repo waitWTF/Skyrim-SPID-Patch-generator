@@ -48,12 +48,15 @@ public static class PatchGenerator
         var duplicateOutfitIds = outfits.GroupBy(item => StableEditorId(item.Configuration.Source.Plugin, item.Configuration.OutfitName), StringComparer.OrdinalIgnoreCase).Where(group => group.Count() > 1).Select(group => group.Key).ToList();
         if (duplicateOutfitIds.Count > 0) throw new InvalidOperationException("Two named outfits resolve to the same generated record ID. Rename one outfit variant and try again.");
 
+        foreach (var assets in configurations.Select(c => c.Source.MeshAssets).OfType<MeshAssetIndex>().Distinct()) assets.RefreshArchives();
         foreach (var item in outfits)
         {
             if (item.Configuration.DistributeToNpcs && (item.Rules.Count == 0 || item.Rules.Any(rule => rule.Count == 0))) throw new InvalidOperationException($"{item.Configuration.Source.Plugin} has an audience with no NPC target. Choose at least one group.");
             if (item.Configuration.DistributeToNpcs && useSkyPatcher && item.Chance != 100)
                 throw new InvalidOperationException("SkyPatcher's NPC outfit rules do not support a per-NPC chance. Choose 100% for a full outfit assignment, or select SPID in Preferences to use the configured chance.");
             ValidateConfiguration(item.Configuration);
+            var partErrors = OutfitPartPresets.Errors(item.Configuration);
+            if (partErrors.Count > 0) throw new InvalidOperationException(string.Join(" ", partErrors));
             if (MerchantStockService.Build(item.Configuration).Count == 0 && !item.Configuration.DistributeToNpcs)
                 throw new InvalidOperationException("Choose at least one confirmed trader category for a merchants-only outfit.");
         }
@@ -102,8 +105,7 @@ public static class PatchGenerator
             // that header, so enforce the normal Skyrim range and avoid existing
             // records even if the saved counter was stale.
             var mutableMod = (IMod)outputMod;
-            var highestOutfitId = outputMod.Outfits.Where(outfit => outfit.FormKey.ModKey == outputModKey)
-                .Select(outfit => outfit.FormKey.ID).DefaultIfEmpty(0u).Max();
+            var highestOutfitId = outputMod.Outfits.Select(o => o.FormKey).Concat(outputMod.LeveledItems.Select(l => l.FormKey)).Where(k => k.ModKey == outputModKey).Select(k => k.ID).DefaultIfEmpty(0u).Max();
             mutableMod.NextFormID = Math.Max(Math.Max(mutableMod.NextFormID, 0x800u), checked(highestOutfitId + 1));
             if (mutableMod.NextFormID > 0xFFFFFF)
                 throw new InvalidDataException("The generated plugin has exhausted its local FormID range. Choose a new output folder.");
@@ -146,10 +148,14 @@ public static class PatchGenerator
                 outfit.EditorID = editorId;
                 outfit.Items = new Noggog.ExtendedList<IFormLinkGetter<IOutfitTargetGetter>>();
                 var outfitItems = outfit.Items;
-                foreach (var piece in item.Pieces.DistinctBy(piece => piece.FormId, StringComparer.OrdinalIgnoreCase))
+                var variantBranches = item.Configuration.DistributeToNpcs && item.Configuration.MatchVariants ? OutfitVariantPlan.Create(item.Configuration) : [];
+                if (variantBranches.Count > 0)
+                    outfitItems.Add(new FormLink<IOutfitTargetGetter>(VariantPartLists.Build(outputMod, editorId, variantBranches)));
+                else foreach (var piece in item.Pieces.DistinctBy(piece => piece.FormId, StringComparer.OrdinalIgnoreCase))
                 {
                     var sourceKey = new FormKey(ModKey.FromFileName(piece.Plugin), piece.LocalId);
-                    outfitItems.Add(new FormLink<IOutfitTargetGetter>(sourceKey));
+                    var itemKey = item.Configuration.DistributeToNpcs && piece.PartMode == "Optional" ? OptionalPartLists.Build(outputMod, editorId, piece) : sourceKey;
+                    outfitItems.Add(new FormLink<IOutfitTargetGetter>(itemKey));
                 }
 
                 var distributionCountBefore = distributionCount;
@@ -160,6 +166,9 @@ public static class PatchGenerator
                 distributionCount += compiled.Count(line => IsOutfitRule(line) || line.Contains("outfitDefault=", StringComparison.Ordinal));
                 generatedEntries.Add(new PatchManifestEntry
                 {
+                    PartPreset = item.Configuration.PartPreset,
+                    MatchVariants = variantBranches.Count > 0, VariantBranches = variantBranches,
+                    PartChoices = item.Configuration.Pieces.Select(p => new SavedPartChoice(p.FormId, item.Configuration.DistributeToNpcs ? p.PartMode : p.Include ? "Required" : "Excluded", p.OptionalChance)).ToList(),
                     DistributeToNpcs = item.Configuration.DistributeToNpcs,
                     SourcePlugin = item.Configuration.Source.Plugin,
                     OutfitName = item.Configuration.OutfitName,
@@ -192,6 +201,7 @@ public static class PatchGenerator
                          !activeOutfitIds.Contains(id) && !retainedIds.Contains(id) && removedIds.Contains(id)).ToList())
                 outputMod.Outfits.Remove(staleOutfit);
 
+            OptionalPartLists.Prune(outputMod);
             var existingIniLines = File.Exists(outputIni) ? File.ReadAllLines(outputIni).ToList() : [];
             replacedNumericIds.UnionWith(outputMod.Outfits.Where(outfit => activeOutfitIds.Contains(outfit.EditorID ?? "")).Select(outfit => outfit.FormKey.ID));
             var mergedLines = MergeIni(existingIniLines, lines, replacingKeys, replacedNumericIds, useSkyPatcher);
@@ -201,6 +211,7 @@ public static class PatchGenerator
             if (generatedEntries.Concat(previousManifest.Entries).Any(entry => !entry.DistributeToNpcs)) existingManifest.SchemaVersion = 4;
             foreach (var entry in generatedEntries)
                 entry.RequiredMasters = entry.RequiredMasters.Concat(entry.MerchantStock.SelectMany(rule => new[] { rule.ContainerPlugin, rule.ItemPlugin })).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase).ToList();
+            existingManifest.SchemaVersion = generatedEntries.Concat(previousManifest.Entries).Any(e => e.MatchVariants) ? 6 : 5;
             existingManifest.Framework = useSkyPatcher ? "SkyPatcher" : "SPID";
             existingManifest.OutputPlugin = OutputPluginName;
             existingManifest.DistributionPath = relativeIniPath;
@@ -450,6 +461,7 @@ public static class PatchGenerator
             }
         var manifest = PatchInventoryService.ReadManifest(directory);
         MerchantStockService.Validate(directory, manifest);
+        OptionalPartLists.Validate(mod, manifest);
         var editorIds = mod.Outfits.Where(outfit => !string.IsNullOrWhiteSpace(outfit.EditorID))
             .ToDictionary(outfit => outfit.EditorID!, outfit => outfit.FormKey.ID, StringComparer.OrdinalIgnoreCase);
         var distributionFiles = new Dictionary<string, GeneratedDistributionIndex>(StringComparer.OrdinalIgnoreCase);
@@ -488,6 +500,22 @@ public static class PatchGenerator
         var skyPatcher = entry.Framework.Equals("SkyPatcher", StringComparison.OrdinalIgnoreCase);
         var rules = matchingSections.SelectMany(section => section.Lines).Where(line => !line.TrimStart().StartsWith(';') &&
             (skyPatcher ? line.Contains("outfitDefault=", StringComparison.Ordinal) : IsOutfitRule(line))).ToList();
+        // Early merchants-only builds omitted an empty NPC comment section. Shop stock can
+        // remain valid without that comment, but a real NPC rule for the same outfit must never
+        // be ignored. MerchantStockService validates the actual container rules separately.
+        if (!entry.DistributeToNpcs && entry.DistributionRows == 0 && matchingSections.Count == 0 && entry.MerchantStock.Count > 0 &&
+            outfitIdsByEditorId.TryGetValue(entry.OutfitEditorId, out var merchantOutfitId))
+        {
+            var hasNpcRule = index.Lines.Where(line => !line.TrimStart().StartsWith(';') &&
+                (skyPatcher ? line.Contains("outfitDefault=", StringComparison.Ordinal) : IsOutfitRule(line))).Any(line =>
+            {
+                var form = skyPatcher
+                    ? DistributionRuleCompiler.ParseSkyPatcherForm(line.Split(':').Single(field => field.StartsWith("outfitDefault=", StringComparison.Ordinal))[14..])
+                    : DistributionRuleCompiler.ParseSpidForm(line[(line.IndexOf('=') + 1)..].Trim().Split('|')[0]);
+                return form.Id == merchantOutfitId && form.Plugin.Equals(OutputPluginName, StringComparison.OrdinalIgnoreCase);
+            });
+            if (!hasNpcRule) return;
+        }
         if (matchingSections.Count != 1 || rules.Count != entry.DistributionRows ||
             (entry.DistributeToNpcs ? rules.Count == 0 : rules.Count != 0 || entry.MerchantStock.Count == 0 ||
                 matchingSections.SelectMany(section => section.Lines).Any(line => !string.IsNullOrWhiteSpace(line) && !line.TrimStart().StartsWith(';'))))

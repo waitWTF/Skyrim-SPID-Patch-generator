@@ -19,6 +19,9 @@ public sealed class WearableScanResult
     public List<(string Path, string Line)> DistributionRules { get; } = [];
     public List<string> Diagnostics { get; } = [];
     public List<string> LoadOrder { get; } = [];
+    public string ScanRoot { get; set; } = "";
+    public List<string> PatchSearchRoots { get; } = [];
+    public List<string> PatchFiles { get; } = [];
     public bool HasProfileLoadOrder { get; set; }
     public string CreateReport() => $"Skyrim SPID Patch Generator scan report — {DateTime.Now:g}\n" +
         $"Wearable plugins: {Plugins.Count}; eligible NPC bases: {Npcs.Count(npc => npc.CanReceiveWearables)}; target records: {Targets.Count}\n" +
@@ -29,11 +32,11 @@ public sealed class WearableScanResult
 public sealed class WearableScanService
 {
     private static readonly string[] OfficialNames = ["Skyrim.esm", "Update.esm", "Dawnguard.esm", "HearthFires.esm", "Dragonborn.esm"];
-    private static readonly HashSet<string> AssetFolders = new([".git", "Backups", "meshes", "textures", "sound", "sounds", "music", "scripts", "source", "interface", "strings", "grass", "shadersfx", "shadercache", "CalienteTools", "Nemesis_Engine", "Pandora_Engine", "animations"], StringComparer.OrdinalIgnoreCase);
+    private static readonly HashSet<string> AssetFolders = new([".git", "Backups", "_BuildBackups", "_BuildUpdates", "meshes", "textures", "sound", "sounds", "music", "scripts", "source", "interface", "strings", "grass", "shadersfx", "shadercache", "CalienteTools", "Nemesis_Engine", "Pandora_Engine", "animations"], StringComparer.OrdinalIgnoreCase);
 
     public WearableScanResult Scan(string root, AppPreferences preferences, string? baselineDataPath, IProgress<ScanProgress>? progress, CancellationToken cancellationToken)
     {
-        var result = new WearableScanResult();
+        var result = new WearableScanResult { ScanRoot = root };
         progress?.Report(new ScanProgress("Finding installed plugins", 0, 0));
         var discovered = EnumerateFiles(root, cancellationToken, result.Diagnostics).ToList();
         var paths = SelectPluginPaths(root, discovered.Where(IsPluginFile), result.Diagnostics);
@@ -55,10 +58,29 @@ public sealed class WearableScanService
                 if (!paths.ContainsKey(name) && File.Exists(file)) paths[name] = file;
             }
         var implicitOrder = ReadImplicitPluginOrder(root, baselineDataPath, paths, result.Diagnostics);
+        if (!ScanLocationDiscovery.IsMo2Attached() && string.IsNullOrWhiteSpace(preferences.PluginListPath) && GameDataLocator.IsGameData(root) &&
+            paths.Keys.All(name => WearableFilterService.IsOfficialContent(name) || implicitOrder.Contains(name, StringComparer.OrdinalIgnoreCase) || DetectedPatchReader.IsGeneratedPlugin(name)))
+        {
+            var staging = ScanLocationDiscovery.FindVortexStagingRoots(preferences).FirstOrDefault(candidate =>
+                Directory.EnumerateDirectories(candidate).Take(200).Any(folder => Directory.EnumerateFiles(folder).Any(IsPluginFile)));
+            if (staging is not null)
+            {
+                progress?.Report(new ScanProgress("Game Data contains only official content; finding installed Vortex mods", 0, 0));
+                var stagedFiles = EnumerateFiles(staging, cancellationToken, result.Diagnostics).ToList();
+                var stagedPaths = SelectPluginPaths(staging, stagedFiles.Where(IsPluginFile), result.Diagnostics);
+                foreach (var pair in paths) stagedPaths.TryAdd(pair.Key, pair.Value);
+                paths = stagedPaths; discovered.AddRange(stagedFiles); result.ScanRoot = staging;
+                result.Diagnostics.Add("Automatically used installed Vortex staging mods because Data contained only official plugins. Staged/disabled mods may be present; deployment/profile activation is not established.");
+            }
+        }
+        result.PatchSearchRoots.AddRange(ScanLocationDiscovery.Discover(preferences, baselineDataPath).Select(location => location.ModLibraryPath).Where(path => !string.IsNullOrWhiteSpace(path)));
+        result.PatchSearchRoots.Add(root); result.PatchSearchRoots.Add(result.ScanRoot);
+        if (!string.IsNullOrWhiteSpace(baselineDataPath)) result.PatchSearchRoots.Add(baselineDataPath);
+        result.PatchFiles.AddRange(PatchFileDiscovery.Find(result.PatchSearchRoots.Concat(preferences.PatchSearchFiles), cancellationToken));
         if (!paths.ContainsKey("Skyrim.esm"))
             throw new FileNotFoundException("Skyrim.esm was not found. Scan the game's Data folder through MO2, or set the game Data folder override in Settings to the folder containing Skyrim.esm. The profile's plugins.txt normally omits this implicit master; do not add it manually or disable master validation.");
         var order = ReadProfilePluginOrder(preferences.PluginListPath, result.Diagnostics);
-        order.RemoveAll(name => name.Equals(PatchGenerator.OutputPluginName, StringComparison.OrdinalIgnoreCase));
+        order.RemoveAll(DetectedPatchReader.IsGeneratedPlugin);
         result.HasProfileLoadOrder = !string.IsNullOrWhiteSpace(preferences.PluginListPath);
         if (result.HasProfileLoadOrder)
         {
@@ -109,7 +131,7 @@ public sealed class WearableScanService
         var vendors = new Dictionary<string, VendorSnapshot>(StringComparer.OrdinalIgnoreCase);
         var listNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var armorModels = new Dictionary<string, (List<string> Addons, string Template, bool Playable, string Slots)>(StringComparer.OrdinalIgnoreCase);
-        var addonModels = new Dictionary<string, (bool Male, bool Female)>(StringComparer.OrdinalIgnoreCase);
+        var addonModels = new Dictionary<string, WornModelPaths>(StringComparer.OrdinalIgnoreCase);
         var outfitItems = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
         var itemEditorIds = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var done = 0;
@@ -122,6 +144,9 @@ public sealed class WearableScanService
                 using var mod = SkyrimMod.CreateFromBinaryOverlay(new Noggog.FilePath(paths[name]), SkyrimRelease.SkyrimSE);
                 var validationIssue = ValidateMasters(name, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
                 var stage = new PluginSnapshot();
+                var content = new List<WearableContentRecord>();
+                var classifyContent = !WearableFilterService.IsOfficialContent(name) && !implicitOrder.Contains(name, StringComparer.OrdinalIgnoreCase) &&
+                    mod.Armors.Any(armor => !armor.IsDeleted && armor.FormKey.ModKey.Equals(mod.ModKey));
                 if (string.IsNullOrWhiteSpace(validationIssue))
                 {
                     foreach (var npc in mod.Npcs)
@@ -151,6 +176,12 @@ public sealed class WearableScanService
                     foreach (var reference in mod.EnumerateMajorRecords())
                     {
                         cancellationToken.ThrowIfCancellationRequested();
+                        if (classifyContent && !reference.IsDeleted)
+                        {
+                            var kind = reference.GetType().Name.Replace("BinaryOverlay", "").Replace("Overlay", "");
+                            content.Add(new WearableContentRecord(Form(reference.FormKey), kind, WearableContentClassifier.NeedsReferences(kind)
+                                ? reference.EnumerateFormLinks().Where(link => !link.FormKey.IsNull).Select(link => Form(link.FormKey)).ToList() : []));
+                        }
                         if (reference is IPlacedNpcGetter actor)
                             stage.Placed[Form(actor.FormKey)] = actor.IsDeleted || actor.Base.IsNull ? null : Form(actor.Base.FormKey);
                         else if (reference is IPlacedObjectGetter obj)
@@ -169,7 +200,7 @@ public sealed class WearableScanService
                 var stagedArmor = mod.Armors.ToDictionary(armor => Form(armor.FormKey), armor =>
                     (Deleted: armor.IsDeleted, Addons: armor.Armature.Select(link => Form(link.FormKey)).ToList(), Template: Form(armor.TemplateArmor.FormKeyNullable ?? FormKey.Null), Playable: !armor.MajorFlags.HasFlag(Armor.MajorFlag.NonPlayable), Slots: armor.BodyTemplate?.FirstPersonFlags.ToString() ?? ""), StringComparer.OrdinalIgnoreCase);
                 var stagedAddons = mod.ArmorAddons.ToDictionary(addon => Form(addon.FormKey), addon =>
-                    (Deleted: addon.IsDeleted, Male: !string.IsNullOrWhiteSpace(addon.WorldModel?.Male?.File.GivenPath), Female: !string.IsNullOrWhiteSpace(addon.WorldModel?.Female?.File.GivenPath)), StringComparer.OrdinalIgnoreCase);
+                    (Deleted: addon.IsDeleted, Model: new WornModelPaths(addon.WorldModel?.Male?.File.GivenPath ?? "", addon.WorldModel?.Female?.File.GivenPath ?? "", addon.WeightSliderEnabled?.Male == true, addon.WeightSliderEnabled?.Female == true)), StringComparer.OrdinalIgnoreCase);
                 var stagedOutfits = mod.Outfits.ToDictionary(outfit => Form(outfit.FormKey), outfit =>
                     (Deleted: outfit.IsDeleted, Items: (outfit.Items ?? []).Select(link => Form(link.FormKey)).ToList()), StringComparer.OrdinalIgnoreCase);
                 foreach (var list in mod.LeveledItems)
@@ -186,12 +217,8 @@ public sealed class WearableScanService
                 var reason = "";
                 if (pieces.Count > 0)
                 {
-                    reason = implicitOrder.Contains(name, StringComparer.OrdinalIgnoreCase) ? "Creation Club / official resource listing" : WearableFilterService.GetFilterReason(paths[name], preferences.AdditionalExclusions, []);
-                    if (string.IsNullOrWhiteSpace(reason)) reason = WearableFilterService.GetContentReason(name, pieces.Count,
-                        mod.Npcs.Count(record => !record.IsDeleted && record.FormKey.ModKey == mod.ModKey),
-                        mod.Spells.Count(record => !record.IsDeleted && record.FormKey.ModKey == mod.ModKey),
-                        mod.Perks.Count(record => !record.IsDeleted && record.FormKey.ModKey == mod.ModKey),
-                        mod.Worldspaces.Count(record => !record.IsDeleted && record.FormKey.ModKey == mod.ModKey));
+                    reason = WearableFilterService.GetLibraryReason(paths[name], preferences.AdditionalExclusions, content,
+                        pieces.Concat(weapons).Select(piece => piece.FormId));
                     if (!string.IsNullOrWhiteSpace(validationIssue)) reason = Append(reason, validationIssue);
                     if (!preferences.IncludeAccessories && pieces.All(WearableFilterService.IsAccessoryOnly)) reason = Append(reason, "Accessory-only items (enable in Preferences to scan these)");
                 }
@@ -202,14 +229,14 @@ public sealed class WearableScanService
                 if (string.IsNullOrWhiteSpace(validationIssue))
                 {
                     foreach (var (id, item) in stagedArmor) { if (item.Deleted) armorModels.Remove(id); else armorModels[id] = (item.Addons, item.Template, item.Playable, item.Slots); }
-                    foreach (var (id, item) in stagedAddons) { if (item.Deleted) addonModels.Remove(id); else addonModels[id] = (item.Male, item.Female); }
+                    foreach (var (id, item) in stagedAddons) { if (item.Deleted) addonModels.Remove(id); else addonModels[id] = item.Model; }
                     foreach (var (id, item) in stagedOutfits) { if (item.Deleted) outfitItems.Remove(id); else outfitItems[id] = item.Items; }
                     foreach (var item in stagedEditorIds) { if (item.IsDeleted) itemEditorIds.Remove(item.Form); else itemEditorIds[item.Form] = item.Id; }
                 }
-                if (pieces.Count > 0)
+                if (pieces.Count > 0 && !WearableFilterService.IsOfficialContent(name) && !implicitOrder.Contains(name, StringComparer.OrdinalIgnoreCase))
                 {
                     result.Plugins.Add(new PluginEntry { Plugin = name, SourcePath = paths[name], Pieces = pieces, Weapons = weapons, FilterReason = reason, ValidationIssue = validationIssue,
-                        Selected = string.IsNullOrWhiteSpace(validationIssue) && (string.IsNullOrWhiteSpace(reason) || preferences.IncludedPlugins.Contains(name)) && !preferences.IgnoredPlugins.Contains(name) && !preferences.DisabledPlugins.Contains(name) });
+                        Selected = false }); // Only an explicit user check adds an outfit to the setup batch.
                 }
                 result.LoadOrder.Add(name);
                 void Remember(ISkyrimMajorRecordGetter record, string kind, string category)
@@ -239,28 +266,34 @@ public sealed class WearableScanService
             if (armorModels.ContainsKey(suppliedId)) distributedSources.Add(suppliedId.Split('~', 2).Last());
             if (outfitItems.TryGetValue(suppliedId, out var items)) foreach (var item in items) suppliedQueue.Enqueue(item);
         }
+        progress?.Report(new ScanProgress("Checking worn meshes in loose files and archives", done, order.Count));
+        var meshAssets = new MeshAssetIndex(baselineDataPath ?? result.ScanRoot, GameDataLocator.IsGameData(result.ScanRoot));
+        meshAssets.RefreshArchives(cancellationToken);
         foreach (var plugin in result.Plugins)
         {
+            plugin.MeshAssets = meshAssets;
             if (plugin.CanPatch)
             {
                 foreach (var piece in plugin.Pieces)
                     if (armorModels.TryGetValue(piece.FormId, out var armor)) piece.Slots = armor.Slots;
                 plugin.Pieces.RemoveAll(piece => !armorModels.TryGetValue(piece.FormId, out var armor) || !armor.Playable || WearableFilterService.IsExcludedRecord(piece));
             }
-            if (distributedSources.Contains(plugin.Plugin) && string.IsNullOrWhiteSpace(plugin.FilterReason))
+            if (distributedSources.Contains(plugin.Plugin))
             {
-                plugin.FilterReason = "Installed outfit distribution references this plugin (coverage may be partial)";
-                plugin.Selected &= preferences.IncludedPlugins.Contains(plugin.Plugin);
+                plugin.DistributionNote = "Existing distribution found (coverage may be partial)";
             }
             foreach (var piece in plugin.Pieces)
             {
                 var addons = ResolveArmorAddons(piece.FormId, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
                 if (addons.Count > 0 && addons.All(addonModels.ContainsKey))
                 {
-                    var male = addons.Any(id => addonModels[id].Male); var female = addons.Any(id => addonModels[id].Female);
+                    piece.WornModels = addons.Select(id => addonModels[id]).ToList();
+                    var male = piece.WornModels.Any(model => !string.IsNullOrWhiteSpace(model.Male));
+                    var female = piece.WornModels.Any(model => !string.IsNullOrWhiteSpace(model.Female));
                     piece.SupportedGender = male && female ? "Both" : female ? "Female" : male ? "Male" : "Unknown";
                     piece.GenderEvidence = piece.SupportedGender == "Unknown" ? "No worn model paths found" : "Effective ArmorAddon third-person model paths";
                 }
+                piece.MeshEvidence = OutfitMeshPolicy.Summary(piece, meshAssets);
                 if (piece.SupportedGender == "Unknown" && OutfitGenderPolicy.KnownRestriction(plugin.Plugin) is "Female" or "Male")
                 {
                     piece.SupportedGender = OutfitGenderPolicy.KnownRestriction(plugin.Plugin);
@@ -269,7 +302,8 @@ public sealed class WearableScanService
             }
         }
         result.Plugins.RemoveAll(plugin => plugin.CanPatch && plugin.Pieces.Count == 0);
-        result.Diagnostics.Add($"Outfit smart filter revision {WearableFilterService.Revision}: {result.Plugins.Count(plugin => !plugin.IsFiltered)} standard candidates; {result.Plugins.Count(plugin => plugin.IsFiltered)} hidden candidates. Existing-distribution checks use supplied outfit/item operands, not comments or NPC filter references. Partial coverage can be restored manually.");
+        result.Diagnostics.Add($"Outfit smart filter revision {WearableFilterService.Revision}: {result.Plugins.Count(plugin => !plugin.IsFiltered)} equipment-only candidates; {result.Plugins.Count(plugin => plugin.IsFiltered)} mixed/hidden candidates. Official/Creation Club plugins are excluded from selection. Existing external distributions are informational and do not hide equipment-only mods. Generated patch contents are discovered independently of the output destination.");
+        result.Diagnostics.Add($"Worn mesh check: {result.Plugins.SelectMany(plugin => plugin.Pieces).Count(piece => OutfitMeshPolicy.Missing(piece, meshAssets, "Any").Count > 0)} parts have unavailable worn meshes. Build/deploy BodySlide output before patching those parts. Staging-only scans and unreadable archives cannot prove absence.");
         result.Diagnostics.Add("Wearable worn-model sex evidence: " + string.Join(", ", result.Plugins.SelectMany(plugin => plugin.Pieces).GroupBy(piece => piece.SupportedGender).OrderBy(group => group.Key).Select(group => group.Key + "=" + group.Count())) + ". Model paths do not verify mesh files or body/race compatibility.");
         progress?.Report(new ScanProgress("Resolving NPC templates and target groups", done, order.Count));
         var references = placed.Values.Concat(quests.Values.SelectMany(list => list)).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -443,7 +477,7 @@ public sealed class WearableScanService
         var selected = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var group in files.GroupBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase))
         {
-            if (group.Key == null || group.Key.Equals(PatchGenerator.OutputPluginName, StringComparison.OrdinalIgnoreCase)) continue;
+            if (group.Key == null || DetectedPatchReader.IsGeneratedPlugin(group.Key)) continue;
             var options = group.OrderBy(path => Path.GetDirectoryName(path)?.Equals(root, StringComparison.OrdinalIgnoreCase) == true ? 0 : 1).ThenBy(path => path, StringComparer.OrdinalIgnoreCase).ToList(); selected[group.Key] = options[0];
             if (options.Count > 1) diagnostics.Add($"Duplicate plugin {group.Key}: using {options[0]}. Staging file priority is ambiguous; scan deployed Data or launch through MO2 for the effective winner.");
         }
@@ -458,7 +492,7 @@ public sealed class WearableScanService
             cancellationToken.ThrowIfCancellationRequested(); string[] files; string[] children;
             try { files = Directory.GetFiles(directory); children = Directory.GetDirectories(directory); }
             catch (Exception ex) when (ex is UnauthorizedAccessException or IOException) { App.WriteDiagnostic(DiagnosticEvent.FolderReadFailed, ex, DiagnosticLevel.Warning); diagnostics.Add($"Skipped folder {directory}: {ex.Message}"); continue; }
-            foreach (var file in files) if (IsPluginFile(file) || Path.GetExtension(file).Equals(".ini", StringComparison.OrdinalIgnoreCase)) yield return file;
+            foreach (var file in files) if (DetectedPatchReader.IsGeneratedFile(file) || IsPluginFile(file) || Path.GetExtension(file).Equals(".ini", StringComparison.OrdinalIgnoreCase)) yield return file;
             foreach (var child in children)
             {
                 if (AssetFolders.Contains(Path.GetFileName(child))) continue;

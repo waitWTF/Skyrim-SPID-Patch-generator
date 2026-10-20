@@ -7,7 +7,7 @@
   "targets": {
     ".NETCoreApp,Version=v10.0": {},
     ".NETCoreApp,Version=v10.0/win-x64": {
-      "SkyrimSPIDPatchGenerator/0.4.8": {
+      "SkyrimSPIDPatchGenerator/0.4.10": {
         "dependencies": {
           "Mutagen.Bethesda.Skyrim": "0.54.4"
         },
@@ -347,7 +347,7 @@
     }
   },
   "libraries": {
-    "SkyrimSPIDPatchGenerator/0.4.8": {
+    "SkyrimSPIDPatchGenerator/0.4.10": {
       "type": "project",
       "serviceable": false,
       "sha512": ""

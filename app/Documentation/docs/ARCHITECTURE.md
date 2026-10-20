@@ -49,3 +49,9 @@ SPID can match NPC filter forms against some original/template base forms too. T
 - `tools/Publish-Release.ps1`: source+app packaging, archive verification and SHA256 files; no publishing or network transmission.
 
 No source changes are committed/pushed automatically. The repository contains historical staged deletions/build folders from earlier iterations; preserve unrelated local work. Build artifacts are ignored, and release packaging copies only source/docs/tests/tools and fresh published companion files.
+
+## Matching garment variants (0.4.10)
+
+OutfitVariantPlan groups exact slot sets by conservative normalized names (color annotations and recognized damage words removed). Unknown overlapping families fail review. One selector picks a color; its UseAll bundle references one selector per garment. Required selectors have ChanceNone=0. Optional selectors share a group chance, then select one version. Color-specific members take priority over unmarked fallbacks; shared accessory families are available in every compatible branch.
+
+VariantPartLists writes deterministic hashed EditorIDs, reuses existing records, clears chance globals and validates the exact topology against the saved branch/part metadata. OptionalPartLists traverses nested links for pruning and validates old fixed/optional outfits alongside new plans. Managed matching plans require manifest schema 6. Merchant stock continues to use the flat included item set independently of NPC roll logic.

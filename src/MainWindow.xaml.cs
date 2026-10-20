@@ -21,13 +21,21 @@ public partial class MainWindow : Window
     private readonly List<KeywordChoice> availableKeywords = [];
     private readonly List<MerchantTarget> merchantTargets = [];
     private readonly Dictionary<string, NpcTargetProfile> npcProfiles = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<string> patchSearchRoots = [];
+    private readonly List<string> discoveredPatchFiles = [];
+    private readonly List<PluginEntry> recoveredPatchedSources = [];
+    private int inventoryRefreshVersion;
     private List<(string Path, string Line)> scannedDistributionRules = [];
-    private readonly string preferencesFile = Path.Combine(Environment.GetEnvironmentVariable("WEARABLE_DISTRIBUTOR_SETTINGS_DIR") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WearableDistributor"), "settings.json");
+    private readonly string preferencesFile = Path.Combine(BuildInfo.SettingsRoot, "settings.json");
     private AppPreferences preferences = new();
     private string dataPath = "";
     private bool activePluginFilterApplied;
     private CancellationTokenSource? scanCancellation;
     private bool isGenerating;
+    private bool isPreparingSetup;
+    private bool isConfiguring;
+    private PluginEntry? contextPlugin;
+    private AudiencePreparation? audiencePreparation;
     private bool isDiscoveringLocations;
     private string lastScanReport = "No scan report yet.";
     private bool settingsRecoveryRequired;
@@ -38,6 +46,9 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        Title += " — " + BuildInfo.Label;
+        BuildVersionText.Text = BuildInfo.Label;
+        ExperimentalHeaderText.Text = BuildInfo.Label + " · OUTFITS & MERCHANDISE";
         var statusDescriptor = DependencyPropertyDescriptor.FromProperty(TextBlock.TextProperty, typeof(TextBlock));
         EventHandler statusChanged = (_, _) => ActivityHistory.Add(StatusText.Text);
         statusDescriptor.AddValueChanged(StatusText, statusChanged);
@@ -53,7 +64,7 @@ public partial class MainWindow : Window
             SettingsNavButton.IsChecked = MainTabs.SelectedIndex == 2;
         };
         PluginsGrid.CellEditEnding += (_, _) => Dispatcher.BeginInvoke(new Action(UpdateSelectionSummary));
-        PluginsGrid.SelectionChanged += (_, _) => UpdateSelectionSummary();
+        PluginsGrid.SelectionChanged += (_, _) => { contextPlugin = null; UpdateSelectionSummary(); };
         Closed += (_, _) => scanCancellation?.Cancel();
         LoadPreferences();
         DataPathBox.Text = preferences.DataPath;
@@ -67,9 +78,19 @@ public partial class MainWindow : Window
         dataPath = preferences.DataPath;
         ActivePathText.Text = string.IsNullOrWhiteSpace(dataPath) ? "Choose your Skyrim Data or mod staging folder in Settings." : dataPath;
         UpdateSelectionSummary();
-        if (Environment.GetEnvironmentVariable("WEARABLE_DISTRIBUTOR_NO_AUTOSCAN") == "1" || settingsRecoveryRequired) { RefreshInventory(); return; }
-        if (Directory.Exists(dataPath) && (!ScanLocationDiscovery.IsMo2Attached() || GameDataLocator.IsGameData(dataPath))) ScanFolder();
-        else Loaded += (_, _) => FindData_Click(this, new RoutedEventArgs());
+        ContentRendered += StartWorkspace;
+    }
+
+    private void StartWorkspace(object? sender, EventArgs e)
+    {
+        ContentRendered -= StartWorkspace;
+        // The workspace and its loading indicator must render before discovery or scanning starts.
+        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, new Action(() =>
+        {
+            if (Environment.GetEnvironmentVariable("WEARABLE_DISTRIBUTOR_NO_AUTOSCAN") == "1" || settingsRecoveryRequired) { RefreshInventory(); return; }
+            if (Directory.Exists(dataPath) && (!ScanLocationDiscovery.IsMo2Attached() || GameDataLocator.IsGameData(dataPath))) ScanFolder();
+            else FindData_Click(this, new RoutedEventArgs());
+        }));
     }
 
     private void LoadPreferences()
@@ -152,7 +173,7 @@ public partial class MainWindow : Window
 
     private void BrowseOutput_Click(object sender, RoutedEventArgs e)
     {
-        if (scanCancellation != null || isGenerating) return;
+        if (scanCancellation != null || isGenerating || isPreparingSetup || isConfiguring) return;
         var dialog = new OpenFolderDialog { Title = "Choose your generated mod folder", InitialDirectory = Directory.Exists(preferences.OutputPath) ? preferences.OutputPath : "" };
         if (dialog.ShowDialog(this) != true) return;
         preferences.OutputPath = dialog.FolderName; OutputPathBox.Text = dialog.FolderName;
@@ -162,7 +183,7 @@ public partial class MainWindow : Window
 
     private async void FindData_Click(object sender, RoutedEventArgs e)
     {
-        if (scanCancellation != null || isGenerating || isDiscoveringLocations) return;
+        if (scanCancellation != null || isGenerating || isPreparingSetup || isConfiguring || isDiscoveringLocations) return;
         isDiscoveringLocations = true;
         ScanButton.IsEnabled = false; GenerateButton.IsEnabled = false;
         ActionProgress.Visibility = Visibility.Visible; ActionProgress.IsIndeterminate = true;
@@ -186,6 +207,7 @@ public partial class MainWindow : Window
             BaseGameDataPathBox.Text = preferences.BaseGameDataPath = "";
             PluginListPathBox.Text = preferences.PluginListPath = selected.ProfilePath;
             scannedPlugins.Clear(); availableKeywords.Clear(); npcProfiles.Clear(); merchantTargets.Clear(); scannedDistributionRules.Clear();
+            audiencePreparation = null; patchSearchRoots.Clear(); discoveredPatchFiles.Clear(); recoveredPatchedSources.Clear();
             RefreshPluginList();
             SavePreferences();
             lastScanReport = "Detected scan location:\n" + selected.Explanation;
@@ -203,7 +225,7 @@ public partial class MainWindow : Window
 
     private void SavePreferences_Click(object sender, RoutedEventArgs e)
     {
-        if (scanCancellation != null || isGenerating) return;
+        if (scanCancellation != null || isGenerating || isPreparingSetup || isConfiguring) return;
         settingsRecoveryRequired = false;
         preferences.DataPath = DataPathBox.Text.Trim();
         preferences.BaseGameDataPath = BaseGameDataPathBox.Text.Trim();
@@ -222,7 +244,7 @@ public partial class MainWindow : Window
 
     private void Scan_Click(object sender, RoutedEventArgs e)
     {
-        if (scanCancellation != null || isGenerating) return;
+        if (scanCancellation != null || isGenerating || isPreparingSetup || isConfiguring) return;
         dataPath = DataPathBox.Text.Trim();
         preferences.BaseGameDataPath = BaseGameDataPathBox.Text.Trim();
         preferences.PluginListPath = PluginListPathBox.Text.Trim();
@@ -239,12 +261,11 @@ public partial class MainWindow : Window
 
     private async void ScanFolder()
     {
-        if (scanCancellation != null || isGenerating || isDiscoveringLocations) return;
+        if (scanCancellation != null || isGenerating || isPreparingSetup || isConfiguring || isDiscoveringLocations) return;
         var cancellation = new CancellationTokenSource();
         scanCancellation = cancellation;
         var requestedRoot = dataPath;
         var snapshot = PreferencesService.Clone(preferences);
-        TryFindDataFolder(out var baseline);
         ScanButton.IsEnabled = false;
         CancelScanButton.Visibility = Visibility.Visible;
         GenerateButton.IsEnabled = false;
@@ -260,17 +281,29 @@ public partial class MainWindow : Window
         });
         try
         {
-            var result = await Task.Run(() => new WearableScanService().Scan(requestedRoot, snapshot, baseline, progress, cancellation.Token), cancellation.Token);
+            var result = await Task.Run(() =>
+            {
+                TryFindDataFolder(out var baseline, snapshot);
+                return new WearableScanService().Scan(requestedRoot, snapshot, baseline, progress, cancellation.Token);
+            }, cancellation.Token);
             cancellation.Token.ThrowIfCancellationRequested();
+            audiencePreparation = null; // All cached audience lists belong to the previous successful scan.
             scannedPlugins.Clear(); scannedPlugins.AddRange(result.Plugins);
+            patchSearchRoots.Clear(); patchSearchRoots.AddRange(result.PatchSearchRoots);
+            discoveredPatchFiles.Clear(); discoveredPatchFiles.AddRange(result.PatchFiles);
+            if (!string.IsNullOrWhiteSpace(result.ScanRoot) && !result.ScanRoot.Equals(dataPath, StringComparison.OrdinalIgnoreCase))
+            {
+                DataPathBox.Text = preferences.DataPath = dataPath = result.ScanRoot;
+                ActivePathText.Text = result.ScanRoot; SavePreferences();
+            }
             availableKeywords.Clear(); availableKeywords.AddRange(result.Targets);
             merchantTargets.Clear(); merchantTargets.AddRange(result.Merchants);
             npcProfiles.Clear(); foreach (var npc in result.Npcs) npcProfiles[npc.FormId] = npc;
             scannedDistributionRules = result.DistributionRules;
             activePluginFilterApplied = result.HasProfileLoadOrder;
             lastScanReport = result.CreateReport(); ScanDiagnosticsBox.Text = lastScanReport;
-            RefreshInventory(); RefreshPluginList();
-            StatusText.Text = $"Scan complete: {visiblePlugins.Count} outfits ready · {result.Npcs.Count(npc => npc.CanReceiveWearables)} eligible NPC bases · {result.Plugins.Count(item => item.IsFiltered)} hidden candidates." +
+            RefreshInventory(false); RefreshPluginList();
+            StatusText.Text = $"Scan complete: {result.Plugins.Count(item => !item.IsFiltered)} equipment-only candidates · {result.Npcs.Count(npc => npc.CanReceiveWearables)} eligible NPC bases · {result.Plugins.Count(item => item.IsFiltered)} mixed/hidden candidates." +
                 (result.Diagnostics.Any(line => line.StartsWith("Cannot") || line.StartsWith("Missing") || line.StartsWith("Duplicate")) ? " Review scan diagnostics in Settings." : "");
         }
         catch (OperationCanceledException)
@@ -305,13 +338,17 @@ public partial class MainWindow : Window
     {
         if (SelectionCountText == null) return;
         var count = scannedPlugins.Count(IsSelectedForPatch);
-        SelectionCountText.Text = $"{count} outfit{(count == 1 ? "" : "s")} selected";
+        var outsideView = scannedPlugins.Count(plugin => IsSelectedForPatch(plugin) && !visiblePlugins.Contains(plugin));
+        SelectionCountText.Text = $"{count} outfit{(count == 1 ? "" : "s")} checked" + (outsideView > 0 ? $" · {outsideView} outside this view" : "");
+        GenerateButton.Content = $"Configure checked ({count}) →";
+        GenerateButton.ToolTip = $"Open exactly {count} checked outfit plugin(s). Searching does not clear checks." +
+            (outsideView > 0 ? $" {outsideView} checked plugin(s) are outside the current search/tab." : "") +
+            " To open one outfit regardless of other checks, right-click its row → Configure this outfit.";
         if (ActionTargetsText is not null) ActionTargetsText.Text = $"{GetActionTargets().Count} visible action targets";
-        GenerateButton.IsEnabled = scanCancellation == null && !isGenerating && !isDiscoveringLocations && count > 0;
+        GenerateButton.IsEnabled = scanCancellation == null && !isGenerating && !isPreparingSetup && !isConfiguring && !isDiscoveringLocations && count > 0;
     }
     private bool IsSelectedForPatch(PluginEntry plugin) => plugin.Selected && plugin.CanPatch && (editingPatchedOutfit ||
-        !preferences.IgnoredPlugins.Contains(plugin.Plugin) && (!plugin.IsFiltered || preferences.IncludedPlugins.Contains(plugin.Plugin)) &&
-        (plugin.PatchStatus != "Patched" || ShowPatchedBox.IsChecked == true || preferences.UnhiddenPlugins.Contains(plugin.Plugin)));
+        !preferences.IgnoredPlugins.Contains(plugin.Plugin) && (!plugin.IsFiltered || preferences.IncludedPlugins.Contains(plugin.Plugin)));
 
     private void PluginSelectionChanged(object sender, RoutedEventArgs e)
     {
@@ -335,8 +372,24 @@ public partial class MainWindow : Window
         var current = e.OriginalSource as DependencyObject;
         while (current != null && current is not DataGridRow) current = current is System.Windows.Media.Visual || current is System.Windows.Media.Media3D.Visual3D
             ? System.Windows.Media.VisualTreeHelper.GetParent(current) : LogicalTreeHelper.GetParent(current);
-        if (current is DataGridRow row && !row.IsSelected) { PluginsGrid.SelectedItems.Clear(); row.IsSelected = true; }
+        if (current is DataGridRow row)
+        {
+            if (!row.IsSelected) { PluginsGrid.SelectedItems.Clear(); row.IsSelected = true; }
+            contextPlugin = row.DataContext as PluginEntry;
+        }
+        else contextPlugin = null;
     }
+
+    private List<PluginEntry> GetCheckedConfigurationTargets() => scannedPlugins.Where(IsSelectedForPatch).ToList();
+
+    private List<PluginEntry> GetContextConfigurationTargets()
+    {
+        var plugin = contextPlugin ?? PluginsGrid.SelectedItem as PluginEntry;
+        return plugin is { CanPatch: true, SourceDetected: true } ? [plugin] : [];
+    }
+
+    private async void ConfigureContext_Click(object sender, RoutedEventArgs e)
+        => await ConfigureAndGenerateAsync(GetContextConfigurationTargets());
     private void ExportScanReport_Click(object sender, RoutedEventArgs e)
     {
         ShowErrorReports_Click(sender, e);
@@ -368,20 +421,28 @@ public partial class MainWindow : Window
         if (sender is CheckBox box) ActivityHistory.Add((box.IsChecked == true ? "Showing: " : "Hiding view: ") + box.Content);
     }
 
+    private void LibraryViewChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (ReferenceEquals(e.Source, LibraryViews) && PluginsGrid is not null) RefreshPluginList();
+    }
     private void RefreshPluginList()
     {
+        if (SearchBox is null || PluginsGrid is null || LibraryViews is null) return;
         var query = SearchBox.Text.Trim();
-        var showIgnored = ShowIgnoredBox.IsChecked == true;
-        var showFiltered = ShowFilteredBox.IsChecked == true;
-        var showPatched = ShowPatchedBox?.IsChecked == true;
+        var view = LibraryViews.SelectedIndex;
+        var all = scannedPlugins.Concat(recoveredPatchedSources).Where(plugin => !WearableFilterService.IsOfficialContent(plugin.Plugin)).ToList();
+        bool Included(PluginEntry item) => !preferences.IgnoredPlugins.Contains(item.Plugin) && (!item.IsFiltered || preferences.IncludedPlugins.Contains(item.Plugin));
         visiblePlugins.Clear();
-        foreach (var plugin in scannedPlugins.OrderBy(item => item.Plugin, StringComparer.OrdinalIgnoreCase).Where(item =>
-                     (preferences.IgnoredPlugins.Contains(item.Plugin) ? showIgnored : item.PatchStatus == "Patched" ? showPatched || preferences.UnhiddenPlugins.Contains(item.Plugin) :
-                         showFiltered || !item.IsFiltered || preferences.IncludedPlugins.Contains(item.Plugin)) &&
-                     (string.IsNullOrWhiteSpace(query) || item.Plugin.Contains(query, StringComparison.OrdinalIgnoreCase))))
-            visiblePlugins.Add(plugin);
+        foreach (var plugin in all.Where(item => view == 2 ? item.HasGeneratedPatch : view == 1 ? !Included(item) : item.SourceDetected && Included(item))
+                     .Where(item => string.IsNullOrWhiteSpace(query) || item.Plugin.Contains(query, StringComparison.OrdinalIgnoreCase))
+                     .OrderBy(item => item.Plugin, StringComparer.OrdinalIgnoreCase)) visiblePlugins.Add(plugin);
+        EquipmentViewTab.Header = $"Armor & clothing ({all.Count(item => item.SourceDetected && Included(item))})";
+        MixedViewTab.Header = $"Mixed / hidden ({all.Count(item => !Included(item))})";
+        PatchedViewTab.Header = $"Already patched ({all.Count(item => item.HasGeneratedPatch)})";
+        LibraryViewHint.Text = view == 2 ? "Source mods confirmed in discovered generated ESPs. The note shows each patch location; activation in a profile is not established." :
+            view == 1 ? "Mixed-content or manually hidden plugins. Use Enable selected / Unhide selected to include them; official Skyrim/DLC/Creation Club files are never selectable." :
+            "Armor/clothing plugins, their equipment support records and any bundled weapons. Already patched outfits remain visible here. Mixed mods you explicitly include also appear here.";
         UpdateSelectionSummary();
-        if (ShowPatchedBox != null) ShowPatchedBox.Content = $"Show already patched outfits ({scannedPlugins.Count(item => item.PatchStatus == "Patched")})";
     }
 
     private void SearchBox_TextChanged(object sender, TextChangedEventArgs e) => RefreshPluginList();
@@ -441,11 +502,11 @@ public partial class MainWindow : Window
         var targets = GetActionTargets().Where(plugin => !enabled || plugin.CanPatch).ToList();
         foreach (var plugin in targets)
             {
-                if (enabled) { preferences.IgnoredPlugins.Remove(plugin.Plugin); if (plugin.PatchStatus == "Patched") preferences.UnhiddenPlugins.Add(plugin.Plugin); }
+                if (enabled) { preferences.IgnoredPlugins.Remove(plugin.Plugin); if (plugin.HasGeneratedPatch) preferences.UnhiddenPlugins.Add(plugin.Plugin); }
                 SetMark(plugin, enabled);
             }
         SavePreferences();
-        PluginsGrid.Items.Refresh();
+        RefreshPluginList();
         UpdateSelectionSummary();
         RecordListAction(enabled ? "Enabled for patch setup:" : "Disabled for patch setup:", targets);
     }
@@ -466,7 +527,7 @@ public partial class MainWindow : Window
 
     private void RestorePlugin_Click(object sender, RoutedEventArgs e)
     {
-        var targets = GetActionTargets().Where(plugin => preferences.IgnoredPlugins.Contains(plugin.Plugin) || plugin.IsFiltered || plugin.PatchStatus == "Patched").ToList();
+        var targets = GetActionTargets().Where(plugin => preferences.IgnoredPlugins.Contains(plugin.Plugin) || plugin.IsFiltered || plugin.HasGeneratedPatch).ToList();
         foreach (var plugin in targets)
         {
             preferences.IgnoredPlugins.Remove(plugin.Plugin);
@@ -479,13 +540,57 @@ public partial class MainWindow : Window
         RecordListAction("Unhidden:", targets);
     }
 
+    private async Task PrepareAudienceLists(int outfitCount)
+    {
+        if (audiencePreparation is not null) return;
+        var keywords = availableKeywords.ToArray();
+        var population = npcProfiles.Values.ToArray();
+        isPreparingSetup = true;
+        var loading = new StartupWindow($"Preparing {outfitCount} selected outfit plugin(s)") { Owner = this, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+        loading.SetStage("Preparing NPC groups and presets once for this scan. Other outfits are not being opened…");
+        var progress = new Progress<string>(message =>
+        {
+            if (!isPreparingSetup) return;
+            loading.SetStage(message); StatusText.Text = message;
+        });
+        try
+        {
+            IsEnabled = false;
+            ActionProgress.Visibility = Visibility.Visible; ActionProgress.IsIndeterminate = true;
+            loading.Show();
+            // No WPF controls are created on the worker. Later outfits reuse these scan-owned lists.
+            audiencePreparation = await Task.Run(() => new AudiencePreparation(keywords, population, progress));
+            StatusText.Text = "Audience lists ready · cached until the next successful scan.";
+        }
+        finally
+        {
+            isPreparingSetup = false;
+            loading.Close(); IsEnabled = true;
+            ActionProgress.IsIndeterminate = false; ActionProgress.Visibility = Visibility.Collapsed;
+            UpdateSelectionSummary();
+        }
+    }
+
     private async void Generate_Click(object sender, RoutedEventArgs e)
     {
-        if (scanCancellation != null || isGenerating) return;
         PluginsGrid.CommitEdit(DataGridEditingUnit.Cell, true);
         PluginsGrid.CommitEdit(DataGridEditingUnit.Row, true);
-        var selected = scannedPlugins.Where(IsSelectedForPatch).ToList();
-        if (selected.Count == 0) { MessageBox.Show("Select at least one plugin to patch.", "No plugins selected"); return; }
+        await ConfigureAndGenerateAsync(GetCheckedConfigurationTargets());
+    }
+
+    private async Task ConfigureAndGenerateAsync(List<PluginEntry> selected)
+    {
+        if (scanCancellation != null || isGenerating || isPreparingSetup || isConfiguring || isDiscoveringLocations) return;
+        if (selected.Count == 0) { StatusText.Text = "Tick outfit boxes for a batch, or right-click an available outfit → Configure this outfit."; return; }
+        isConfiguring = true;
+        UpdateSelectionSummary();
+        ActivityHistory.Add("Configuring only: " + string.Join(", ", selected.Select(plugin => plugin.Plugin)));
+        try { await ConfigureCoreAsync(selected); }
+        finally { isConfiguring = false; UpdateSelectionSummary(); }
+    }
+
+    private async Task ConfigureCoreAsync(List<PluginEntry> selected)
+    {
         var outputDirectory = Directory.Exists(preferences.OutputPath) ? preferences.OutputPath : "";
         var requestedOutfits = requestedRepatchOutfits;
         var preferSavedSetup = reuseSavedRepatch;
@@ -509,10 +614,11 @@ public partial class MainWindow : Window
             preferences.DistributionPresets.Remove(name);
             SavePreferences();
         }, npcProfiles: npcProfiles.Values, skippedOutfits: skippedOutfits, merchantTargets: merchantTargets, requestedOutfits: requestedOutfits,
-        saveBatch: saved => { foreach (var pair in saved) preferences.DistributionSettings[pair.Key] = pair.Value; SavePreferences(); }) { Owner = this };
+        saveBatch: saved => { foreach (var pair in saved) preferences.DistributionSettings[pair.Key] = pair.Value; SavePreferences(); }, preparation: audiencePreparation) { Owner = this };
 
         try
         {
+          await PrepareAudienceLists(selected.Count);
           while (true)
           {
             dialog = CreateSetup();
@@ -521,6 +627,7 @@ public partial class MainWindow : Window
             if (!usingSavedSetup && dialog.ShowDialog() != true)
             {
                 if (dialog.Options.Count == 0) StatusText.Text = "All outfits skipped. Your existing patch has not been changed.";
+                else StatusText.Text = $"Saved setup for {selected.Count} outfit plugin(s). Reopen Configure and choose Review & generate to build the patch.";
                 return;
             }
             if (string.IsNullOrWhiteSpace(outputDirectory))
@@ -533,7 +640,7 @@ public partial class MainWindow : Window
                 if (outputPicker.ShowDialog(this) != true) return;
                 outputDirectory = outputPicker.FolderName;
             }
-            var targeting = new NpcTargetingService(availableKeywords, npcProfiles.Values);
+            var targeting = audiencePreparation?.Targeting ?? new NpcTargetingService(availableKeywords, npcProfiles.Values);
             foreach (var config in dialog.Options.Where(config => config.DistributeToNpcs))
                 foreach (var rule in config.TargetRules) targeting.Resolve(rule, config.Gender);
             var review = new PatchReviewWindow(dialog.Options, CountMatchingNpcs, (rule, owner) => CountOverlappingRules(rule, owner, dialog.Options), CountInstalledRuleOverlaps, framework, outputDirectory) { Owner = this };
@@ -602,7 +709,7 @@ public partial class MainWindow : Window
 
     private int CountOverlappingRules(DistributionTargetRule rule, PluginPatchOptions owner, IEnumerable<PluginPatchOptions> current)
     {
-        var targeting = new NpcTargetingService(availableKeywords, npcProfiles.Values);
+        var targeting = audiencePreparation?.Targeting ?? new NpcTargetingService(availableKeywords, npcProfiles.Values);
         var matches = rule.NpcResolutionComplete ? rule.ResolvedNpcFormIds.ToHashSet(StringComparer.OrdinalIgnoreCase) : targeting.GetMatchingProfiles(rule, owner.Gender).Select(profile => profile.FormId).ToHashSet(StringComparer.OrdinalIgnoreCase);
         if (matches.Count == 0) return 0;
         return current.Where(config => config.DistributeToNpcs && !ReferenceEquals(config, owner)).Sum(config => config.TargetRules.Count(other =>
@@ -623,62 +730,89 @@ public partial class MainWindow : Window
 
     private void RefreshInventory_Click(object sender, RoutedEventArgs e) => RefreshInventory();
 
-    private void RefreshInventory()
+    private async void RefreshInventory(bool rediscover = true)
     {
-        inventoryRows.Clear();
-        var output = preferences.OutputPath;
-        foreach (var plugin in scannedPlugins) plugin.PatchStatus = "Not patched";
-        if (string.IsNullOrWhiteSpace(output) || !Directory.Exists(output))
-        {
-            if (PluginsGrid is not null) PluginsGrid.Items.Refresh();
-            ScanSummaryText.Text = $"{scannedPlugins.Count} wearable plugin candidate(s) · {scannedPlugins.Sum(plugin => plugin.PieceCount)} wearable record(s) · 0 patched";
-            InventoryDetailsBox.Text = "Choose an output folder after generating a patch. The overview will list each source plugin, selected pieces, audiences, chance, and framework.";
-            RefreshPluginList();
-            return;
-        }
-        PatchManifest manifest;
-        IReadOnlyDictionary<PatchManifestEntry, PatchEntryHealth> health;
+        var refresh = ++inventoryRefreshVersion;
+        ScanSummaryText.Text = "Reading generated patch files across detected mod locations…";
+        var roots = (rediscover ? patchSearchRoots.Append(dataPath) : discoveredPatchFiles).Concat(preferences.PatchSearchFiles).Append(preferences.OutputPath).Where(path => !string.IsNullOrWhiteSpace(path)).ToArray();
+        var snapshot = PreferencesService.Clone(preferences);
+        var scannedSnapshot = scannedPlugins.ToList();
+        var ownProgress = scanCancellation is null && !isGenerating && !isPreparingSetup && !isDiscoveringLocations;
+        if (ownProgress) { ActionProgress.Visibility = Visibility.Visible; ActionProgress.IsIndeterminate = true; }
         try
         {
-            manifest = PatchInventoryService.ReadManifest(output);
-            health = PatchHealthService.Inspect(output, manifest, scannedPlugins.Count > 0 ? scannedPlugins : null);
-        }
-        catch (Exception ex)
-        {
-            App.WriteDiagnostic(DiagnosticEvent.PatchLibraryReadFailed, ex);
-            ScanSummaryText.Text = $"{scannedPlugins.Count} wearable plugin candidate(s) · generated library needs attention";
-            InventoryDetailsBox.Text = $"The generated patch library could not be read safely. Your existing output has been preserved.\n\n{ex.Message}\n\nRestore the previous backup, or choose a different output folder in Settings before generating a patch.";
-            StatusText.Text = "The generated patch library needs attention. Open My patch for details.";
-            RefreshPluginList();
-            return;
-        }
-        var patchedPlugins = manifest.Entries.Select(entry => entry.SourcePlugin).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        foreach (var plugin in scannedPlugins)
-        {
-            var entries = manifest.Entries.Where(entry => entry.SourcePlugin.Equals(plugin.Plugin, StringComparison.OrdinalIgnoreCase)).ToList();
-            plugin.PatchStatus = entries.Count == 0 ? "Not patched" : entries.All(entry => health[entry].Status == "Ready") ? "Patched" : "Needs review";
-            if (plugin.PatchStatus == "Patched" && !preferences.UnhiddenPlugins.Contains(plugin.Plugin)) plugin.Selected = false;
-        }
-        PluginsGrid.Items.Refresh();
-        ScanSummaryText.Text = $"{scannedPlugins.Count} wearable plugin candidate(s) · {scannedPlugins.Sum(plugin => plugin.PieceCount)} wearable record(s) · {patchedPlugins.Count} plugin(s) already patched";
-        foreach (var entry in manifest.Entries.OrderBy(entry => entry.SourcePlugin, StringComparer.OrdinalIgnoreCase))
-            inventoryRows.Add(new PatchInventoryRow
+            var detected = await Task.Run(() => DetectedPatchReader.Read(PatchFileDiscovery.Find(rediscover ? roots.Concat(ScanLocationDiscovery.FindVortexStagingRoots(snapshot)) : roots), scannedSnapshot));
+            if (refresh != inventoryRefreshVersion || Dispatcher.HasShutdownStarted) return;
+            inventoryRows.Clear(); recoveredPatchedSources.Clear();
+            var bySource = detected.GroupBy(item => item.Entry.SourcePlugin, StringComparer.OrdinalIgnoreCase).ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
+            foreach (var plugin in scannedPlugins)
             {
-                Health = health[entry].Status,
-                SourcePlugin = string.IsNullOrWhiteSpace(entry.OutfitName) ? entry.SourcePlugin : $"{entry.SourcePlugin} · {entry.OutfitName}",
-                IncludedPieces = entry.IncludedPieces.Count.ToString(),
-                Audiences = !entry.DistributeToNpcs ? "Merchants only" : (entry.MerchantStock.Count > 0 ? "Shops + " : "") + string.Join(", ", entry.Audiences.Select(audience => audience.Split(':', 2)[0]).Distinct(StringComparer.OrdinalIgnoreCase)),
-                Chance = !entry.DistributeToNpcs ? "N/A (shops)" : entry.Framework == "SPID" ? $"{entry.Chance}%" : "100% (SkyPatcher)",
-                Gender = entry.DistributeToNpcs ? entry.Gender : "N/A (shops)",
-                LastGenerated = entry.GeneratedAtUtc.ToLocalTime().ToString("g"),
-                Details = MerchantStockService.Describe(entry) + "\n\n" + $"Status: {health[entry].Status}\n{health[entry].Explanation}\n\nSource plugin: {entry.SourcePlugin}\nFramework: {entry.Framework}\nDistribution file: {entry.DistributionPath}\nGenerated outfit: {(string.IsNullOrEmpty(entry.OutfitEditorId) ? "legacy record (not indexed)" : entry.OutfitEditorId)}\nRequired masters: {string.Join(", ", entry.RequiredMasters)}\nChance: {(entry.DistributeToNpcs ? entry.Chance + "%" : "N/A (shops only)")}\nNPC sex: {(entry.DistributeToNpcs ? entry.Gender : "N/A (shops only)")}\nDistribution rows: {entry.DistributionRows}\n\nIncluded pieces:\n• {string.Join("\n• ", entry.IncludedPieces)}\n\nExcluded pieces:\n• {string.Join("\n• ", entry.ExcludedPieces)}\n\nAudiences:\n• {string.Join("\n• ", entry.Audiences)}",
-                Entry = entry
-            });
-        if (inventoryRows.Count == 0 && (File.Exists(Path.Combine(output, PatchGenerator.OutputPluginName)) || Directory.Exists(output)))
-            InventoryDetailsBox.Text = File.Exists(Path.Combine(output, PatchGenerator.OutputPluginName))
-                ? "The output folder has a patch but no Skyrim SPID Patch Generator inventory manifest. New patches include the inventory automatically; you can still inspect the ESP/INI files in the output folder."
-                : "No generated outfits are recorded for this output folder yet.";
-        RefreshPluginList();
+                var wasPatched = plugin.HasGeneratedPatch;
+                var entries = bySource.GetValueOrDefault(plugin.Plugin) ?? [];
+                plugin.HasGeneratedPatch = entries.Any(item => item.PresentInPlugin);
+                plugin.PatchLocations = string.Join("; ", entries.Where(item => item.PresentInPlugin).Select(item => item.PatchPlugin).Distinct(StringComparer.OrdinalIgnoreCase));
+                plugin.PatchStatus = entries.Count == 0 ? "Not patched" : entries.All(item => item.PresentInPlugin && item.Health == "Files found") ? "Patched" : "Needs review";
+                if (plugin.HasGeneratedPatch && !wasPatched && !preferences.UnhiddenPlugins.Contains(plugin.Plugin)) plugin.Selected = false;
+            }
+            foreach (var group in bySource.Where(pair => !scannedPlugins.Any(plugin => plugin.Plugin.Equals(pair.Key, StringComparison.OrdinalIgnoreCase))))
+                if (group.Value.Any(item => item.PresentInPlugin)) recoveredPatchedSources.Add(new PluginEntry { Plugin = group.Key, SourceDetected = false, Selected = false, HasGeneratedPatch = true,
+                    PatchStatus = "Source not scanned", ValidationIssue = "Patch found, but this source plugin is not visible in the current source scan.",
+                    PatchLocations = string.Join("; ", group.Value.Select(item => item.PatchPlugin).Distinct(StringComparer.OrdinalIgnoreCase)) });
+            foreach (var found in detected.OrderBy(item => item.Entry.SourcePlugin, StringComparer.OrdinalIgnoreCase).ThenBy(item => item.Directory, StringComparer.OrdinalIgnoreCase))
+            {
+                var entry = found.Entry;
+                inventoryRows.Add(new PatchInventoryRow {
+                    OutputDirectory = found.Directory, PatchPlugin = found.PatchPlugin, CanManage = found.CanManage,
+                    Health = found.Health, SourcePlugin = string.IsNullOrWhiteSpace(entry.OutfitName) ? entry.SourcePlugin : entry.SourcePlugin + " · " + entry.OutfitName,
+                    IncludedPieces = entry.IncludedPieces.Count.ToString(),
+                    Audiences = !entry.DistributeToNpcs ? "Merchants only" : (entry.MerchantStock.Count > 0 ? "Shops + " : "") + string.Join(", ", entry.Audiences.Select(audience => audience.Split(':', 2)[0]).Distinct(StringComparer.OrdinalIgnoreCase)),
+                    Chance = found.Health == "Recovered from ESP" ? "Unknown" : !entry.DistributeToNpcs ? "N/A (shops)" : entry.Framework == "SPID" ? $"{entry.Chance}%" : "100% (SkyPatcher)",
+                    Gender = found.Health == "Recovered from ESP" ? "Unknown" : entry.DistributeToNpcs ? entry.Gender : "N/A (shops)", LastGenerated = entry.GeneratedAtUtc.ToLocalTime().ToString("g"), Entry = entry,
+                    Details = "Patch file: " + found.PatchPlugin + "\n" + (found.CanManage ? "Managed release output: editable in this app." : "Read-only detected output: experimental or recovered patches are not edited by this release.") +
+                        "\n\nStatus: " + found.Health + "\n" + found.Explanation + "\n\nSource plugin: " + entry.SourcePlugin + "\nGenerated outfit: " + entry.OutfitEditorId +
+                        "\nFramework: " + entry.Framework + "\nDistribution file: " + entry.DistributionPath + "\n\nPart preset: " + entry.PartPreset + "\n" + string.Join("\n", entry.PartChoices.Select(part => part.FormId + " · " + part.Mode + (part.Mode == "Optional" ? " " + part.Chance + "%" : ""))) + "\n\nIncluded pieces:\n• " + string.Join("\n• ", entry.IncludedPieces) +
+                        "\n\nAudiences:\n• " + string.Join("\n• ", entry.Audiences) + "\n\n" + MerchantStockService.Describe(entry)
+                });
+            }
+            PluginsGrid.Items.Refresh();
+            var patchedCount = bySource.Count(pair => pair.Value.Any(item => item.PresentInPlugin) && !WearableFilterService.IsOfficialContent(pair.Key));
+            ScanSummaryText.Text = $"{scannedPlugins.Count} source plugin candidates · {patchedCount} source mods found in generated ESPs · {detected.Select(item => item.PatchPlugin).Distinct(StringComparer.OrdinalIgnoreCase).Count()} detected patch files";
+            InventoryDetailsBox.Text = detected.Count == 0 ? "No generated patch contents found in the scanned mod locations. Use Find patch files to add an ESP, _DISTR.ini or .patch.json from another profile/mod folder. The output destination does not control this list." :
+                "Select an entry to see its actual generated patch file and source equipment. The overview combines files from discovered mod locations and manually added patch files. Multiple profiles can contain the same source outfit; activation is not established.";
+            RefreshPluginList();
+        }
+        catch (Exception failure)
+        {
+            App.WriteDiagnostic(DiagnosticEvent.PatchLibraryReadFailed, failure);
+            if (refresh == inventoryRefreshVersion) InventoryDetailsBox.Text = "Patch discovery could not finish. Existing files were preserved. Use Error reports for technical details or Find patch files to inspect a specific output.";
+        }
+        finally
+        {
+            if (ownProgress && refresh == inventoryRefreshVersion && scanCancellation is null && !isGenerating && !isPreparingSetup && !isDiscoveringLocations)
+            { ActionProgress.IsIndeterminate = false; ActionProgress.Visibility = Visibility.Collapsed; }
+        }
+    }
+
+    private void FindPatchFiles_Click(object sender, RoutedEventArgs e)
+    {
+        var picker = new OpenFileDialog { Title = "Select generated patch files from any profile/mod folder", Multiselect = true,
+            Filter = "Generated patch files (*.esp;*_DISTR.ini;*.patch.json)|*.esp;*_DISTR.ini;*.patch.json" };
+        if (picker.ShowDialog(this) != true) return;
+        foreach (var file in picker.FileNames.Where(DetectedPatchReader.IsGeneratedFile)) preferences.PatchSearchFiles.Add(file);
+        SavePreferences(); RefreshInventory();
+    }
+
+    private bool UseSelectedManagedLibrary()
+    {
+        if (PatchInventoryGrid.SelectedItem is not PatchInventoryRow row) return true;
+        if (!row.CanManage)
+        {
+            MessageBox.Show(this, "This experimental or recovered patch can be inspected, but cannot be edited safely by this release. Choose a managed release patch or generate into a new output folder.", "Read-only patch", MessageBoxButton.OK, MessageBoxImage.Information);
+            return false;
+        }
+        if (!preferences.OutputPath.Equals(row.OutputDirectory, StringComparison.OrdinalIgnoreCase))
+        { OutputPathBox.Text = preferences.OutputPath = row.OutputDirectory; SavePreferences(); }
+        return true;
     }
 
     private void InventorySelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -688,14 +822,15 @@ public partial class MainWindow : Window
 
     private void OpenOutput_Click(object sender, RoutedEventArgs e)
     {
-        var path = preferences.OutputPath;
+        var path = (PatchInventoryGrid.SelectedItem as PatchInventoryRow)?.OutputDirectory ?? preferences.OutputPath;
         if (!Directory.Exists(path)) { MessageBox.Show(this, "Choose an output folder by generating a patch first.", "Output folder not set", MessageBoxButton.OK, MessageBoxImage.Information); return; }
         try { Process.Start(new ProcessStartInfo(path) { UseShellExecute = true }); }
         catch (Exception ex) { App.WriteDiagnostic(DiagnosticEvent.OutputFolderOpenFailed, ex); MessageBox.Show(this, ex.Message, "Could not open output folder", MessageBoxButton.OK, MessageBoxImage.Error); }
     }
 
-    private void EditInventoryEntry_Click(object sender, RoutedEventArgs e)
+    private async void EditInventoryEntry_Click(object sender, RoutedEventArgs e)
     {
+        if (!UseSelectedManagedLibrary()) return;
         if (PatchInventoryGrid.SelectedItem is not PatchInventoryRow row) { MessageBox.Show(this, "Select a generated outfit first.", "No outfit selected", MessageBoxButton.OK, MessageBoxImage.Information); return; }
         var plugin = scannedPlugins.FirstOrDefault(item => item.Plugin.Equals(row.Entry.SourcePlugin, StringComparison.OrdinalIgnoreCase));
         if (plugin is null)
@@ -709,15 +844,17 @@ public partial class MainWindow : Window
         requestedRepatchOutfits = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
         { [plugin.Plugin] = new[] { string.IsNullOrWhiteSpace(row.Entry.OutfitName) ? Path.GetFileNameWithoutExtension(plugin.Plugin) : row.Entry.OutfitName } };
         editingPatchedOutfit = true;
-        try { Generate_Click(sender, e); }
+        try { await ConfigureAndGenerateAsync(GetCheckedConfigurationTargets()); }
         finally { editingPatchedOutfit = false; requestedRepatchOutfits = null; }
     }
 
-    private void RepatchAll_Click(object sender, RoutedEventArgs e)
+    private async void RepatchAll_Click(object sender, RoutedEventArgs e)
     {
-        if (scanCancellation != null || isGenerating) return;
+        if (!UseSelectedManagedLibrary()) return;
+        if (scanCancellation != null || isGenerating || isPreparingSetup || isConfiguring) return;
         if (inventoryRows.Count == 0) { StatusText.Text = "Choose an existing patch folder in Settings first."; return; }
-        var entries = inventoryRows.Select(row => row.Entry).ToList();
+        var entries = inventoryRows.Where(row => row.CanManage && row.OutputDirectory.Equals(preferences.OutputPath, StringComparison.OrdinalIgnoreCase)).Select(row => row.Entry).ToList();
+        if (entries.Count == 0) { StatusText.Text = "Select an editable managed patch entry first."; return; }
         var sources = entries.Select(entry => entry.SourcePlugin).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var missing = sources.Where(source => !scannedPlugins.Any(plugin => plugin.CanPatch && plugin.Plugin.Equals(source, StringComparison.OrdinalIgnoreCase))).ToList();
         if (missing.Count > 0)
@@ -730,12 +867,13 @@ public partial class MainWindow : Window
             .ToDictionary(group => group.Key, group => (IReadOnlyList<string>)group.Select(entry => string.IsNullOrWhiteSpace(entry.OutfitName) ? Path.GetFileNameWithoutExtension(entry.SourcePlugin) : entry.OutfitName).Distinct(StringComparer.OrdinalIgnoreCase).ToList(), StringComparer.OrdinalIgnoreCase);
         editingPatchedOutfit = true;
         reuseSavedRepatch = true;
-        try { Generate_Click(sender, e); }
+        try { await ConfigureAndGenerateAsync(GetCheckedConfigurationTargets()); }
         finally { editingPatchedOutfit = false; requestedRepatchOutfits = null; reuseSavedRepatch = false; }
     }
 
     private void RemoveInventoryEntry_Click(object sender, RoutedEventArgs e)
     {
+        if (!UseSelectedManagedLibrary()) return;
         if (PatchInventoryGrid.SelectedItem is not PatchInventoryRow row) { MessageBox.Show(this, "Select a generated outfit first.", "No outfit selected", MessageBoxButton.OK, MessageBoxImage.Information); return; }
         if (string.IsNullOrWhiteSpace(row.Entry.OutfitEditorId)) { MessageBox.Show(this, "This is a legacy patch without an inventory record. It can be inspected, but cannot be safely removed by source plugin.", "Legacy patch", MessageBoxButton.OK, MessageBoxImage.Information); return; }
         if (MessageBox.Show(this, $"Remove {row.SourcePlugin} from the generated patch? A backup will be saved first.", "Remove generated outfit", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
@@ -745,6 +883,7 @@ public partial class MainWindow : Window
 
     private void RestoreBackup_Click(object sender, RoutedEventArgs e)
     {
+        if (!UseSelectedManagedLibrary()) return;
         if (string.IsNullOrWhiteSpace(preferences.OutputPath)) { MessageBox.Show(this, "No output folder has been selected yet.", "Backup unavailable", MessageBoxButton.OK, MessageBoxImage.Information); return; }
         if (MessageBox.Show(this, "Restore the most recent saved patch files for this output folder? Current files will be replaced.", "Restore previous patch", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
         try { PatchInventoryService.RestoreLastBackup(preferences.OutputPath); RefreshInventory(); StatusText.Text = "Previous generated patch restored from backup."; }
@@ -753,6 +892,7 @@ public partial class MainWindow : Window
 
     private void ExportReport_Click(object sender, RoutedEventArgs e)
     {
+        if (!UseSelectedManagedLibrary()) return;
         if (string.IsNullOrWhiteSpace(preferences.OutputPath)) { MessageBox.Show(this, "Generate a patch first.", "Nothing to export", MessageBoxButton.OK, MessageBoxImage.Information); return; }
         var dialog = new SaveFileDialog { Filter = "JSON report (*.json)|*.json", FileName = "SkyrimSPIDPatchGenerator-patch-report.json" };
         if (dialog.ShowDialog(this) != true) return;
@@ -762,7 +902,8 @@ public partial class MainWindow : Window
 
     private async void ExportModArchive_Click(object sender, RoutedEventArgs e)
     {
-        if (scanCancellation != null || isGenerating) return;
+        if (!UseSelectedManagedLibrary()) return;
+        if (scanCancellation != null || isGenerating || isPreparingSetup || isConfiguring) return;
         if (!Directory.Exists(preferences.OutputPath)) { MessageBox.Show(this, "Choose a generated mod folder in Settings first.", "Output folder missing", MessageBoxButton.OK, MessageBoxImage.Information); return; }
         var dialog = new SaveFileDialog { Filter = "Installable mod (*.zip)|*.zip", FileName = "SkyrimSPIDPatchGenerator-Generated-Mod.zip" };
         if (dialog.ShowDialog(this) != true) return;
@@ -789,7 +930,7 @@ public partial class MainWindow : Window
 
     private void ImportPreferences_Click(object sender, RoutedEventArgs e)
     {
-        if (scanCancellation != null || isGenerating) return;
+        if (scanCancellation != null || isGenerating || isPreparingSetup || isConfiguring) return;
         var dialog = new OpenFileDialog { Filter = "Skyrim SPID Patch Generator settings (*.json)|*.json|All files (*.*)|*.*" };
         if (dialog.ShowDialog(this) != true) return;
         try

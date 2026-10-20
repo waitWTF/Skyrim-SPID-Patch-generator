@@ -5,6 +5,21 @@ namespace WearableDistributor;
 /// <summary>Keep uniformed protectors out of every wearable audience, including broad selections.</summary>
 public static class UniformedNpcPolicy
 {
+    internal static void ApplyToPopulation(IEnumerable<NpcTargetProfile> population, IReadOnlyDictionary<string, KeywordChoice> choices)
+    {
+        var relevant = choices.Values.Where(choice => choice.TargetKind is "Faction" or "Class" or "Keyword" or "Outfit").ToList();
+        var protectedForms = relevant.Where(choice => HasProtectedIdentity(choice.EditorId)).Select(choice => choice.FormId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var guardForms = relevant.Where(choice => HasGuardIdentity(choice.EditorId)).Select(choice => choice.FormId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var profile in population)
+        {
+            // Match IsProtected/IsGuard exactly, including all inherited alternatives, but
+            // tokenize each shared faction/class/outfit name once rather than once per NPC.
+            var forms = profile.TargetForms.Concat(profile.Variants.SelectMany(variant => variant.TargetForms));
+            profile.IsProtectedUniformed |= IsProtected(profile) || forms.Any(protectedForms.Contains);
+            profile.IsProtectedGuard |= profile.IsProtectedGuard || HasGuardIdentity(profile.EditorId) || HasGuardIdentity(profile.Name) || forms.Any(guardForms.Contains);
+        }
+    }
+
     public static bool HasGuardIdentity(string text)
     {
         var split = Regex.Replace(Regex.Replace(text ?? "", "([A-Z]+)([A-Z][a-z])", "$1 $2"), "([a-z0-9])([A-Z])", "$1 $2");

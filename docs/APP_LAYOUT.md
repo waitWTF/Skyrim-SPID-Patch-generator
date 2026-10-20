@@ -1,4 +1,4 @@
-# Application download layout — 0.4.7
+# Application download layout — 0.4.10
 
 ## For users
 
@@ -12,7 +12,7 @@ Skyrim SPID Patch Generator/
     SkyrimSPIDPatchGenerator.dll
     SkyrimSPIDPatchGenerator.deps.json
     SkyrimSPIDPatchGenerator.runtimeconfig.json
-    ... dependency DLLs and debug symbols
+    ... dependency DLLs (release builds omit debug symbols)
   Documentation/
     README.md
     RELEASE_NOTES.md

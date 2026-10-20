@@ -26,7 +26,7 @@ internal static class UiTheme
             catch (DllNotFoundException error) { App.WriteDiagnostic(DiagnosticEvent.UiThemeUnavailable, error, DiagnosticLevel.Warning); }
             catch (EntryPointNotFoundException error) { App.WriteDiagnostic(DiagnosticEvent.UiThemeUnavailable, error, DiagnosticLevel.Warning); }
         };
-        try { window.Icon = System.Windows.Media.Imaging.BitmapFrame.Create(new Uri("pack://application:,,,/SkyrimSPIDPatchGenerator;component/assets/WearableDistributor.ico", UriKind.Absolute)); }
+        try { window.Icon = System.Windows.Media.Imaging.BitmapFrame.Create(new Uri("pack://application:,,,/assets/WearableDistributor.ico", UriKind.Absolute)); }
         catch (IOException error) { App.WriteDiagnostic(DiagnosticEvent.UiIconLoadFailed, error, DiagnosticLevel.Warning); }
     }
 

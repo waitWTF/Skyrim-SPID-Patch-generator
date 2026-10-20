@@ -14,6 +14,7 @@ internal enum DiagnosticEvent
     ApplicationStarted = 1000, ApplicationStopped = 1001, UnhandledUiError = 1002, UnhandledProcessError = 1003, UnobservedTaskError = 1004,
     PreferencesLoadFailed = 1100, PreferencesSaveFailed = 1101, PreferencesImportFailed = 1102, PreferencesExportFailed = 1103,
     RegistryDiscoveryFailed = 1200, SteamDiscoveryFailed = 1201, FolderDiscoveryFailed = 1202, GameLocationProbeFailed = 1203, Mo2ModuleProbeFailed = 1204, Mo2ConfigProbeFailed = 1205,
+    MeshArchiveReadFailed = 1310,
     ScanFailed = 1300, PluginHeaderReadFailed = 1301, PluginReadFailed = 1302, FolderReadFailed = 1303, IniReadFailed = 1304, MissingActivePlugin = 1305, InvalidMasterDependency = 1306, LoadOrderIssue = 1307,
     PatchGenerationFailed = 1400, PatchLibraryReadFailed = 1401, PatchRemoveFailed = 1402, PatchRestoreFailed = 1403, PatchPackageFailed = 1404,
     PatchReportExportFailed = 1405, OutputFolderOpenFailed = 1406, OutputLockFailed = 1407, SnapshotCreateFailed = 1408, OutputCommitFailed = 1409, OutputRollbackFailed = 1410, BackupMaintenanceFailed = 1411, TemporaryCleanupFailed = 1412,
@@ -44,8 +45,7 @@ internal static class SupportLog
     private static int part;
     private static bool storageFailureRecorded;
     internal static bool PersistenceAvailable { get; private set; } = true;
-    internal static string DirectoryPath => Path.Combine(Environment.GetEnvironmentVariable("WEARABLE_DISTRIBUTOR_SETTINGS_DIR") ??
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WearableDistributor"), "SupportLogs");
+    internal static string DirectoryPath => Path.Combine(BuildInfo.SettingsRoot, "SupportLogs");
     private static string CurrentFile => Path.Combine(DirectoryPath, $"support-{Session:N}-{part:0000}.jsonl");
 
     internal static string? Record(DiagnosticEvent eventId, Exception? exception = null, DiagnosticLevel level = DiagnosticLevel.Error)

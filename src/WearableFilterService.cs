@@ -5,7 +5,19 @@ namespace WearableDistributor;
 
 public static class WearableFilterService
 {
-    public const int Revision = 1;
+    public const int Revision = 2;
+    public static bool IsOfficialContent(string plugin) => NpcTargetingService.IsOfficialPlugin(Path.GetFileName(plugin)) ||
+        Path.GetFileName(plugin).Equals("_ResourcePack.esl", StringComparison.OrdinalIgnoreCase) ||
+        Regex.IsMatch(Path.GetFileName(plugin), @"^cc[a-z0-9_-]+[.]es[mlp]$", RegexOptions.IgnoreCase);
+
+    public static string GetLibraryReason(string path, IEnumerable<string> additional, IReadOnlyList<WearableContentRecord> content, IEnumerable<string> equipmentIds)
+    {
+        var name = Path.GetFileNameWithoutExtension(path);
+        foreach (var term in additional.Where(term => !string.IsNullOrWhiteSpace(term)))
+            if (name.Contains(term, StringComparison.OrdinalIgnoreCase)) return "Custom exclusion: " + term;
+        if (new[] { "zzLSAR", "SiB", "TheNewGentleman", "CBBE", "3BBB", "3BA", "BHUNP", "HIMBO" }.Contains(name, StringComparer.OrdinalIgnoreCase)) return "Body framework / vanilla replacer";
+        return WearableContentClassifier.Classify(content, equipmentIds);
+    }
     public static string GetFilterReason(string path, IEnumerable<string> additional, List<(string Path, string Text)> distributions)
     {
         var fileName = Path.GetFileName(path);
@@ -94,7 +106,7 @@ public static class WearableFilterService
             .Any(form => form.Split('~', 2)[1].Equals(plugin, StringComparison.OrdinalIgnoreCase)));
     }
 
-    public static bool IsOwnDistribution(string path) => Path.GetFileName(path).Equals(PatchGenerator.OutputIniName, StringComparison.OrdinalIgnoreCase) ||
+    public static bool IsOwnDistribution(string path) => DetectedPatchReader.IsGeneratedFile(path) ||
         path.Replace('/', '\\').Contains(@"\WearableDistributor\", StringComparison.OrdinalIgnoreCase);
 
     public static IEnumerable<string> SuppliedEditorIds(string text)

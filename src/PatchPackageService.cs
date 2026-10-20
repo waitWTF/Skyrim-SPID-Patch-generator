@@ -30,7 +30,7 @@ public static class PatchPackageService
         foreach (var file in files.Values)
             if (!File.Exists(file)) throw new FileNotFoundException("A required generated patch file is missing. Restore a backup or regenerate before exporting.", file);
         var required = manifest.Entries.SelectMany(entry => entry.RequiredMasters.Concat(entry.MerchantStock.SelectMany(rule => new[] { rule.ContainerPlugin, rule.ItemPlugin }))).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase).ToList();
-        var instructions = "Skyrim SPID Patch Generator generated mod\n\n" +
+        var instructions = "Skyrim SPID Patch Generator generated mod\n\nEnable one generator output for the same recipients. Keep backups when updating an existing patch.\nOptional part percentages affect NPC outfit lists, not merchant stock; resets can re-evaluate optional pieces.\n\n" +
             "Install this ZIP using Vortex's Install From File or MO2's Install a new mod from an archive. Enable the new mod and WearableDistributor.esp.\n\n" +
             "Required source/NPC plugins (install and enable separately):\n" + string.Join("\n", required.Select(plugin => "- " + plugin)) +
             "\n\nRequired distribution engines: " + string.Join(", ", manifest.Entries.Where(entry => entry.DistributeToNpcs).Select(entry => entry.Framework)

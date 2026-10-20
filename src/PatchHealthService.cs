@@ -23,17 +23,18 @@ public static class PatchHealthService
             try
             {
                 using var mod = SkyrimMod.CreateFromBinaryOverlay(new Noggog.FilePath(pluginPath), SkyrimRelease.SkyrimSE);
+                OptionalPartLists.Validate(mod, manifest);
                 outfitIds.UnionWith(mod.Outfits.Select(outfit => outfit.EditorID).OfType<string>());
                 foreach (var outfit in mod.Outfits.Where(outfit => !string.IsNullOrWhiteSpace(outfit.EditorID)))
                     outfitIdsByEditorId[outfit.EditorID!] = outfit.FormKey.ID;
             }
-            catch (Exception ex) when (ex is IOException or ArgumentException or InvalidOperationException)
+            catch (Exception ex) when (ex is InvalidDataException or IOException or ArgumentException or InvalidOperationException)
             { App.WriteDiagnostic(DiagnosticEvent.PatchHealthFailed, ex, DiagnosticLevel.Warning); pluginIssue = "The generated ESP could not be read: " + ex.Message; }
         }
         var scanned = scannedPlugins?.ToDictionary(plugin => plugin.Plugin, StringComparer.OrdinalIgnoreCase);
         string? merchandiseIssue = null;
         try { MerchantStockService.Validate(outputDirectory, manifest); }
-        catch (Exception ex) when (ex is IOException or InvalidOperationException or ArgumentException) { App.WriteDiagnostic(DiagnosticEvent.PatchHealthFailed, ex, DiagnosticLevel.Warning); merchandiseIssue = ex.Message; }
+        catch (Exception ex) when (ex is InvalidDataException or IOException or InvalidOperationException or ArgumentException) { App.WriteDiagnostic(DiagnosticEvent.PatchHealthFailed, ex, DiagnosticLevel.Warning); merchandiseIssue = ex.Message; }
         var distributionFiles = new Dictionary<string, GeneratedDistributionIndex>(StringComparer.OrdinalIgnoreCase);
         foreach (var entry in manifest.Entries)
         {
@@ -54,6 +55,8 @@ public static class PatchHealthService
                 health = new("Invalid source", invalid.ValidationIssue);
             else if (scanned is not null && HasRemovedPart(entry, scanned[entry.SourcePlugin]))
                 health = new("Parts changed", "One or more selected armor records are absent from the current source scan. Repatch this outfit after checking the mod version.");
+            else if (scanned is not null && EquipmentIssue(entry, scanned[entry.SourcePlugin]) is { } equipmentIssue)
+                health = equipmentIssue;
             else health = new("Ready", "The generated ESP, distribution file and outfit record are present." +
                 (scanned is null ? " Source plugins have not been compared with a current scan." : " Included parts match the current source scan.") +
                 " This is a file-health check, not an in-game distribution test.");
@@ -62,6 +65,22 @@ public static class PatchHealthService
                 App.WriteDiagnostic(DiagnosticEvent.PatchHealthFailed, level: DiagnosticLevel.Warning);
         }
         return result;
+    }
+
+
+    private static PatchEntryHealth? EquipmentIssue(PatchManifestEntry entry, PluginEntry plugin)
+    {
+        var selectedIds = entry.IncludedPieces.Select(text => Regex.Match(text, @"\[(0x[0-9a-f]+~[^\]]+)\]", RegexOptions.IgnoreCase))
+            .Where(match => match.Success).Select(match => match.Groups[1].Value).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var selected = plugin.Pieces.Where(piece => selectedIds.Contains(piece.FormId)).ToList();
+        var checkedGender = entry.MerchantStock.Count > 0 || !entry.DistributeToNpcs ? "Any" : entry.Gender;
+        if (plugin.MeshAssets is { } assets && selected.Any(piece => OutfitMeshPolicy.Missing(piece, assets, checkedGender).Count > 0))
+            return new("Missing worn meshes", "Selected outfit parts refer to unavailable worn meshes. Build/deploy BodySlide output or install the outfit meshes, then rescan and repatch. Changing only the NPC sex cannot fix absent female meshes.");
+        if (entry.DistributeToNpcs && !entry.MatchVariants)
+            for (var i = 0; i < selected.Count; i++) for (var j = i + 1; j < selected.Count; j++)
+                if (OutfitPartSelection.BodySlots(selected[i].Slots).Overlaps(OutfitPartSelection.BodySlots(selected[j].Slots)))
+                    return new("Conflicting outfit parts", "This older outfit combines alternatives that occupy the same body slots. Edit it and choose Reset to Balanced or a matching color, review the selected parts, then regenerate.");
+        return null;
     }
 
     private static PatchEntryHealth? DistributionIssue(string directory, PatchManifestEntry entry, IReadOnlyDictionary<string, uint> outfitIds, Dictionary<string, GeneratedDistributionIndex> distributionFiles)
