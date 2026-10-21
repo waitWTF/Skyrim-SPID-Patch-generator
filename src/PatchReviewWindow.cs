@@ -64,7 +64,9 @@ public sealed class PatchReviewWindow : Window
         var actions = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
         var back = UiTheme.Button("← Back to setup"); back.IsCancel = true; back.Click += (_, _) => DialogResult = false;
         var generate = UiTheme.Button("Generate patch", true); generate.IsDefault = true; generate.MinWidth = 140;
-        generate.IsEnabled = configs.Count > 0 && rows.Count > 0 && configs.All(config => config.Pieces.Any(piece => piece.Include) && (config.DistributeToNpcs ? config.TargetRules.Count > 0 : config.MerchantCategories.Count > 0)) && rows.All(row => !row.BlocksGeneration);
+        var poolErrors = WardrobePools.ConfigurationErrors(configs, framework);
+        if (poolErrors.Count > 0) notes.Children.Add(UiTheme.Caption(string.Join("\n", poolErrors)));
+        generate.IsEnabled = poolErrors.Count == 0 && configs.Count > 0 && rows.Count > 0 && configs.All(config => config.Pieces.Any(piece => piece.Include) && (config.DistributeToNpcs ? config.TargetRules.Count > 0 : config.MerchantCategories.Count > 0)) && rows.All(row => !row.BlocksGeneration);
         generate.ToolTip = generate.IsEnabled ? "Write the outfit plugin, distribution INI, and patch manifest." : "Return to setup and fix the audiences with no matches or missing parts.";
         generate.Click += (_, _) => DialogResult = true;
         actions.Children.Add(back); actions.Children.Add(generate); Grid.SetColumn(actions, 1); footer.Children.Add(actions); Grid.SetRow(footer, 2); root.Children.Add(footer);
@@ -103,7 +105,15 @@ public sealed class PatchReviewWindow : Window
                 var matches = rule.NpcResolutionComplete ? rule.ResolvedNpcFormIds.Count : countMatches(rule);
                 rule.EstimatedNpcCount = matches;
                 var overlaps = countConflicts(rule, config); var installed = countInstalledConflicts(rule);
+                if (!string.IsNullOrEmpty(config.WardrobeName))
+                {
+                    var recipients = rule.ResolvedNpcFormIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
+                    overlaps = configs.Where(other => !ReferenceEquals(other, config) && other.DistributeToNpcs &&
+                        !other.WardrobeName.Equals(config.WardrobeName, StringComparison.OrdinalIgnoreCase))
+                        .SelectMany(other => other.TargetRules).Count(other => other.ResolvedNpcFormIds.Any(recipients.Contains));
+                }
                 var notes = OutfitPartPresets.Warnings(config.Pieces);
+                if (!string.IsNullOrEmpty(config.WardrobeName)) notes.Add($"Random wardrobe: {config.WardrobeName}. Overall coverage: {config.Chance}%. Relative weight: {config.WardrobeWeight}. One complete outfit is chosen after the shared coverage roll; member outfits do not compete with each other. Retained members from earlier patch sessions remain in the pool. This does not schedule daily rotation.");
                 notes.Add(OutfitPartPresets.Summary(config));
                 notes.AddRange(OutfitPartPresets.Errors(config));
                 if (rule.ProtectedNpcCount > 0) notes.Add($"⚠ Protected NPCs: {rule.ProtectedNpcCount} member(s) have existing uniform protection. This explicit faction selection replaces their outfits and can remove their recognizable uniforms. Guards stay excluded.");

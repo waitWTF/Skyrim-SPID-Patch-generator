@@ -51,7 +51,9 @@ internal static class Program
                     TargetRules = [new SavedDistributionTargetRule { Collection = NpcTargetingService.OfficialCollection, Group = "Bandits",
                         Filters = [new SavedTargetChoice { EditorId = choices[1].EditorId, Plugin = choices[1].Plugin, LocalId = choices[1].LocalId, TargetKind = "Class", Category = choices[1].Category }] }]
                 };
-        Window window = mode == "cover" ? DocumentationCover()
+        var wardrobeFixtures = WardrobeUiChecks.Fixtures();
+        Window window = mode == "wardrobe" ? new WardrobePoolWindow(wardrobeFixtures, wardrobeFixtures[0])
+            : mode == "cover" ? DocumentationCover()
             : mode == "main" || mode == "settings" || mode == "inventory" ? new MainWindow()
             : mode == "review" ? new PatchReviewWindow(plugins.Select(plugin => new PluginPatchOptions
                 { Source = plugin, OutfitName = Path.GetFileNameWithoutExtension(plugin.Plugin), Pieces = documentation ? plugin.Pieces.Take(6).ToList() : plugin.Pieces,
@@ -213,7 +215,8 @@ internal static class Program
         if (buttons.Count < 2) throw new InvalidOperationException("The expected navigation controls did not render.");
         var navigation = buttons.Where(button => (button.Content?.ToString() ?? "").Contains("Next") ||
             (button.Content?.ToString() ?? "").Contains("Review") || (button.Content?.ToString() ?? "").Contains("Generate") ||
-            (button.Content?.ToString() ?? "").Contains("Configure checked") || (button.Content?.ToString() ?? "").Contains("Save & close") || (button.Content?.ToString() ?? "").Contains("Back")).ToList();
+            (button.Content?.ToString() ?? "").Contains("Configure checked") || (button.Content?.ToString() ?? "").Contains("Save & close") || (button.Content?.ToString() ?? "").Contains("Back") ||
+            (button.Content?.ToString() ?? "").Contains("Apply wardrobe") || (button.Content?.ToString() ?? "").Contains("Remove checked from pools")).ToList();
         if (navigation.Count == 0) throw new InvalidOperationException("No primary workflow control is visible.");
         foreach (var button in navigation)
         {

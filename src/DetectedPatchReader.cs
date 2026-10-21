@@ -90,7 +90,7 @@ public static class DetectedPatchReader
         var iniFile = Path.Combine(root, prefix + "_DISTR.ini");
         var skyFile = Path.Combine(root, "SKSE", "Plugins", "SkyPatcher", "npc", prefix, prefix + ".ini");
         var supplied = new[] { iniFile, skyFile }.Where(File.Exists).SelectMany(path => WearableFilterService.SuppliedForms(File.ReadAllText(path))).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var managed = !metadataIncomplete && prefix.Equals("WearableDistributor", StringComparison.OrdinalIgnoreCase) && manifest is not null && manifest.SchemaVersion is >= 1 and <= 6 &&
+        var managed = !metadataIncomplete && prefix.Equals("WearableDistributor", StringComparison.OrdinalIgnoreCase) && manifest is not null && manifest.SchemaVersion is >= 1 and <= 7 &&
             !File.Exists(Path.Combine(root, "SkyrimSPIDPresetTest.esp")) && !File.Exists(Path.Combine(root, "SkyrimSPIDPresetTest.patch.json"));
         IReadOnlyDictionary<PatchManifestEntry, PatchEntryHealth>? managedHealth = null;
         if (managed)
@@ -107,6 +107,11 @@ public static class DetectedPatchReader
             var hasOutfit = !string.IsNullOrWhiteSpace(entry.OutfitEditorId) && outfits.TryGetValue(entry.OutfitEditorId, out var outfit);
             var present = hasOutfit && Pieces(outfits[entry.OutfitEditorId].Items).Any(item => item.ModKey.FileName.String.Equals(entry.SourcePlugin, StringComparison.OrdinalIgnoreCase));
             var hasRules = hasOutfit && supplied.Contains($"0x{outfits[entry.OutfitEditorId].Id:X6}~{pluginName}");
+            if (!string.IsNullOrWhiteSpace(entry.WardrobeName) && outfits.TryGetValue(WardrobePools.EditorId(entry.WardrobeName), out var pool))
+            {
+                hasRules = supplied.Contains($"0x{pool.Id:X6}~{pluginName}");
+                recorded.Add(WardrobePools.EditorId(entry.WardrobeName));
+            }
             if (!entry.DistributeToNpcs) hasRules = entry.MerchantStock.Count > 0 && File.Exists(Path.Combine(root, "SKSE", "Plugins", "SkyPatcher", "container", prefix, prefix + "_Merchandise.ini"));
             var health = pluginIssue is not null ? "Missing / unreadable ESP" : metadataIncomplete ? "Inventory needs review" : !present ? "Missing outfit / parts" : !hasRules ? "Rules need review" : "Files found";
             if (managedHealth?.TryGetValue(entry, out var checkedHealth) == true) health = checkedHealth.Status == "Ready" ? "Files found" : checkedHealth.Status;

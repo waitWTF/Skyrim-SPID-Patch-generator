@@ -29,6 +29,9 @@ public static class PatchGenerator
             throw new InvalidOperationException("Choose SPID or SkyPatcher as the distribution framework.");
         var useSkyPatcher = framework.Equals("SkyPatcher", StringComparison.OrdinalIgnoreCase);
         var configurations = sourceOptions.ToList();
+        foreach (var config in configurations) config.WardrobeName = WardrobePools.NormalizeName(config.WardrobeName);
+        var wardrobeErrors = WardrobePools.ConfigurationErrors(configurations, framework);
+        if (wardrobeErrors.Count > 0) throw new InvalidOperationException(string.Join("\n\n", wardrobeErrors));
         progress?.Report($"Checking {configurations.Count} outfit setup(s) and trader selections…");
         if (configurations.Count == 0) throw new InvalidOperationException("No plugin configurations were provided.");
         if (configurations.Any(configuration => !configuration.Pieces.Any(piece => piece.Include)))
@@ -161,11 +164,13 @@ public static class PatchGenerator
                 var distributionCountBefore = distributionCount;
                 lines.Add($"; {item.Configuration.Source.Plugin} — {item.Pieces.Count} piece(s)");
                 lines.Add($"; Outfit: {item.Configuration.OutfitName}");
-                var compiled = DistributionRuleCompiler.Compile(item.Configuration, outfit.FormKey.ID, useSkyPatcher);
+                var compiled = string.IsNullOrEmpty(item.Configuration.WardrobeName) ? DistributionRuleCompiler.Compile(item.Configuration, outfit.FormKey.ID, useSkyPatcher) : [];
                 lines.AddRange(compiled);
                 distributionCount += compiled.Count(line => IsOutfitRule(line) || line.Contains("outfitDefault=", StringComparison.Ordinal));
                 generatedEntries.Add(new PatchManifestEntry
                 {
+                    WardrobeName = item.Configuration.WardrobeName, WardrobeWeight = item.Configuration.WardrobeWeight,
+                    WardrobeTargets = string.IsNullOrEmpty(item.Configuration.WardrobeName) ? [] : WardrobePools.CopyTargets(item.Configuration.TargetRules),
                     PartPreset = item.Configuration.PartPreset,
                     MatchVariants = variantBranches.Count > 0, VariantBranches = variantBranches,
                     PartChoices = item.Configuration.Pieces.Select(p => new SavedPartChoice(p.FormId, item.Configuration.DistributeToNpcs ? p.PartMode : p.Include ? "Required" : "Excluded", p.OptionalChance)).ToList(),
@@ -201,11 +206,9 @@ public static class PatchGenerator
                          !activeOutfitIds.Contains(id) && !retainedIds.Contains(id) && removedIds.Contains(id)).ToList())
                 outputMod.Outfits.Remove(staleOutfit);
 
-            OptionalPartLists.Prune(outputMod);
             var existingIniLines = File.Exists(outputIni) ? File.ReadAllLines(outputIni).ToList() : [];
             replacedNumericIds.UnionWith(outputMod.Outfits.Where(outfit => activeOutfitIds.Contains(outfit.EditorID ?? "")).Select(outfit => outfit.FormKey.ID));
             var mergedLines = MergeIni(existingIniLines, lines, replacingKeys, replacedNumericIds, useSkyPatcher);
-            var mergedDistributionCount = mergedLines.Count(line => IsOutfitRule(line) || line.Contains("outfitDefault=", StringComparison.Ordinal));
             var existingManifest = previousManifest;
             if (generatedEntries.Any(entry => entry.MerchantStock.Count > 0)) existingManifest.SchemaVersion = 3;
             if (generatedEntries.Concat(previousManifest.Entries).Any(entry => !entry.DistributeToNpcs)) existingManifest.SchemaVersion = 4;
@@ -217,6 +220,9 @@ public static class PatchGenerator
             existingManifest.DistributionPath = relativeIniPath;
             existingManifest.GeneratedAtUtc = DateTime.UtcNow;
             existingManifest.Entries = existingManifest.Entries.Where(entry => !Replaces(entry) || !entry.Framework.Equals(existingManifest.Framework, StringComparison.OrdinalIgnoreCase)).Concat(generatedEntries).OrderBy(entry => entry.SourcePlugin, StringComparer.OrdinalIgnoreCase).ThenBy(entry => entry.OutfitName, StringComparer.OrdinalIgnoreCase).ToList();
+            mergedLines = WardrobePools.Rebuild(outputMod, existingManifest, mergedLines);
+            OptionalPartLists.Prune(outputMod);
+            var mergedDistributionCount = mergedLines.Count(line => IsOutfitRule(line) || line.Contains("outfitDefault=", StringComparison.Ordinal));
             var tempManifest = Path.Combine(tempDirectory, ManifestName);
             progress?.Report("Staging the merged ESP, NPC rules, merchant stock and inventory…");
             var tempMerchandise = MerchantStockService.Stage(tempDirectory, existingManifest);
@@ -462,6 +468,7 @@ public static class PatchGenerator
         var manifest = PatchInventoryService.ReadManifest(directory);
         MerchantStockService.Validate(directory, manifest);
         OptionalPartLists.Validate(mod, manifest);
+        WardrobePools.ValidateDistribution(directory, manifest, mod);
         var editorIds = mod.Outfits.Where(outfit => !string.IsNullOrWhiteSpace(outfit.EditorID))
             .ToDictionary(outfit => outfit.EditorID!, outfit => outfit.FormKey.ID, StringComparer.OrdinalIgnoreCase);
         var distributionFiles = new Dictionary<string, GeneratedDistributionIndex>(StringComparer.OrdinalIgnoreCase);
@@ -481,7 +488,12 @@ public static class PatchGenerator
             {
                 var id = editorIds[entry.OutfitEditorId];
                 if (!entry.DistributeToNpcs) merchandiseOnlyIds.Add(id);
-                if (!verifiedManifestIds.Add(id) || observedRuleCounts.GetValueOrDefault(id) != entry.DistributionRows)
+                if (!string.IsNullOrWhiteSpace(entry.WardrobeName))
+                {
+                    merchandiseOnlyIds.Add(id); // Validated complete bundle is reached through the wardrobe selector.
+                    if (observedRuleCounts.GetValueOrDefault(id) != 0) throw new InvalidDataException("A wardrobe member still has a competing individual outfit rule.");
+                }
+                if (!verifiedManifestIds.Add(id) || string.IsNullOrWhiteSpace(entry.WardrobeName) && observedRuleCounts.GetValueOrDefault(id) != entry.DistributionRows)
                     throw new InvalidDataException($"Unexpected or duplicated distribution rows exist outside the managed section for '{entry.SourcePlugin} / {entry.OutfitName}'. Repatch this outfit or restore a backup.");
             }
         }
@@ -496,6 +508,14 @@ public static class PatchGenerator
         if (!File.Exists(ini))
             throw new InvalidDataException($"The distribution file for '{entry.SourcePlugin} / {entry.OutfitName}' is missing. Restore a backup or regenerate in a new output folder.");
         index ??= new GeneratedDistributionIndex(ini);
+        if (!string.IsNullOrWhiteSpace(entry.WardrobeName))
+        {
+            // Health inspection validates all shared selectors and rules once per output, above.
+            // A member is intentionally not distributed through its individual OTFT record.
+            var sections = index.Find(entry.SourcePlugin, entry.OutfitName);
+            if (sections.Count != 1) throw new InvalidDataException("A wardrobe member's INI section is missing or duplicated. Repatch the pool.");
+            return;
+        }
         var matchingSections = index.Find(entry.SourcePlugin, entry.OutfitName);
         var skyPatcher = entry.Framework.Equals("SkyPatcher", StringComparison.OrdinalIgnoreCase);
         var rules = matchingSections.SelectMany(section => section.Lines).Where(line => !line.TrimStart().StartsWith(';') &&

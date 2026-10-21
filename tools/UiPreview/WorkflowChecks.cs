@@ -105,6 +105,7 @@ internal static class WorkflowChecks
         }
         feedbackWindow.Close();
         main.Close();
+        WardrobeUiChecks.Run();
         Console.WriteLine("UI workflow checks: "+checks+" passed.");
     }
 }

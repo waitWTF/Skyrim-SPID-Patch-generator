@@ -1,4 +1,4 @@
-Skyrim SPID Patch Generator v0.4.10
+Skyrim SPID Patch Generator v0.4.11
 
 Extract the complete folder. Start SkyrimSPIDPatchGenerator.exe, keeping Runtime and Documentation beside it.
 Requires .NET 10 Desktop Runtime x64. In MO2, add the top-level EXE as a tool and launch through MO2.
@@ -6,5 +6,7 @@ Search an outfit, right-click Configure this outfit, then Save & close or Review
 For invisible body parts, build/deploy the outfit meshes and rescan; see Documentation/README.md.
 Existing WearableDistributor output filenames/settings are retained. Experimental outputs are separate.
 Source: https://github.com/waitWTF/Skyrim-SPID-Patch-generator
+
+Random outfit pools: Batch-check the outfits you want, open Configure checked, add NPC groups to one outfit, then use Random outfit pools in Distribution. Choose members, a shared overall chance and relative weights, Apply wardrobe, then Review & generate. Requires SPID 7.2+ for per-actor distribution. This does not schedule daily outfit changes.
 
 For matching colors and normal/torn alternatives, open an existing setup and choose Balanced. Review & generate updates the installed patch; replacing the app alone does not rewrite it.

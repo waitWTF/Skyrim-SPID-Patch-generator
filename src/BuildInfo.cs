@@ -4,7 +4,7 @@ namespace WearableDistributor;
 
 internal static class BuildInfo
 {
-    public const string Label = "v0.4.10";
+    public const string Label = "v0.4.11";
     public static string SettingsRoot => Environment.GetEnvironmentVariable("WEARABLE_DISTRIBUTOR_SETTINGS_DIR") is { Length: > 0 } isolated
         ? Path.GetFullPath(isolated) : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WearableDistributor");
     public static void CheckOutput(string root)

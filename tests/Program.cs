@@ -105,6 +105,7 @@ try
 
     MeshSafetyChecks.Run(root);
     VariantChecks.Run(root);
+    WardrobeChecks.Run(root);
     CurrentRegressionChecks.Run(root);
     Console.WriteLine("All Wearable Distributor integration checks passed.");
 }

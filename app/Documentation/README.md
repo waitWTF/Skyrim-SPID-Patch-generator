@@ -1,4 +1,4 @@
-# Skyrim SPID Patch Generator — v0.4.10
+# Skyrim SPID Patch Generator — v0.4.11
 
 A Windows desktop tool for turning installed Skyrim SE/AE outfit mods into NPC outfits and/or trader merchandise, through a guided, scrollable setup.
 
@@ -21,6 +21,28 @@ The app keeps the MO2 app-host compatibility setting; it does not change Windows
 4. Choose a matching color and parts preset, then review the actual parts. With matching variants enabled, a color is picked once and one version of every Required garment is guaranteed after the outfit assignment; Optional parts use separate outfit leveled-list chances; Excluded parts are left out. Marked lewd alternatives and wigs are never selected by normal presets. Detection uses names, not visual inspection.
 5. **Save & close** stores a draft without generating files. **Review & generate** builds the patch. Skip outfit leaves that entry unchanged.
 6. Install the generated mod ZIP through Vortex or MO2, or deploy the output folder as a mod. Enable **WearableDistributor.esp** and keep its INI files, outfit source plugins and required distribution engine installed together. The legacy generated filenames are intentionally retained for compatibility.
+
+## Random outfit pools (0.4.11)
+
+Several individual SPID outfit rules aimed at the same NPCs compete: the first passing normal outfit rule wins in SPID 7.2+. Three rules at 100% do not create a three-outfit wardrobe. This optional feature generates one shared rule and a weighted complete-set selector instead. Existing individual setups are unchanged until you opt them in.
+
+![Random wardrobe editor with synthetic example outfits and live weighted shares](docs/images/wardrobe-pools.png)
+
+1. Batch-check the outfit mods you want in the library, then **Configure checked**. Only opened outfit setups are listed in the pool editor.
+2. Enable NPC distribution on one outfit, choose its NPC group (for example Immersive Wenches → Wenches), optional role/race refinements and compatible sex, then add the group.
+3. Click **Random outfit pools…** in Distribution. Name the wardrobe, choose **2–20** outfit setups, and choose which setup supplies their shared NPC groups and sex. Set overall chance and member weights (1–10). The live Share column shows each member's probability after the coverage roll.
+4. **Apply wardrobe** copies the chosen audience, sex and overall chance to checked outfits; parts, matching colors and trader selections are preserved. It replaces their former NPC targets explicitly. **Review & generate** creates the files.
+
+- Example: 100% coverage and three weights of 1 gives each eligible actor one complete outfit chosen with equal odds, approximately one-third each across a large population. It does not guarantee exact numbers or that every outfit appears in a small sample. Weights 1:1:2 give 25%:25%:50% within the pool. At 50% coverage, approximately half of eligible NPCs pass the pool roll.
+- Each chosen outfit keeps its own matching colors, required garment alternatives, optional parts and lewd exclusions. Different source sets are never flattened into one combined worn outfit.
+- Use **SPID 7.2+** for independent outfit distribution to spawned actors. Other installed SPID rules and scripted outfit controllers can still take priority. Pools do not change those mods.
+- This is random outfit selection, **not daily rotation**. The app adds no runtime script, calendar scheduler or forced NPC inventory resets. Leveled item evaluation/reset behavior is controlled by Skyrim.
+- Pool membership/weights are saved in settings and shown in My patch. Incremental generation preserves members not selected this session. To change the shared audience, sex or coverage, open all members and apply the pool setup together; inconsistent partial edits are rejected before replacing output. Member weights/parts can be repatched individually when the shared scope stays the same.
+- Removing a member transfers the shared rule to a survivor. A pool reduced to one member remains valid; removing the last member removes its pool records. **Remove checked from pools** returns checked outfits to their individual settings; they can then compete with other outfits aimed at the same NPCs.
+- Trader sales remain independent and include each selected stock item. Pool weights and coverage do not change merchant stock. Merchants-only setups cannot be pool members. Pools require the SPID NPC framework; SkyPatcher merchant stock can be used alongside it.
+- Pool patches/settings use **schema 7** and require **0.4.11+** for editing. Keep the generated ESP, INI and `.patch.json` inventory together. If a pool inventory is lost, restore its matching backup; the app will not guess membership from comments and overwrite it. Keep application/output backups before downgrading.
+
+See [SPID outfit resolution](https://www.nexusmods.com/skyrimspecialedition/articles/10421) and [technical architecture](docs/ARCHITECTURE.md). File/graph and UI checks are covered by the automated suite; this version's wardrobe behavior has not been verified in-game.
 
 ## Matching colors and garment alternatives (0.4.10)
 

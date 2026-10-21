@@ -113,6 +113,7 @@ public sealed class PatchOptionsWindow : Window
         var config = new PluginPatchOptions
         {
             Source = plugin, OutfitName = name,
+            WardrobeName = saved?.WardrobeName ?? "", WardrobeWeight = saved?.WardrobeWeight ?? 1,
             DistributeToNpcs = saved?.DistributeToNpcs ?? false,
             Chance = IsSkyPatcher ? "100" : saved?.Chance ?? defaultChance, Gender = saved?.Gender ?? "Any",
             Pieces = plugin.Pieces.Select(piece => ClonePiece(piece, !excluded.Contains(piece.FormId))).ToList(),
@@ -263,6 +264,13 @@ public sealed class PatchOptionsWindow : Window
         var settings = new StackPanel();
         var npcMode = new CheckBox { Content = "Distribute outfits for NPCs to wear", IsChecked = config.DistributeToNpcs, Margin = new Thickness(0, 0, 0, 8) };
         settings.Children.Add(npcMode);
+        var poolButton = UiTheme.Button(string.IsNullOrEmpty(config.WardrobeName) ? "Random outfit pools…" : "Edit wardrobe: " + config.WardrobeName);
+        poolButton.HorizontalAlignment = HorizontalAlignment.Left;
+        poolButton.IsEnabled = !IsSkyPatcher;
+        poolButton.ToolTip = "Choose several outfits for one shared NPC audience and chance. SPID rolls once, then Skyrim selects one complete set using your weights.";
+        poolButton.Click += (_, _) => EditWardrobes();
+        settings.Children.Add(poolButton);
+        if (!string.IsNullOrEmpty(config.WardrobeName)) settings.Children.Add(UiTheme.Caption($"Random wardrobe: {config.WardrobeName} · weight {config.WardrobeWeight}. Overall chance, sex and NPC groups must match all its members. Use Edit wardrobe to change these together."));
         var npcControls = new StackPanel(); settings.Children.Add(npcControls);
         npcControls.Children.Add(new WrapPanel { Children = { Labeled(IsSkyPatcher ? "Assignment (%)" : "Chance per NPC (%)", chance), Labeled("NPC sex", gender) } });
         var genderHint = UiTheme.Caption(""); npcControls.Children.Add(genderHint);
@@ -393,6 +401,7 @@ public sealed class PatchOptionsWindow : Window
                 (!config.DistributeToNpcs ? config.MerchantCategories.Count > 0 ? "Merchants only · no NPC outfits changed" : "Choose NPCs, traders or both" : $"{config.TargetRules.Count} NPC group(s)" + (match >= 0 ? $"   ·   {match} matching NPCs" : "") + $"   ·   {config.Chance}%") +
                 (config.MerchantCategories.Count > 0 ? $"   ·   {config.MerchantCategories.Count} trader categories" : "");
             chanceHint.Text = IsSkyPatcher ? "Every matched NPC receives this outfit. Use SPID for a random chance. Existing outfits are replaced."
+                : !string.IsNullOrEmpty(config.WardrobeName) ? $"{config.Chance}% is the shared wardrobe coverage. An eligible NPC gets one complete set from ‘{config.WardrobeName}’, selected by relative weight. No daily rotation is scheduled."
                 : int.TryParse(config.Chance, out var probability) && probability is > 0 and <= 100
                     ? probability == 100 ? "Every eligible NPC receives this outfit. Existing outfits are replaced."
                         : 100 % probability == 0 ? $"{probability}% gives this outfit to roughly 1 in {100 / probability} eligible NPCs. Existing outfits are replaced."
@@ -719,6 +728,10 @@ public sealed class PatchOptionsWindow : Window
             if (pages[i].Validate()) continue;
             ShowPage(i); return;
         }
+        foreach (var config in Options.Where(c => c.DistributeToNpcs && !string.IsNullOrEmpty(c.WardrobeName)))
+            foreach (var rule in config.TargetRules) targeting.Resolve(rule, config.Gender);
+        var poolErrors = WardrobePools.ConfigurationErrors(Options, framework);
+        if (poolErrors.Count > 0) { MessageBox.Show(this, string.Join("\n\n", poolErrors), "Review random outfit pools", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
         DialogResult = true;
     }
 
@@ -732,6 +745,7 @@ public sealed class PatchOptionsWindow : Window
     private void SavePage(PluginPatchOptions config) => saveOptions(GetSavedKey(config), SaveConfiguration(config, true));
     private SavedDistributionOptions SaveConfiguration(PluginPatchOptions config, bool includePieces) => new()
     {
+        WardrobeName = includePieces ? config.WardrobeName : "", WardrobeWeight = includePieces ? config.WardrobeWeight : 1,
         OutfitName = config.OutfitName, Chance = config.Chance, Gender = config.Gender,
         MatchVariants = includePieces && config.MatchVariants, PreferredColor = includePieces ? config.PreferredColor : "", PartPreset = includePieces ? config.PartPreset : "Custom", AllowLewdParts = includePieces && config.AllowLewdParts,
         PartChoices = includePieces ? config.Pieces.Select(p => new SavedPartChoice(p.FormId, p.PartMode, p.OptionalChance)).ToList() : [],
@@ -748,6 +762,20 @@ public sealed class PatchOptionsWindow : Window
                 .Select(choice => new SavedTargetChoice { EditorId = choice.EditorId, Plugin = choice.Plugin, Category = choice.Category, TargetKind = choice.TargetKind, LocalId = choice.LocalId }).ToList()
         }).ToList()
     };
+
+    private void EditWardrobes()
+    {
+        if (IsSkipped(pages[currentIndex].Config)) { MessageBox.Show(this, "Include this outfit again before editing its random wardrobe.", "Outfit skipped", MessageBoxButton.OK, MessageBoxImage.Information); return; }
+        foreach (var page in pages) page.Commit();
+        foreach (var config in Options.Where(c => c.DistributeToNpcs)) foreach (var rule in config.TargetRules) targeting.Resolve(rule, config.Gender);
+        var dialog = new WardrobePoolWindow(Options, pages[currentIndex].Config) { Owner = this };
+        if (dialog.ShowDialog() != true) return;
+        // Old controls hold stale field values: discard lazy views before saving the changed models.
+        pages.Clear(); foreach (var config in options) pages.Add(new PageState(config, () => BuildPage(config)));
+        if (saveBatch is not null) saveBatch(options.ToDictionary(GetSavedKey, c => SaveConfiguration(c, true), StringComparer.OrdinalIgnoreCase));
+        else foreach (var config in options) SavePage(config);
+        ShowPage(currentIndex);
+    }
 
     private static string GetSavedKey(PluginPatchOptions config) => config.OutfitName.Equals(Path.GetFileNameWithoutExtension(config.Source.Plugin), StringComparison.OrdinalIgnoreCase) ? config.Source.Plugin : config.Source.Plugin + "|outfit|" + config.OutfitName;
     private static WearableRecord ClonePiece(WearableRecord piece, bool include) => new() { Plugin = piece.Plugin, LocalId = piece.LocalId, EditorId = piece.EditorId, Name = piece.Name, Slots = piece.Slots, Category = piece.Category, SourcePath = piece.SourcePath, Include = include, SupportedGender = piece.SupportedGender, GenderEvidence = piece.GenderEvidence, WornModels = piece.WornModels.ToList(), MeshEvidence = piece.MeshEvidence, PartMode = include ? piece.PartMode == "Excluded" ? "Required" : piece.PartMode : "Excluded", OptionalChance = piece.OptionalChance };

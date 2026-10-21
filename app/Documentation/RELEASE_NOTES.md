@@ -1,3 +1,14 @@
+# 0.4.11 preview — 2026-10-21
+
+- Added opt-in Random outfit pools: a shared overall NPC chance, 2–20 outfit members, weights 1–10 and live selection percentages. Equal weights provide equal complete-set odds rather than competing individual SPID rules.
+- Added a pool editor to Distribution. Choose which outfit supplies the shared NPC groups/sex; apply copies that scope and overall chance to checked members while preserving their parts and trader settings. Remove checked membership explicitly.
+- The generated wardrobe OTFT points to one weighted LVLI selector of complete UseAll item bundles; no LVLI references an OTFT. Member color/garment selectors and optional-part chances remain nested within their own bundle.
+- Saved pool membership/weights across sessions and exposed the wardrobe, weight and shared chance in My patch/review. Standalone setups remain unchanged unless opted in.
+- Incremental repatching rebuilds pools from the merged inventory, retaining unselected members and stable FormIDs. Removing a rule-owning member transfers its one shared rule; empty pools and orphaned lists are pruned. Transactional backups cover the complete patch.
+- Added validation for mismatched audiences/sex/coverage, unsupported SkyPatcher NPC pools, invalid weights, broken selectors, competing individual member rules and missing pool inventories. Pool patches/settings use schema 7; older schemas remain readable, but pool output needs 0.4.11+ to edit.
+- Daily clothing rotation is not included. Use SPID 7.2+ for per-actor outfit distribution; other distributors/scripts may still compete. Trader merchandise is independent of wardrobe weights/coverage.
+- Automated binary/merge/removal/settings and WPF workflow checks cover the new feature. No in-game wardrobe claim is made.
+
 # 0.4.10 preview — 2026-10-20
 
 - Matching variants: generate one color selector, complete color bundles, and one-choice garment lists. Recognized normal/torn/ripped/tattered versions become alternatives; one Required version is guaranteed after a successful overall outfit roll. The same garment's colored version is preferred in its branch; shared unmarked components remain available without mixing marked colors.

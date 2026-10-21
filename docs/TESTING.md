@@ -1,5 +1,7 @@
 # Verification and development checks
 
+For random outfit pools, see [0.4.11 verification](RELEASE_VERIFICATION_0411.md). `WardrobeChecks` exercises weighted complete-set graphs, retained members, shared-scope validation, merchant independence, damaged metadata/rules, pool removal and restoration. `tools/UiPreview/WardrobeUiChecks` exercises applying/removing membership, live percentages, model/view refresh, save/reopen and review. `wardrobe --small --check --render <PNG>` renders the minimum-size editor using synthetic data.
+
 See [release verification](RELEASE_VERIFICATION_049.md) for v0.4.9 evidence and limits. Test artifacts use unique directories under test-results; settings/logs and backup roots are isolated. Never point fixture output at installed mods or live patches.
 
 ```powershell

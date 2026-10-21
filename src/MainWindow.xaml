@@ -98,7 +98,7 @@
               <TextBlock Text="Choose your mods. Decide who wears them. Build one patch." Foreground="{DynamicResource MutedBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,8,0,0" />
             </StackPanel>
           </Border>
-          <TextBlock x:Name="BuildVersionText" Text="v0.4.10" FontSize="9" Foreground="{DynamicResource MutedBrush}" Margin="5,0,0,6" />
+          <TextBlock x:Name="BuildVersionText" Text="v0.4.11" FontSize="9" Foreground="{DynamicResource MutedBrush}" Margin="5,0,0,6" />
           <TextBlock Text="Skyrim Special Edition / Anniversary" FontSize="10" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="5,0,0,0" />
         </StackPanel>
       </DockPanel>
@@ -115,7 +115,7 @@
           <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
         <StackPanel VerticalAlignment="Center">
-          <TextBlock x:Name="ExperimentalHeaderText" Text="v0.4.10 · OUTFITS &amp; MERCHANDISE" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" />
+          <TextBlock x:Name="ExperimentalHeaderText" Text="v0.4.11 · RANDOM OUTFIT POOLS" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" />
           <TextBlock Text="Skyrim SPID Patch Generator" FontSize="25" FontWeight="SemiBold" Margin="0,3,0,5" TextWrapping="Wrap" />
           <TextBlock x:Name="ActivePathText" Text="Set up your Skyrim or mod staging folder in Settings." Foreground="{DynamicResource MutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
         </StackPanel>

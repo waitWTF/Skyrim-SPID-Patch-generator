@@ -23,7 +23,7 @@ internal static class OptionalPartLists
         };
         return list.FormKey;
     }
-    private static bool Managed(string? id) => id?.StartsWith(Marker, StringComparison.Ordinal) == true || id?.StartsWith(VariantPartLists.Marker, StringComparison.Ordinal) == true;
+    private static bool Managed(string? id) => id?.StartsWith(Marker, StringComparison.Ordinal) == true || id?.StartsWith(VariantPartLists.Marker, StringComparison.Ordinal) == true || id?.StartsWith(WardrobePools.Marker, StringComparison.Ordinal) == true;
     internal static void Prune(SkyrimMod mod)
     {
         var referenced = new HashSet<FormKey>();
@@ -38,6 +38,7 @@ internal static class OptionalPartLists
     {
         var lists = mod.LeveledItems.ToDictionary(l => l.FormKey);
         var used = new HashSet<FormKey>();
+        WardrobePools.Validate(mod, manifest, used);
         foreach (var entry in manifest.Entries.Where(e => e.PartChoices.Count > 0))
         {
             if (entry.MatchVariants) { VariantPartLists.Validate(mod, entry, used); continue; }

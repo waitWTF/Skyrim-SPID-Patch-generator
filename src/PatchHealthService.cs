@@ -24,6 +24,7 @@ public static class PatchHealthService
             {
                 using var mod = SkyrimMod.CreateFromBinaryOverlay(new Noggog.FilePath(pluginPath), SkyrimRelease.SkyrimSE);
                 OptionalPartLists.Validate(mod, manifest);
+                WardrobePools.ValidateDistribution(outputDirectory, manifest, mod);
                 outfitIds.UnionWith(mod.Outfits.Select(outfit => outfit.EditorID).OfType<string>());
                 foreach (var outfit in mod.Outfits.Where(outfit => !string.IsNullOrWhiteSpace(outfit.EditorID)))
                     outfitIdsByEditorId[outfit.EditorID!] = outfit.FormKey.ID;

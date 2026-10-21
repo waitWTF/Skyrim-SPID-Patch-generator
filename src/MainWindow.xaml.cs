@@ -765,11 +765,12 @@ public partial class MainWindow : Window
                     OutputDirectory = found.Directory, PatchPlugin = found.PatchPlugin, CanManage = found.CanManage,
                     Health = found.Health, SourcePlugin = string.IsNullOrWhiteSpace(entry.OutfitName) ? entry.SourcePlugin : entry.SourcePlugin + " · " + entry.OutfitName,
                     IncludedPieces = entry.IncludedPieces.Count.ToString(),
-                    Audiences = !entry.DistributeToNpcs ? "Merchants only" : (entry.MerchantStock.Count > 0 ? "Shops + " : "") + string.Join(", ", entry.Audiences.Select(audience => audience.Split(':', 2)[0]).Distinct(StringComparer.OrdinalIgnoreCase)),
+                    Audiences = !entry.DistributeToNpcs ? "Merchants only" : (string.IsNullOrEmpty(entry.WardrobeName) ? "" : "Wardrobe: " + entry.WardrobeName + " · ") + (entry.MerchantStock.Count > 0 ? "Shops + " : "") + string.Join(", ", entry.Audiences.Select(audience => audience.Split(':', 2)[0]).Distinct(StringComparer.OrdinalIgnoreCase)),
                     Chance = found.Health == "Recovered from ESP" ? "Unknown" : !entry.DistributeToNpcs ? "N/A (shops)" : entry.Framework == "SPID" ? $"{entry.Chance}%" : "100% (SkyPatcher)",
                     Gender = found.Health == "Recovered from ESP" ? "Unknown" : entry.DistributeToNpcs ? entry.Gender : "N/A (shops)", LastGenerated = entry.GeneratedAtUtc.ToLocalTime().ToString("g"), Entry = entry,
                     Details = "Patch file: " + found.PatchPlugin + "\n" + (found.CanManage ? "Managed release output: editable in this app." : "Read-only detected output: experimental or recovered patches are not edited by this release.") +
                         "\n\nStatus: " + found.Health + "\n" + found.Explanation + "\n\nSource plugin: " + entry.SourcePlugin + "\nGenerated outfit: " + entry.OutfitEditorId +
+                        (string.IsNullOrEmpty(entry.WardrobeName) ? "" : $"\nRandom wardrobe: {entry.WardrobeName}\nRelative weight: {entry.WardrobeWeight}\nShared coverage: {entry.Chance}%\nOne complete weighted outfit; no daily rotation.") +
                         "\nFramework: " + entry.Framework + "\nDistribution file: " + entry.DistributionPath + "\n\nPart preset: " + entry.PartPreset + "\n" + string.Join("\n", entry.PartChoices.Select(part => part.FormId + " · " + part.Mode + (part.Mode == "Optional" ? " " + part.Chance + "%" : ""))) + "\n\nIncluded pieces:\n• " + string.Join("\n• ", entry.IncludedPieces) +
                         "\n\nAudiences:\n• " + string.Join("\n• ", entry.Audiences) + "\n\n" + MerchantStockService.Describe(entry)
                 });

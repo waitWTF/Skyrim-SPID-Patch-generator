@@ -16,7 +16,7 @@ public static class PreferencesService
 
     public static AppPreferences Normalize(AppPreferences value)
     {
-        if (value.SchemaVersion > 6) throw new InvalidDataException("These settings were created by a newer app. Update Skyrim SPID Patch Generator before importing them.");
+        if (value.SchemaVersion > 7) throw new InvalidDataException("These settings were created by a newer app. Update Skyrim SPID Patch Generator before importing them.");
         value.SchemaVersion = 2;
         value.DataPath = (value.DataPath ?? "").Trim(); value.PluginListPath = (value.PluginListPath ?? "").Trim();
         value.BaseGameDataPath = (value.BaseGameDataPath ?? "").Trim();
@@ -41,6 +41,7 @@ public static class PreferencesService
         if (value.DistributionSettings.Values.Any(settings => settings.MerchantCategories.Count > 0)) value.SchemaVersion = 3;
         if (value.DistributionSettings.Values.Concat(value.DistributionPresets.Values).Any(settings => !settings.DistributeToNpcs)) value.SchemaVersion = 4;
         value.SchemaVersion = value.DistributionSettings.Values.Concat(value.DistributionPresets.Values).Any(s => s.MatchVariants) ? 6 : 5;
+        if (value.DistributionSettings.Values.Any(s => !string.IsNullOrWhiteSpace(s.WardrobeName))) value.SchemaVersion = 7;
         return value;
     }
 
@@ -75,6 +76,8 @@ public static class PreferencesService
             if (string.IsNullOrWhiteSpace(pair.Key) || pair.Value is null) continue;
             var settings = pair.Value;
             settings.OutfitName ??= "";
+            settings.WardrobeName = WardrobePools.NormalizeName(settings.WardrobeName);
+            if (settings.WardrobeWeight is < 1 or > 10) throw new InvalidDataException("Saved wardrobe weights must be from 1 to 10. Restore the settings backup.");
             settings.PartPreset ??= "Custom";
             settings.PreferredColor ??= "";
             settings.PartChoices = (settings.PartChoices ?? []).Where(c => c is not null && !string.IsNullOrWhiteSpace(c.FormId) && WearableRecord.PartModes.Contains(c.Mode) && c.Chance is >= 1 and <= 99).DistinctBy(c => c.FormId, StringComparer.OrdinalIgnoreCase).ToList();

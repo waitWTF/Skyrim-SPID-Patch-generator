@@ -98,6 +98,8 @@ public sealed class KeywordChoice
 
 public sealed class PluginPatchOptions
 {
+    public string WardrobeName { get; set; } = "";
+    public int WardrobeWeight { get; set; } = 1;
     public bool MatchVariants { get; set; }
     public string PartPreset { get; set; } = "Custom";
     public string PreferredColor { get; set; } = "";
@@ -194,6 +196,10 @@ public sealed class PatchManifest
 
 public sealed class PatchManifestEntry
 {
+    public string WardrobeName { get; set; } = "";
+    public int WardrobeWeight { get; set; } = 1;
+    public List<DistributionTargetRule> WardrobeTargets { get; set; } = [];
+    public bool WardrobeRuleOwner { get; set; }
     public List<OutfitColorBranch> VariantBranches { get; set; } = [];
     public bool MatchVariants { get; set; }
     public string PartPreset { get; set; } = "Custom";
@@ -233,6 +239,8 @@ public sealed class PatchInventoryRow
 
 public sealed class SavedDistributionOptions
 {
+    public string WardrobeName { get; set; } = "";
+    public int WardrobeWeight { get; set; } = 1;
     public bool MatchVariants { get; set; }
     public string PartPreset { get; set; } = "Custom";
     public string PreferredColor { get; set; } = "";
