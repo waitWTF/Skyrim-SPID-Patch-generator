@@ -1,5 +1,15 @@
 # Skyrim SPID Patch Generator — v0.4.11
 
+## Download the Windows app
+
+### [⬇ Download v0.4.11 for Windows — ZIP containing the EXE](https://github.com/waitWTF/Skyrim-SPID-Patch-generator/releases/download/v0.4.11-preview/Skyrim-SPID-Patch-Generator-v0.4.11-preview-Windows.zip)
+
+Extract the **whole ZIP**, then run **SkyrimSPIDPatchGenerator.exe**. Keep **Runtime** and **Documentation** beside it. Requires **.NET 10 Desktop Runtime x64**. This is a development preview.
+
+[Release details and all downloads](https://github.com/waitWTF/Skyrim-SPID-Patch-generator/releases/tag/v0.4.11-preview) · [All versions](https://github.com/waitWTF/Skyrim-SPID-Patch-generator/releases)
+
+You do not need the right-hand sidebar or GitHub's **Code → Download ZIP** to get the working app. The direct link above downloads the Windows program; **Source.zip** is for contributors.
+
 A Windows desktop tool for turning installed Skyrim SE/AE outfit mods into NPC outfits and/or trader merchandise, through a guided, scrollable setup.
 
 **Community project, MIT licensed, developed with substantial AI assistance.** Contributions, fixes and forks are welcome: [source code and downloads](https://github.com/waitWTF/Skyrim-SPID-Patch-generator/releases).
