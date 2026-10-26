@@ -1,0 +1,1513 @@
+[
+  {
+    "package": "DynamicData",
+    "version": "9.4.31",
+    "license": "MIT",
+    "license_type": "expression",
+    "license_url": "https://licenses.nuget.org/MIT",
+    "authors": "Roland Pheasant",
+    "copyright": "Copyright (c) Roland Pheasant 2011-2026",
+    "project_url": "https://github.com/reactiveui/DynamicData",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/reactiveui/DynamicData",
+      "branch": "refs/heads/main",
+      "commit": "8db480674d0971c46e4ea872c74f3973e2496e2b"
+    },
+    "nuget_url": "https://www.nuget.org/packages/DynamicData/9.4.31",
+    "nupkg_sha256": "fffd04c267c32450de6520dff7138fb3e433d021143c488a652e9b20186c1ddc",
+    "nupkg_sha512": "MZm3kf5owasindV9a1JN2l+7bvY/tfvmvMlHUWfa17khmY0u2tYT2zI2fz1BbWSuyw0os7C74+L/+GWPjtULSA==",
+    "bundled_runtime_files": [
+      "DynamicData.dll"
+    ],
+    "package_binary_comparison": [
+      {
+        "file": "Runtime/DynamicData.dll",
+        "nuget_entry": "lib/net10.0/DynamicData.dll",
+        "matches_nuget": true
+      }
+    ],
+    "package_notice_files": [
+      "LICENSE/LICENSE"
+    ],
+    "dependencies": {
+      "System.Reactive": "6.1.0"
+    },
+    "reviewed_license_family": "MIT",
+    "upstream_license_evidence": {
+      "package": "DynamicData",
+      "version": "9.4.31",
+      "repository": "reactiveui/DynamicData",
+      "resolved_ref": "8db480674d0971c46e4ea872c74f3973e2496e2b",
+      "ref_is_package_pinned": true,
+      "files": [
+        {
+          "path": "Upstream-License-Evidence/reactiveui__DynamicData/8db480674d0971c46e4ea872c74f3973e2496e2b/LICENSE",
+          "url": "https://raw.githubusercontent.com/reactiveui/DynamicData/8db480674d0971c46e4ea872c74f3973e2496e2b/LICENSE",
+          "sha256": "e174751aae65aedbc70a7a0bd45426ef157123469cef24cf0607f8b489044843"
+        }
+      ],
+      "error": null
+    }
+  },
+  {
+    "package": "FluentResults",
+    "version": "3.15.2",
+    "license": "MIT",
+    "license_type": "expression",
+    "license_url": "https://licenses.nuget.org/MIT",
+    "authors": "Michael Altmann",
+    "copyright": "Copyright 2022 (c) Michael Altmann. All rights reserved.",
+    "project_url": "https://github.com/altmann/FluentResults",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/altmann/FluentResults",
+      "commit": "8b675de7e8b6e4c0921e95138c99e15fd52cde40"
+    },
+    "nuget_url": "https://www.nuget.org/packages/FluentResults/3.15.2",
+    "nupkg_sha256": "3614bbb0b8605c3008e10c1bdbce47591b4f7d40cde8ad2d4e42b1d9046c23dc",
+    "nupkg_sha512": "NpUFoLIF/cPk627CfTEpjnGJYOhX608AOCKZnzs5q0I79txMaSL+MsCXRZ+y6tC1qCKCk5pO3vZDJtOhOHzBcg==",
+    "bundled_runtime_files": [
+      "FluentResults.dll"
+    ],
+    "package_binary_comparison": [
+      {
+        "file": "Runtime/FluentResults.dll",
+        "nuget_entry": "lib/netstandard2.1/FluentResults.dll",
+        "matches_nuget": true
+      }
+    ],
+    "package_notice_files": [],
+    "dependencies": {
+      "Microsoft.Extensions.Logging.Abstractions": "9.0.4"
+    },
+    "reviewed_license_family": "MIT",
+    "upstream_license_evidence": {
+      "package": "FluentResults",
+      "version": "3.15.2",
+      "repository": "altmann/FluentResults",
+      "resolved_ref": "8b675de7e8b6e4c0921e95138c99e15fd52cde40",
+      "ref_is_package_pinned": true,
+      "files": [
+        {
+          "path": "Upstream-License-Evidence/altmann__FluentResults/8b675de7e8b6e4c0921e95138c99e15fd52cde40/LICENSE",
+          "url": "https://raw.githubusercontent.com/altmann/FluentResults/8b675de7e8b6e4c0921e95138c99e15fd52cde40/LICENSE",
+          "sha256": "9cb743c769822ad4b83a73720141c2add4b1e8ca4aba53b61a47c66ea1339d53"
+        }
+      ],
+      "error": null
+    }
+  },
+  {
+    "package": "GameFinder.Common",
+    "version": "4.9.0",
+    "license": "GPL-3.0-only",
+    "license_type": "expression",
+    "license_url": "https://licenses.nuget.org/GPL-3.0-only",
+    "authors": "erri120",
+    "copyright": "",
+    "project_url": "https://github.com/erri120/GameFinder",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/erri120/GameFinder.git",
+      "branch": "master",
+      "commit": "efa23bd6d02ec07aa9fb1abe1025efafe3190d9f"
+    },
+    "nuget_url": "https://www.nuget.org/packages/GameFinder.Common/4.9.0",
+    "nupkg_sha256": "d4f5c208b37e4e30ed9cc668f0d9f113730a25bd4252444d6220f549e5a47531",
+    "nupkg_sha512": "45cNewZvP2HvCgl1vL/OSYbkkcYDxWXxa7TLMX2eahon4EP+INv2WkEdU6wQFiCQK/kUkgWUu/v1yksCF/z3DQ==",
+    "bundled_runtime_files": [
+      "GameFinder.Common.dll"
+    ],
+    "package_binary_comparison": [
+      {
+        "file": "Runtime/GameFinder.Common.dll",
+        "nuget_entry": "lib/net9.0/GameFinder.Common.dll",
+        "matches_nuget": true
+      }
+    ],
+    "package_notice_files": [],
+    "dependencies": {
+      "FluentResults": "3.15.2",
+      "Microsoft.Extensions.Logging.Abstractions": "9.0.4",
+      "NexusMods.Paths": "0.19.1",
+      "OneOf": "3.0.271"
+    },
+    "reviewed_license_family": "GPL-3.0-only",
+    "upstream_license_evidence": {
+      "package": "GameFinder.Common",
+      "version": "4.9.0",
+      "repository": "erri120/GameFinder",
+      "resolved_ref": "efa23bd6d02ec07aa9fb1abe1025efafe3190d9f",
+      "ref_is_package_pinned": true,
+      "files": [
+        {
+          "path": "Upstream-License-Evidence/erri120__GameFinder/efa23bd6d02ec07aa9fb1abe1025efafe3190d9f/LICENSE",
+          "url": "https://raw.githubusercontent.com/erri120/GameFinder/efa23bd6d02ec07aa9fb1abe1025efafe3190d9f/LICENSE",
+          "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+        }
+      ],
+      "error": null
+    }
+  },
+  {
+    "package": "GameFinder.RegistryUtils",
+    "version": "4.9.0",
+    "license": "GPL-3.0-only",
+    "license_type": "expression",
+    "license_url": "https://licenses.nuget.org/GPL-3.0-only",
+    "authors": "erri120",
+    "copyright": "",
+    "project_url": "https://github.com/erri120/GameFinder",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/erri120/GameFinder.git",
+      "branch": "master",
+      "commit": "efa23bd6d02ec07aa9fb1abe1025efafe3190d9f"
+    },
+    "nuget_url": "https://www.nuget.org/packages/GameFinder.RegistryUtils/4.9.0",
+    "nupkg_sha256": "9a3196130a5bc4d76296397bc7e9168e7572b0d0707070bfceff59f761cde423",
+    "nupkg_sha512": "0UjVwZ2ZXNh4mfH4oJs/wbv40jVpcZRPPm/8JxlBQuYpyau7yNsFn5pNuoZFZRz7YVGNcChAOY0IodcLYxptJg==",
+    "bundled_runtime_files": [
+      "GameFinder.RegistryUtils.dll"
+    ],
+    "package_binary_comparison": [
+      {
+        "file": "Runtime/GameFinder.RegistryUtils.dll",
+        "nuget_entry": "lib/net9.0/GameFinder.RegistryUtils.dll",
+        "matches_nuget": true
+      }
+    ],
+    "package_notice_files": [],
+    "dependencies": {},
+    "reviewed_license_family": "GPL-3.0-only",
+    "upstream_license_evidence": {
+      "package": "GameFinder.RegistryUtils",
+      "version": "4.9.0",
+      "repository": "erri120/GameFinder",
+      "resolved_ref": "efa23bd6d02ec07aa9fb1abe1025efafe3190d9f",
+      "ref_is_package_pinned": true,
+      "files": [
+        {
+          "path": "Upstream-License-Evidence/erri120__GameFinder/efa23bd6d02ec07aa9fb1abe1025efafe3190d9f/LICENSE",
+          "url": "https://raw.githubusercontent.com/erri120/GameFinder/efa23bd6d02ec07aa9fb1abe1025efafe3190d9f/LICENSE",
+          "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+        }
+      ],
+      "error": null
+    }
+  },
+  {
+    "package": "GameFinder.StoreHandlers.GOG",
+    "version": "4.9.0",
+    "license": "GPL-3.0-only",
+    "license_type": "expression",
+    "license_url": "https://licenses.nuget.org/GPL-3.0-only",
+    "authors": "erri120",
+    "copyright": "",
+    "project_url": "https://github.com/erri120/GameFinder",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/erri120/GameFinder.git",
+      "branch": "master",
+      "commit": "efa23bd6d02ec07aa9fb1abe1025efafe3190d9f"
+    },
+    "nuget_url": "https://www.nuget.org/packages/GameFinder.StoreHandlers.GOG/4.9.0",
+    "nupkg_sha256": "17eb0039e49d215ffce6692159fbaccd23e734439d241f96ba5eb4d6b0156a84",
+    "nupkg_sha512": "kH9hlabIE91IPKT20i0z4vKZazeX35XJXOLuQI4Zf/Jlrm0Op6/JfIfO3kC/ULy4/rr123pZkt0yRkGBjDj5Ow==",
+    "bundled_runtime_files": [
+      "GameFinder.StoreHandlers.GOG.dll"
+    ],
+    "package_binary_comparison": [
+      {
+        "file": "Runtime/GameFinder.StoreHandlers.GOG.dll",
+        "nuget_entry": "lib/net9.0/GameFinder.StoreHandlers.GOG.dll",
+        "matches_nuget": true
+      }
+    ],
+    "package_notice_files": [],
+    "dependencies": {
+      "GameFinder.Common": "4.9.0",
+      "GameFinder.RegistryUtils": "4.9.0",
+      "TransparentValueObjects.Abstractions": "1.1.0"
+    },
+    "reviewed_license_family": "GPL-3.0-only",
+    "upstream_license_evidence": {
+      "package": "GameFinder.StoreHandlers.GOG",
+      "version": "4.9.0",
+      "repository": "erri120/GameFinder",
+      "resolved_ref": "efa23bd6d02ec07aa9fb1abe1025efafe3190d9f",
+      "ref_is_package_pinned": true,
+      "files": [
+        {
+          "path": "Upstream-License-Evidence/erri120__GameFinder/efa23bd6d02ec07aa9fb1abe1025efafe3190d9f/LICENSE",
+          "url": "https://raw.githubusercontent.com/erri120/GameFinder/efa23bd6d02ec07aa9fb1abe1025efafe3190d9f/LICENSE",
+          "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+        }
+      ],
+      "error": null
+    }
+  },
+  {
+    "package": "GameFinder.StoreHandlers.Steam",
+    "version": "4.9.0",
+    "license": "GPL-3.0-only",
+    "license_type": "expression",
+    "license_url": "https://licenses.nuget.org/GPL-3.0-only",
+    "authors": "erri120",
+    "copyright": "",
+    "project_url": "https://github.com/erri120/GameFinder",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/erri120/GameFinder.git",
+      "branch": "master",
+      "commit": "efa23bd6d02ec07aa9fb1abe1025efafe3190d9f"
+    },
+    "nuget_url": "https://www.nuget.org/packages/GameFinder.StoreHandlers.Steam/4.9.0",
+    "nupkg_sha256": "0b0ede31ebe76f2273dcde2351f599f52b10bcc11bb4528781ce873e70c3dfe6",
+    "nupkg_sha512": "LJzl7Z3GQBxh/nCt3bwyIHyFrgNl1+GElqNSlqJ0gYNPnZlzWmN0UkzovRCvxaWJuXGHfOsrK7FvfqX8j+GaQA==",
+    "bundled_runtime_files": [
+      "GameFinder.StoreHandlers.Steam.dll"
+    ],
+    "package_binary_comparison": [
+      {
+        "file": "Runtime/GameFinder.StoreHandlers.Steam.dll",
+        "nuget_entry": "lib/net9.0/GameFinder.StoreHandlers.Steam.dll",
+        "matches_nuget": true
+      }
+    ],
+    "package_notice_files": [],
+    "dependencies": {
+      "GameFinder.Common": "4.9.0",
+      "GameFinder.RegistryUtils": "4.9.0",
+      "GameFinder.Wine": "4.9.0",
+      "TransparentValueObjects.Abstractions": "1.1.0",
+      "ValveKeyValue": "0.13.1.398"
+    },
+    "reviewed_license_family": "GPL-3.0-only",
+    "upstream_license_evidence": {
+      "package": "GameFinder.StoreHandlers.Steam",
+      "version": "4.9.0",
+      "repository": "erri120/GameFinder",
+      "resolved_ref": "efa23bd6d02ec07aa9fb1abe1025efafe3190d9f",
+      "ref_is_package_pinned": true,
+      "files": [
+        {
+          "path": "Upstream-License-Evidence/erri120__GameFinder/efa23bd6d02ec07aa9fb1abe1025efafe3190d9f/LICENSE",
+          "url": "https://raw.githubusercontent.com/erri120/GameFinder/efa23bd6d02ec07aa9fb1abe1025efafe3190d9f/LICENSE",
+          "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+        }
+      ],
+      "error": null
+    }
+  },
+  {
+    "package": "GameFinder.StoreHandlers.Xbox",
+    "version": "4.9.0",
+    "license": "GPL-3.0-only",
+    "license_type": "expression",
+    "license_url": "https://licenses.nuget.org/GPL-3.0-only",
+    "authors": "erri120",
+    "copyright": "",
+    "project_url": "https://github.com/erri120/GameFinder",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/erri120/GameFinder.git",
+      "branch": "master",
+      "commit": "efa23bd6d02ec07aa9fb1abe1025efafe3190d9f"
+    },
+    "nuget_url": "https://www.nuget.org/packages/GameFinder.StoreHandlers.Xbox/4.9.0",
+    "nupkg_sha256": "fe5925f8f390822c25631349e21e03b69ef0fa12396140efd6c8b3024f050b37",
+    "nupkg_sha512": "Rkh1A9N4pX3KDeOKn3m+rEB5N/bzcri7WXlIeanLN4+TMXhCbjad+tBykXtX9W5hsrsZyUyPYlOF7IyMrnt0cg==",
+    "bundled_runtime_files": [
+      "GameFinder.StoreHandlers.Xbox.dll"
+    ],
+    "package_binary_comparison": [
+      {
+        "file": "Runtime/GameFinder.StoreHandlers.Xbox.dll",
+        "nuget_entry": "lib/net9.0/GameFinder.StoreHandlers.Xbox.dll",
+        "matches_nuget": true
+      }
+    ],
+    "package_notice_files": [],
+    "dependencies": {
+      "GameFinder.Common": "4.9.0",
+      "TransparentValueObjects.Abstractions": "1.1.0"
+    },
+    "reviewed_license_family": "GPL-3.0-only",
+    "upstream_license_evidence": {
+      "package": "GameFinder.StoreHandlers.Xbox",
+      "version": "4.9.0",
+      "repository": "erri120/GameFinder",
+      "resolved_ref": "efa23bd6d02ec07aa9fb1abe1025efafe3190d9f",
+      "ref_is_package_pinned": true,
+      "files": [
+        {
+          "path": "Upstream-License-Evidence/erri120__GameFinder/efa23bd6d02ec07aa9fb1abe1025efafe3190d9f/LICENSE",
+          "url": "https://raw.githubusercontent.com/erri120/GameFinder/efa23bd6d02ec07aa9fb1abe1025efafe3190d9f/LICENSE",
+          "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+        }
+      ],
+      "error": null
+    }
+  },
+  {
+    "package": "GameFinder.Wine",
+    "version": "4.9.0",
+    "license": "GPL-3.0-only",
+    "license_type": "expression",
+    "license_url": "https://licenses.nuget.org/GPL-3.0-only",
+    "authors": "erri120",
+    "copyright": "",
+    "project_url": "https://github.com/erri120/GameFinder",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/erri120/GameFinder.git",
+      "branch": "master",
+      "commit": "efa23bd6d02ec07aa9fb1abe1025efafe3190d9f"
+    },
+    "nuget_url": "https://www.nuget.org/packages/GameFinder.Wine/4.9.0",
+    "nupkg_sha256": "111f360d48939e6f399bae6b20aed76db222883d9cbeebbb723175df783aca27",
+    "nupkg_sha512": "XdYkM4ID6Y5ocOR1UiQu4Mp0ar6n+Pkfp/06fEsjrbC5kr1kTRt2VP6R35QX7aVoPhxmg9DbPnpb+oATyr/HdQ==",
+    "bundled_runtime_files": [
+      "GameFinder.Wine.dll"
+    ],
+    "package_binary_comparison": [
+      {
+        "file": "Runtime/GameFinder.Wine.dll",
+        "nuget_entry": "lib/net9.0/GameFinder.Wine.dll",
+        "matches_nuget": true
+      }
+    ],
+    "package_notice_files": [],
+    "dependencies": {
+      "GameFinder.Common": "4.9.0",
+      "GameFinder.RegistryUtils": "4.9.0"
+    },
+    "reviewed_license_family": "GPL-3.0-only",
+    "upstream_license_evidence": {
+      "package": "GameFinder.Wine",
+      "version": "4.9.0",
+      "repository": "erri120/GameFinder",
+      "resolved_ref": "efa23bd6d02ec07aa9fb1abe1025efafe3190d9f",
+      "ref_is_package_pinned": true,
+      "files": [
+        {
+          "path": "Upstream-License-Evidence/erri120__GameFinder/efa23bd6d02ec07aa9fb1abe1025efafe3190d9f/LICENSE",
+          "url": "https://raw.githubusercontent.com/erri120/GameFinder/efa23bd6d02ec07aa9fb1abe1025efafe3190d9f/LICENSE",
+          "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+        }
+      ],
+      "error": null
+    }
+  },
+  {
+    "package": "K4os.Compression.LZ4.Streams",
+    "version": "1.3.8",
+    "license": "",
+    "license_type": "",
+    "license_url": "https://github.com/MiloszKrajewski/K4os.Compression.LZ4/blob/master/LICENSE?raw=true",
+    "authors": "Milosz Krajewski",
+    "copyright": "Milosz Krajewski",
+    "project_url": "https://github.com/MiloszKrajewski/K4os.Compression.LZ4",
+    "repository": {
+      "url": "https://github.com/MiloszKrajewski/K4os.Compression.LZ4"
+    },
+    "nuget_url": "https://www.nuget.org/packages/K4os.Compression.LZ4.Streams/1.3.8",
+    "nupkg_sha256": "bf83f9dd7009ed69ce710d35e2952ffcf8b4950bb45a7903c2206dfd054edf4e",
+    "nupkg_sha512": "dLHAD/rNqf+SRk7DqIVaYgOq0MdMRUgoVtBoUGcfSoGl62MWOsOmSiO2Z3bG6GfO7jqNtdMefYFz3QkAofXGVQ==",
+    "bundled_runtime_files": [
+      "K4os.Compression.LZ4.Streams.dll"
+    ],
+    "package_binary_comparison": [
+      {
+        "file": "Runtime/K4os.Compression.LZ4.Streams.dll",
+        "nuget_entry": "lib/net6.0/K4os.Compression.LZ4.Streams.dll",
+        "matches_nuget": true
+      }
+    ],
+    "package_notice_files": [],
+    "dependencies": {
+      "K4os.Compression.LZ4": "1.3.8",
+      "K4os.Hash.xxHash": "1.0.8"
+    },
+    "reviewed_license_family": "MIT",
+    "upstream_license_evidence": {
+      "package": "K4os.Compression.LZ4.Streams",
+      "version": "1.3.8",
+      "repository": "MiloszKrajewski/K4os.Compression.LZ4",
+      "resolved_ref": "67701f7ce624564dad5df0fe87c573e339f96a33",
+      "ref_is_package_pinned": false,
+      "files": [
+        {
+          "path": "Upstream-License-Evidence/MiloszKrajewski__K4os.Compression.LZ4/67701f7ce624564dad5df0fe87c573e339f96a33/LICENSE",
+          "url": "https://raw.githubusercontent.com/MiloszKrajewski/K4os.Compression.LZ4/67701f7ce624564dad5df0fe87c573e339f96a33/LICENSE",
+          "sha256": "ef5a021fc2ae3658f4ad8d2526c87fb2cf394285f47abfb784cf73a27ffd9522"
+        }
+      ],
+      "error": null
+    }
+  },
+  {
+    "package": "K4os.Compression.LZ4",
+    "version": "1.3.8",
+    "license": "",
+    "license_type": "",
+    "license_url": "https://github.com/MiloszKrajewski/K4os.Compression.LZ4/blob/master/LICENSE?raw=true",
+    "authors": "Milosz Krajewski",
+    "copyright": "Milosz Krajewski",
+    "project_url": "https://github.com/MiloszKrajewski/K4os.Compression.LZ4",
+    "repository": {
+      "url": "https://github.com/MiloszKrajewski/K4os.Compression.LZ4"
+    },
+    "nuget_url": "https://www.nuget.org/packages/K4os.Compression.LZ4/1.3.8",
+    "nupkg_sha256": "3a64f72703b8aa99190cbed7aa216a642cb1c928fae2cf6dfa65dc3754fe2320",
+    "nupkg_sha512": "34eaDMthZbtqtcybO1dXpqtIUbpmzUgTeglczK8wUMl8YPj5121wcO3YiEDAqPkt+wKbz6prigXG+Y3tXZyO1Q==",
+    "bundled_runtime_files": [
+      "K4os.Compression.LZ4.dll"
+    ],
+    "package_binary_comparison": [
+      {
+        "file": "Runtime/K4os.Compression.LZ4.dll",
+        "nuget_entry": "lib/net6.0/K4os.Compression.LZ4.dll",
+        "matches_nuget": true
+      }
+    ],
+    "package_notice_files": [],
+    "dependencies": {},
+    "reviewed_license_family": "MIT",
+    "upstream_license_evidence": {
+      "package": "K4os.Compression.LZ4",
+      "version": "1.3.8",
+      "repository": "MiloszKrajewski/K4os.Compression.LZ4",
+      "resolved_ref": "67701f7ce624564dad5df0fe87c573e339f96a33",
+      "ref_is_package_pinned": false,
+      "files": [
+        {
+          "path": "Upstream-License-Evidence/MiloszKrajewski__K4os.Compression.LZ4/67701f7ce624564dad5df0fe87c573e339f96a33/LICENSE",
+          "url": "https://raw.githubusercontent.com/MiloszKrajewski/K4os.Compression.LZ4/67701f7ce624564dad5df0fe87c573e339f96a33/LICENSE",
+          "sha256": "ef5a021fc2ae3658f4ad8d2526c87fb2cf394285f47abfb784cf73a27ffd9522"
+        }
+      ],
+      "error": null
+    }
+  },
+  {
+    "package": "K4os.Hash.xxHash",
+    "version": "1.0.8",
+    "license": "",
+    "license_type": "",
+    "license_url": "https://raw.githubusercontent.com/MiloszKrajewski/K4os.Hash.xxHash/master/LICENSE",
+    "authors": "Milosz Krajewski",
+    "copyright": "Milosz Krajewski",
+    "project_url": "https://github.com/MiloszKrajewski/K4os.Hash.xxHash",
+    "repository": {
+      "url": "https://github.com/MiloszKrajewski/K4os.Hash.xxHash"
+    },
+    "nuget_url": "https://www.nuget.org/packages/K4os.Hash.xxHash/1.0.8",
+    "nupkg_sha256": "20b4d64fc34507b8ad1a90e5a0987ae41e59b961eb37674e510766f20372e16f",
+    "nupkg_sha512": "mbiWFrBw1PYi7yzuft8jFyeLfybeWL5Dl6wlZ2XY6mcF7thjfAY/76v9Bdgr9CHFe3H2flEUVMeq4LSRcuBurg==",
+    "bundled_runtime_files": [
+      "K4os.Hash.xxHash.dll"
+    ],
+    "package_binary_comparison": [
+      {
+        "file": "Runtime/K4os.Hash.xxHash.dll",
+        "nuget_entry": "lib/net6.0/K4os.Hash.xxHash.dll",
+        "matches_nuget": true
+      }
+    ],
+    "package_notice_files": [],
+    "dependencies": {},
+    "reviewed_license_family": "MIT",
+    "upstream_license_evidence": {
+      "package": "K4os.Hash.xxHash",
+      "version": "1.0.8",
+      "repository": "MiloszKrajewski/K4os.Hash.xxHash",
+      "resolved_ref": "c36ef54edbd778c082cab04df7e42cb72a22d887",
+      "ref_is_package_pinned": false,
+      "files": [
+        {
+          "path": "Upstream-License-Evidence/MiloszKrajewski__K4os.Hash.xxHash/c36ef54edbd778c082cab04df7e42cb72a22d887/LICENSE",
+          "url": "https://raw.githubusercontent.com/MiloszKrajewski/K4os.Hash.xxHash/c36ef54edbd778c082cab04df7e42cb72a22d887/LICENSE",
+          "sha256": "ef5a021fc2ae3658f4ad8d2526c87fb2cf394285f47abfb784cf73a27ffd9522"
+        }
+      ],
+      "error": null
+    }
+  },
+  {
+    "package": "Loqui",
+    "version": "3.7.0",
+    "license": "",
+    "license_type": "",
+    "license_url": "",
+    "authors": "Noggog",
+    "copyright": "",
+    "project_url": "",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/Noggog/Loqui",
+      "branch": "main",
+      "commit": "da23e9867105c91e855edf791a35386ef038f063"
+    },
+    "nuget_url": "https://www.nuget.org/packages/Loqui/3.7.0",
+    "nupkg_sha256": "c38a2eabc2790837f1fd24fbc4dcf063fd96b6fe98a49f5b744f6c08fba321f2",
+    "nupkg_sha512": "RZtHEVssmRBogMsFtx3AZPQIaXaqZ8gij4+iboIigeKojhmiLn/23Fkqrd4ZbwaeCdfn2ESldJsgJIWfOZxvrA==",
+    "bundled_runtime_files": [
+      "Loqui.dll"
+    ],
+    "package_binary_comparison": [
+      {
+        "file": "Runtime/Loqui.dll",
+        "nuget_entry": "lib/net10.0/Loqui.dll",
+        "matches_nuget": true
+      }
+    ],
+    "package_notice_files": [],
+    "dependencies": {
+      "Noggog.CSharpExt": "4.3.0"
+    },
+    "reviewed_license_family": "GPL-3.0",
+    "upstream_license_evidence": {
+      "package": "Loqui",
+      "version": "3.7.0",
+      "repository": "Noggog/Loqui",
+      "resolved_ref": "da23e9867105c91e855edf791a35386ef038f063",
+      "ref_is_package_pinned": true,
+      "files": [
+        {
+          "path": "Upstream-License-Evidence/Noggog__Loqui/da23e9867105c91e855edf791a35386ef038f063/LICENSE.txt",
+          "url": "https://raw.githubusercontent.com/Noggog/Loqui/da23e9867105c91e855edf791a35386ef038f063/LICENSE.txt",
+          "sha256": "230184f60bae2feaf244f10a8bac053c8ff33a183bcc365b4d8b876d2b7f4809"
+        }
+      ],
+      "error": null
+    }
+  },
+  {
+    "package": "Microsoft.Extensions.DependencyInjection.Abstractions",
+    "version": "9.0.4",
+    "license": "MIT",
+    "license_type": "expression",
+    "license_url": "https://licenses.nuget.org/MIT",
+    "authors": "Microsoft",
+    "copyright": "\u00a9 Microsoft Corporation. All rights reserved.",
+    "project_url": "https://dot.net/",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/dotnet/runtime",
+      "commit": "f57e6dc747158ab7ade4e62a75a6750d16b771e8"
+    },
+    "nuget_url": "https://www.nuget.org/packages/Microsoft.Extensions.DependencyInjection.Abstractions/9.0.4",
+    "nupkg_sha256": "e96706a6c018461ae91e5a04a26d2854fec57f81a1fced57589113249dcbbc44",
+    "nupkg_sha512": "yG2pj45qdgLQfzNjgiYKsvWUf0vQqaV1FRX30kZzgQUrNJCnFhYNouFOLLdkUUN6nP2V4H9HusCAAZvSCHOcPw==",
+    "bundled_runtime_files": [
+      "Microsoft.Extensions.DependencyInjection.Abstractions.dll"
+    ],
+    "package_binary_comparison": [
+      {
+        "file": "Runtime/Microsoft.Extensions.DependencyInjection.Abstractions.dll",
+        "nuget_entry": "lib/net9.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll",
+        "matches_nuget": true
+      }
+    ],
+    "package_notice_files": [
+      "LICENSE.TXT",
+      "THIRD-PARTY-NOTICES.TXT"
+    ],
+    "dependencies": {},
+    "reviewed_license_family": "MIT",
+    "upstream_license_evidence": {
+      "package": "Microsoft.Extensions.DependencyInjection.Abstractions",
+      "version": "9.0.4",
+      "repository": "dotnet/runtime",
+      "resolved_ref": "f57e6dc747158ab7ade4e62a75a6750d16b771e8",
+      "ref_is_package_pinned": true,
+      "files": [
+        {
+          "path": "Upstream-License-Evidence/dotnet__runtime/f57e6dc747158ab7ade4e62a75a6750d16b771e8/LICENSE.TXT",
+          "url": "https://raw.githubusercontent.com/dotnet/runtime/f57e6dc747158ab7ade4e62a75a6750d16b771e8/LICENSE.TXT",
+          "sha256": "cfc21f5e8bd655ae997eec916138b707b1d290b83272c02a95c9f821b8c87310"
+        },
+        {
+          "path": "Upstream-License-Evidence/dotnet__runtime/f57e6dc747158ab7ade4e62a75a6750d16b771e8/THIRD-PARTY-NOTICES.TXT",
+          "url": "https://raw.githubusercontent.com/dotnet/runtime/f57e6dc747158ab7ade4e62a75a6750d16b771e8/THIRD-PARTY-NOTICES.TXT",
+          "sha256": "fa3e9d0a2c52476f04fe798d7dc4f6e7edb7b68a3d2f4d5f59a39bce957eedc8"
+        }
+      ],
+      "error": null
+    }
+  },
+  {
+    "package": "Microsoft.Extensions.Logging.Abstractions",
+    "version": "9.0.4",
+    "license": "MIT",
+    "license_type": "expression",
+    "license_url": "https://licenses.nuget.org/MIT",
+    "authors": "Microsoft",
+    "copyright": "\u00a9 Microsoft Corporation. All rights reserved.",
+    "project_url": "https://dot.net/",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/dotnet/runtime",
+      "commit": "f57e6dc747158ab7ade4e62a75a6750d16b771e8"
+    },
+    "nuget_url": "https://www.nuget.org/packages/Microsoft.Extensions.Logging.Abstractions/9.0.4",
+    "nupkg_sha256": "9f4651850ed4ff92afd6156a5171a86b981fae1cdccbbef21617e89e3aba5457",
+    "nupkg_sha512": "gFPAVaJSpboi57b62ZEc52w4C2aMmwCTH5oD6Sx39tRgsGapRgv3+yH+aI+vEvJYcbhSB4yI2nG1fgYi6bp3Bw==",
+    "bundled_runtime_files": [
+      "Microsoft.Extensions.Logging.Abstractions.dll"
+    ],
+    "package_binary_comparison": [
+      {
+        "file": "Runtime/Microsoft.Extensions.Logging.Abstractions.dll",
+        "nuget_entry": "lib/net9.0/Microsoft.Extensions.Logging.Abstractions.dll",
+        "matches_nuget": true
+      }
+    ],
+    "package_notice_files": [
+      "LICENSE.TXT",
+      "THIRD-PARTY-NOTICES.TXT"
+    ],
+    "dependencies": {
+      "Microsoft.Extensions.DependencyInjection.Abstractions": "9.0.4"
+    },
+    "reviewed_license_family": "MIT",
+    "upstream_license_evidence": {
+      "package": "Microsoft.Extensions.Logging.Abstractions",
+      "version": "9.0.4",
+      "repository": "dotnet/runtime",
+      "resolved_ref": "f57e6dc747158ab7ade4e62a75a6750d16b771e8",
+      "ref_is_package_pinned": true,
+      "files": [
+        {
+          "path": "Upstream-License-Evidence/dotnet__runtime/f57e6dc747158ab7ade4e62a75a6750d16b771e8/LICENSE.TXT",
+          "url": "https://raw.githubusercontent.com/dotnet/runtime/f57e6dc747158ab7ade4e62a75a6750d16b771e8/LICENSE.TXT",
+          "sha256": "cfc21f5e8bd655ae997eec916138b707b1d290b83272c02a95c9f821b8c87310"
+        },
+        {
+          "path": "Upstream-License-Evidence/dotnet__runtime/f57e6dc747158ab7ade4e62a75a6750d16b771e8/THIRD-PARTY-NOTICES.TXT",
+          "url": "https://raw.githubusercontent.com/dotnet/runtime/f57e6dc747158ab7ade4e62a75a6750d16b771e8/THIRD-PARTY-NOTICES.TXT",
+          "sha256": "fa3e9d0a2c52476f04fe798d7dc4f6e7edb7b68a3d2f4d5f59a39bce957eedc8"
+        }
+      ],
+      "error": null
+    }
+  },
+  {
+    "package": "Mutagen.Bethesda.Core",
+    "version": "0.54.4",
+    "license": "GPL-3.0-only",
+    "license_type": "expression",
+    "license_url": "https://licenses.nuget.org/GPL-3.0-only",
+    "authors": "Noggog",
+    "copyright": "2024",
+    "project_url": "https://github.com/Mutagen-Modding/Mutagen",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/Mutagen-Modding/Mutagen",
+      "branch": "main",
+      "commit": "0188012c607ce8bb283d2704400d37737f089134"
+    },
+    "nuget_url": "https://www.nuget.org/packages/Mutagen.Bethesda.Core/0.54.4",
+    "nupkg_sha256": "1e69c006b1de083d64271fa3f14f3c112cc173b4afdcf01b7df43cd7492b6df4",
+    "nupkg_sha512": "4ATsawzpdWCTgKhWJGdc9NLDnvW2vLgTSOvLZ6QvBviJNIv+zQXhVupa5Aw6VUsCueURM+xEzm4h/dELjxQfyw==",
+    "bundled_runtime_files": [
+      "Mutagen.Bethesda.Core.dll"
+    ],
+    "package_binary_comparison": [
+      {
+        "file": "Runtime/Mutagen.Bethesda.Core.dll",
+        "nuget_entry": "lib/net10.0/Mutagen.Bethesda.Core.dll",
+        "matches_nuget": true
+      }
+    ],
+    "package_notice_files": [],
+    "dependencies": {
+      "GameFinder.StoreHandlers.GOG": "4.9.0",
+      "GameFinder.StoreHandlers.Steam": "4.9.0",
+      "GameFinder.StoreHandlers.Xbox": "4.9.0",
+      "K4os.Compression.LZ4.Streams": "1.3.8",
+      "Loqui": "3.7.0",
+      "Mutagen.Bethesda.Kernel": "0.54.4",
+      "Noggog.CSharpExt": "4.3.0",
+      "SharpZipLib": "1.4.2",
+      "StrongInject": "1.4.4",
+      "ini-parser-netstandard": "2.5.3"
+    },
+    "reviewed_license_family": "GPL-3.0-only",
+    "upstream_license_evidence": {
+      "package": "Mutagen.Bethesda.Core",
+      "version": "0.54.4",
+      "repository": "Mutagen-Modding/Mutagen",
+      "resolved_ref": "0188012c607ce8bb283d2704400d37737f089134",
+      "ref_is_package_pinned": true,
+      "files": [
+        {
+          "path": "Upstream-License-Evidence/Mutagen-Modding__Mutagen/0188012c607ce8bb283d2704400d37737f089134/LICENSE.txt",
+          "url": "https://raw.githubusercontent.com/Mutagen-Modding/Mutagen/0188012c607ce8bb283d2704400d37737f089134/LICENSE.txt",
+          "sha256": "230184f60bae2feaf244f10a8bac053c8ff33a183bcc365b4d8b876d2b7f4809"
+        }
+      ],
+      "error": null
+    }
+  },
+  {
+    "package": "Mutagen.Bethesda.Kernel",
+    "version": "0.54.4",
+    "license": "GPL-3.0-only",
+    "license_type": "expression",
+    "license_url": "https://licenses.nuget.org/GPL-3.0-only",
+    "authors": "Noggog",
+    "copyright": "2024",
+    "project_url": "https://github.com/Mutagen-Modding/Mutagen",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/Mutagen-Modding/Mutagen",
+      "branch": "main",
+      "commit": "0188012c607ce8bb283d2704400d37737f089134"
+    },
+    "nuget_url": "https://www.nuget.org/packages/Mutagen.Bethesda.Kernel/0.54.4",
+    "nupkg_sha256": "36539b9c9366932480ff9798300c87beef19607773a009c4141a7406cc7b2380",
+    "nupkg_sha512": "M2Lxj3CkgMPecYw3miJFqR+COTgmJY54buh2KPcRF2iB39SDOKZ/JjXknU5D3BT6wl/4a0/ICvQ7esGILaye3g==",
+    "bundled_runtime_files": [
+      "Mutagen.Bethesda.Kernel.dll"
+    ],
+    "package_binary_comparison": [
+      {
+        "file": "Runtime/Mutagen.Bethesda.Kernel.dll",
+        "nuget_entry": "lib/net10.0/Mutagen.Bethesda.Kernel.dll",
+        "matches_nuget": true
+      }
+    ],
+    "package_notice_files": [],
+    "dependencies": {
+      "Noggog.CSharpExt": "4.3.0"
+    },
+    "reviewed_license_family": "GPL-3.0-only",
+    "upstream_license_evidence": {
+      "package": "Mutagen.Bethesda.Kernel",
+      "version": "0.54.4",
+      "repository": "Mutagen-Modding/Mutagen",
+      "resolved_ref": "0188012c607ce8bb283d2704400d37737f089134",
+      "ref_is_package_pinned": true,
+      "files": [
+        {
+          "path": "Upstream-License-Evidence/Mutagen-Modding__Mutagen/0188012c607ce8bb283d2704400d37737f089134/LICENSE.txt",
+          "url": "https://raw.githubusercontent.com/Mutagen-Modding/Mutagen/0188012c607ce8bb283d2704400d37737f089134/LICENSE.txt",
+          "sha256": "230184f60bae2feaf244f10a8bac053c8ff33a183bcc365b4d8b876d2b7f4809"
+        }
+      ],
+      "error": null
+    }
+  },
+  {
+    "package": "Mutagen.Bethesda.Skyrim",
+    "version": "0.54.4",
+    "license": "GPL-3.0-only",
+    "license_type": "expression",
+    "license_url": "https://licenses.nuget.org/GPL-3.0-only",
+    "authors": "Noggog",
+    "copyright": "2024",
+    "project_url": "https://github.com/Mutagen-Modding/Mutagen",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/Mutagen-Modding/Mutagen",
+      "branch": "main",
+      "commit": "0188012c607ce8bb283d2704400d37737f089134"
+    },
+    "nuget_url": "https://www.nuget.org/packages/Mutagen.Bethesda.Skyrim/0.54.4",
+    "nupkg_sha256": "be234d62813c87408bb15c8226dd3298bf1c658657160c75a7942bc18a31a12e",
+    "nupkg_sha512": "3zuiV9STm/D7Na/TFVTDUZONn3czp01453HVwYwPcTIJz45Hw4xR2VmsoRL8nqBFvv/XSmK9Z9iOT/Yz3jkhdg==",
+    "bundled_runtime_files": [
+      "Mutagen.Bethesda.Skyrim.dll"
+    ],
+    "package_binary_comparison": [
+      {
+        "file": "Runtime/Mutagen.Bethesda.Skyrim.dll",
+        "nuget_entry": "lib/net10.0/Mutagen.Bethesda.Skyrim.dll",
+        "matches_nuget": true
+      }
+    ],
+    "package_notice_files": [],
+    "dependencies": {
+      "Loqui": "3.7.0",
+      "Mutagen.Bethesda.Core": "0.54.4",
+      "Noggog.CSharpExt": "4.3.0"
+    },
+    "reviewed_license_family": "GPL-3.0-only",
+    "upstream_license_evidence": {
+      "package": "Mutagen.Bethesda.Skyrim",
+      "version": "0.54.4",
+      "repository": "Mutagen-Modding/Mutagen",
+      "resolved_ref": "0188012c607ce8bb283d2704400d37737f089134",
+      "ref_is_package_pinned": true,
+      "files": [
+        {
+          "path": "Upstream-License-Evidence/Mutagen-Modding__Mutagen/0188012c607ce8bb283d2704400d37737f089134/LICENSE.txt",
+          "url": "https://raw.githubusercontent.com/Mutagen-Modding/Mutagen/0188012c607ce8bb283d2704400d37737f089134/LICENSE.txt",
+          "sha256": "230184f60bae2feaf244f10a8bac053c8ff33a183bcc365b4d8b876d2b7f4809"
+        }
+      ],
+      "error": null
+    }
+  },
+  {
+    "package": "NexusMods.Paths",
+    "version": "0.19.1",
+    "license": "GPL-3.0-only",
+    "license_type": "expression",
+    "license_url": "https://licenses.nuget.org/GPL-3.0-only",
+    "authors": "Nexus Mods",
+    "copyright": "",
+    "project_url": "https://github.com/Nexus-Mods/NexusMods.App",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/Nexus-Mods/NexusMods.Paths",
+      "branch": "v0.19.1",
+      "commit": "99b62efd5af88b83a0bc9eba8b3607afe802bbed"
+    },
+    "nuget_url": "https://www.nuget.org/packages/NexusMods.Paths/0.19.1",
+    "nupkg_sha256": "39592734e12b01782541f0c58adfae210969c4127ffd63ac62d21d1880a5b3cf",
+    "nupkg_sha512": "5sl+XHi2dj9+hq3/FGacEtqtlFil0Rdu0RwSakNVwlyHZ6QigT3bzHYQqQWp8U3YzW15gkAR2bO39Q5cURTNTg==",
+    "bundled_runtime_files": [
+      "NexusMods.Paths.dll"
+    ],
+    "package_binary_comparison": [
+      {
+        "file": "Runtime/NexusMods.Paths.dll",
+        "nuget_entry": "lib/net9.0/NexusMods.Paths.dll",
+        "matches_nuget": true
+      }
+    ],
+    "package_notice_files": [],
+    "dependencies": {
+      "Microsoft.Extensions.DependencyInjection.Abstractions": "9.0.4",
+      "Reloaded.Memory": "9.4.2",
+      "TransparentValueObjects.Abstractions": "1.1.0"
+    },
+    "reviewed_license_family": "GPL-3.0-only",
+    "upstream_license_evidence": {
+      "package": "NexusMods.Paths",
+      "version": "0.19.1",
+      "repository": "Nexus-Mods/NexusMods.Paths",
+      "resolved_ref": "99b62efd5af88b83a0bc9eba8b3607afe802bbed",
+      "ref_is_package_pinned": true,
+      "files": [
+        {
+          "path": "Upstream-License-Evidence/Nexus-Mods__NexusMods.Paths/99b62efd5af88b83a0bc9eba8b3607afe802bbed/LICENSE.md",
+          "url": "https://raw.githubusercontent.com/Nexus-Mods/NexusMods.Paths/99b62efd5af88b83a0bc9eba8b3607afe802bbed/LICENSE.md",
+          "sha256": "1fd5970aca69aed6eca99ed8bf5826f77c218932f3ff3a45331d1c2a742fa84d"
+        }
+      ],
+      "error": null
+    }
+  },
+  {
+    "package": "Noggog.CSharpExt",
+    "version": "4.3.0",
+    "license": "",
+    "license_type": "",
+    "license_url": "",
+    "authors": "Noggog",
+    "copyright": "",
+    "project_url": "",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/Noggog/CSharpExt",
+      "branch": "main",
+      "commit": "dc1558f85e7595bdbae20a18a57905c3a07add9d"
+    },
+    "nuget_url": "https://www.nuget.org/packages/Noggog.CSharpExt/4.3.0",
+    "nupkg_sha256": "546920a9cfbdca84fa7b4d094cefe6ab4c1b536bb09801043aad7f2635e6bdb3",
+    "nupkg_sha512": "OxvBRNqqhU4vsXZADTA2nUgy2TydqytXQGMScsI7Nks1LkMaWN8IwWJN4JrPDQwnaBfQJnSdP44o9lJtzYGJNQ==",
+    "bundled_runtime_files": [
+      "Noggog.CSharpExt.dll"
+    ],
+    "package_binary_comparison": [
+      {
+        "file": "Runtime/Noggog.CSharpExt.dll",
+        "nuget_entry": "lib/net10.0/Noggog.CSharpExt.dll",
+        "matches_nuget": true
+      }
+    ],
+    "package_notice_files": [],
+    "dependencies": {
+      "DynamicData": "9.4.31",
+      "System.IO.Abstractions": "22.1.1"
+    },
+    "reviewed_license_family": "GPL-3.0",
+    "upstream_license_evidence": {
+      "package": "Noggog.CSharpExt",
+      "version": "4.3.0",
+      "repository": "Noggog/CSharpExt",
+      "resolved_ref": "dc1558f85e7595bdbae20a18a57905c3a07add9d",
+      "ref_is_package_pinned": true,
+      "files": [
+        {
+          "path": "Upstream-License-Evidence/Noggog__CSharpExt/dc1558f85e7595bdbae20a18a57905c3a07add9d/LICENSE.txt",
+          "url": "https://raw.githubusercontent.com/Noggog/CSharpExt/dc1558f85e7595bdbae20a18a57905c3a07add9d/LICENSE.txt",
+          "sha256": "230184f60bae2feaf244f10a8bac053c8ff33a183bcc365b4d8b876d2b7f4809"
+        }
+      ],
+      "error": null
+    }
+  },
+  {
+    "package": "OneOf",
+    "version": "3.0.271",
+    "license": "",
+    "license_type": "",
+    "license_url": "https://github.com/mcintyre321/OneOf/blob/master/licence.md",
+    "authors": "Harry McIntyre",
+    "copyright": "Harry McIntyre",
+    "project_url": "https://github.com/mcintyre321/OneOf/",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/mcintyre321/OneOf.git",
+      "commit": "6e02dbe75d0f20f198c640d4c04190a85c5ac9e6"
+    },
+    "nuget_url": "https://www.nuget.org/packages/OneOf/3.0.271",
+    "nupkg_sha256": "b455b2f0983f5d525f54e75d8d7782022ceafc05258c9aeae89f0f17a02b6125",
+    "nupkg_sha512": "7RDmnFKnYfVkxojbb1UTZhaCcRf7KQYFV6T1Z3t5gNF+vaPr5xcHmnzvzHEao3UOg016G/BEZnHvIK8ag4UlUQ==",
+    "bundled_runtime_files": [
+      "OneOf.dll"
+    ],
+    "package_binary_comparison": [
+      {
+        "file": "Runtime/OneOf.dll",
+        "nuget_entry": "lib/netstandard2.0/OneOf.dll",
+        "matches_nuget": true
+      }
+    ],
+    "package_notice_files": [],
+    "dependencies": {},
+    "reviewed_license_family": "MIT",
+    "upstream_license_evidence": {
+      "package": "OneOf",
+      "version": "3.0.271",
+      "repository": "mcintyre321/OneOf",
+      "resolved_ref": "6e02dbe75d0f20f198c640d4c04190a85c5ac9e6",
+      "ref_is_package_pinned": true,
+      "files": [
+        {
+          "path": "Upstream-License-Evidence/mcintyre321__OneOf/6e02dbe75d0f20f198c640d4c04190a85c5ac9e6/licence.md",
+          "url": "https://raw.githubusercontent.com/mcintyre321/OneOf/6e02dbe75d0f20f198c640d4c04190a85c5ac9e6/licence.md",
+          "sha256": "e29a4736e409cac0e116673b8fc97f987392cbe295b90336fe297864fa05c3ac"
+        }
+      ],
+      "error": null
+    }
+  },
+  {
+    "package": "Reloaded.Memory",
+    "version": "9.4.2",
+    "license": "LICENSE.md",
+    "license_type": "file",
+    "license_url": "https://aka.ms/deprecateLicenseUrl",
+    "authors": "Sewer56",
+    "copyright": "",
+    "project_url": "https://github.com/Reloaded-Project/Reloaded.Memory",
+    "repository": {
+      "type": "git",
+      "commit": "6bab99d723bf6f783d24ed0d489db28ea5d9e075"
+    },
+    "nuget_url": "https://www.nuget.org/packages/Reloaded.Memory/9.4.2",
+    "nupkg_sha256": "1864bde3d5a82d43f0098c9f6dd4ce0205e06d5fcdd2c7aa2f745e830c8f925b",
+    "nupkg_sha512": "JXe5rlUtfz6Qek1uT+BpWp2gLc+WEQNF4whCavbdxX/T4WsqDNmMra+GPmbpsCtZW1ZMegzL2XMcfkpWPZ7oFw==",
+    "bundled_runtime_files": [
+      "Reloaded.Memory.dll"
+    ],
+    "package_binary_comparison": [
+      {
+        "file": "Runtime/Reloaded.Memory.dll",
+        "nuget_entry": "lib/net8.0/Reloaded.Memory.dll",
+        "matches_nuget": true
+      }
+    ],
+    "package_notice_files": [
+      "LICENSE.md"
+    ],
+    "dependencies": {},
+    "reviewed_license_family": "GPL-3.0",
+    "upstream_license_evidence": {
+      "package": "Reloaded.Memory",
+      "version": "9.4.2",
+      "repository": "Reloaded-Project/Reloaded.Memory",
+      "resolved_ref": "6bab99d723bf6f783d24ed0d489db28ea5d9e075",
+      "ref_is_package_pinned": true,
+      "files": [
+        {
+          "path": "Upstream-License-Evidence/Reloaded-Project__Reloaded.Memory/6bab99d723bf6f783d24ed0d489db28ea5d9e075/LICENSE",
+          "url": "https://raw.githubusercontent.com/Reloaded-Project/Reloaded.Memory/6bab99d723bf6f783d24ed0d489db28ea5d9e075/LICENSE",
+          "sha256": "b3a3394c25a8de4c7160f130b1036221069d4e4390c42de1ac82d791e220d0c9"
+        }
+      ],
+      "error": null
+    }
+  },
+  {
+    "package": "SharpZipLib",
+    "version": "1.4.2",
+    "license": "MIT",
+    "license_type": "expression",
+    "license_url": "https://licenses.nuget.org/MIT",
+    "authors": "ICSharpCode",
+    "copyright": "Copyright \u00a9 2000-2022 SharpZipLib Contributors",
+    "project_url": "https://github.com/icsharpcode/SharpZipLib",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/icsharpcode/SharpZipLib",
+      "commit": "33f64eb0f28cdd2b084cb822fcc224c7c5aba553"
+    },
+    "nuget_url": "https://www.nuget.org/packages/SharpZipLib/1.4.2",
+    "nupkg_sha256": "fe0895aa2930a2b1b65caa9f37db8bca35125ebdf9cc1b99d855f6afc5ff5946",
+    "nupkg_sha512": "TggBlumyBCfRtaviOUPWR8NlYRJHz1cdPPJXWAi+cpS5lXBQrtV/o0Mm74llu7MU4DlEaTIWUC0OuZAlPfyU9A==",
+    "bundled_runtime_files": [
+      "ICSharpCode.SharpZipLib.dll"
+    ],
+    "package_binary_comparison": [
+      {
+        "file": "Runtime/ICSharpCode.SharpZipLib.dll",
+        "nuget_entry": "lib/net6.0/ICSharpCode.SharpZipLib.dll",
+        "matches_nuget": true
+      }
+    ],
+    "package_notice_files": [],
+    "dependencies": {},
+    "reviewed_license_family": "MIT",
+    "upstream_license_evidence": {
+      "package": "SharpZipLib",
+      "version": "1.4.2",
+      "repository": "icsharpcode/SharpZipLib",
+      "resolved_ref": "33f64eb0f28cdd2b084cb822fcc224c7c5aba553",
+      "ref_is_package_pinned": true,
+      "files": [
+        {
+          "path": "Upstream-License-Evidence/icsharpcode__SharpZipLib/33f64eb0f28cdd2b084cb822fcc224c7c5aba553/LICENSE.txt",
+          "url": "https://raw.githubusercontent.com/icsharpcode/SharpZipLib/33f64eb0f28cdd2b084cb822fcc224c7c5aba553/LICENSE.txt",
+          "sha256": "d7fbbc16f871bf24fa5624c7eaf945054b778985f32676dcacba41fddca61133"
+        }
+      ],
+      "error": null
+    }
+  },
+  {
+    "package": "StrongInject",
+    "version": "1.4.4",
+    "license": "MIT",
+    "license_type": "expression",
+    "license_url": "https://licenses.nuget.org/MIT",
+    "authors": "StrongInject",
+    "copyright": "",
+    "project_url": "https://github.com/YairHalberstadt/stronginject",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/YairHalberstadt/stronginject",
+      "commit": "6f3077c68b1ebd9c56663456efb67ef90886942e"
+    },
+    "nuget_url": "https://www.nuget.org/packages/StrongInject/1.4.4",
+    "nupkg_sha256": "be2851a231ba41756df542b7da0737330548b90b97e7c7cb8d849bf07a06f6ec",
+    "nupkg_sha512": "VdkyzC5KY9tOKFAC5GLGYwyUOcC5KvX8CN3923koJ3SKa48EIijYi7AYNmaYqjEJjCFDkvWBs9AN8p641LIN5Q==",
+    "bundled_runtime_files": [
+      "StrongInject.dll"
+    ],
+    "package_binary_comparison": [
+      {
+        "file": "Runtime/StrongInject.dll",
+        "nuget_entry": "lib/netstandard2.1/StrongInject.dll",
+        "matches_nuget": true
+      }
+    ],
+    "package_notice_files": [],
+    "dependencies": {},
+    "reviewed_license_family": "MIT",
+    "upstream_license_evidence": {
+      "package": "StrongInject",
+      "version": "1.4.4",
+      "repository": "YairHalberstadt/stronginject",
+      "resolved_ref": "6f3077c68b1ebd9c56663456efb67ef90886942e",
+      "ref_is_package_pinned": true,
+      "files": [
+        {
+          "path": "Upstream-License-Evidence/YairHalberstadt__stronginject/6f3077c68b1ebd9c56663456efb67ef90886942e/LICENSE",
+          "url": "https://raw.githubusercontent.com/YairHalberstadt/stronginject/6f3077c68b1ebd9c56663456efb67ef90886942e/LICENSE",
+          "sha256": "4134694032404f3b104c82f5df9aeb780c4fd4183e14cb5781218aa2258f5ff0"
+        }
+      ],
+      "error": null
+    }
+  },
+  {
+    "package": "System.IO.Abstractions",
+    "version": "22.1.1",
+    "license": "MIT",
+    "license_type": "expression",
+    "license_url": "https://licenses.nuget.org/MIT",
+    "authors": "Tatham Oddie & friends",
+    "copyright": "Copyright \u00a9 Tatham Oddie & friends 2010-2026",
+    "project_url": "https://github.com/TestableIO/System.IO.Abstractions",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/TestableIO/System.IO.Abstractions.git",
+      "commit": "a091ac7f9655f61aeaeb28baf452c1a96c546ba8"
+    },
+    "nuget_url": "https://www.nuget.org/packages/System.IO.Abstractions/22.1.1",
+    "nupkg_sha256": "ea974b9ecb791fc5b63a35c49f8f54f90bd9e97a73181dc0eb7213a9a1665b49",
+    "nupkg_sha512": "Km2/1rnhNouonzAb9yPOcFiCZiaDX+jOYdYBhZzjqECCyBFXDcdTYeH7ewarDTtObtzB+aofk5nv2Fl3MWNyOA==",
+    "bundled_runtime_files": [
+      "System.IO.Abstractions.dll"
+    ],
+    "package_binary_comparison": [
+      {
+        "file": "Runtime/System.IO.Abstractions.dll",
+        "nuget_entry": "lib/net10.0/System.IO.Abstractions.dll",
+        "matches_nuget": true
+      }
+    ],
+    "package_notice_files": [],
+    "dependencies": {
+      "TestableIO.System.IO.Abstractions": "22.1.1",
+      "TestableIO.System.IO.Abstractions.Wrappers": "22.1.1"
+    },
+    "reviewed_license_family": "MIT",
+    "upstream_license_evidence": {
+      "package": "System.IO.Abstractions",
+      "version": "22.1.1",
+      "repository": "TestableIO/System.IO.Abstractions",
+      "resolved_ref": "a091ac7f9655f61aeaeb28baf452c1a96c546ba8",
+      "ref_is_package_pinned": true,
+      "files": [
+        {
+          "path": "Upstream-License-Evidence/TestableIO__System.IO.Abstractions/a091ac7f9655f61aeaeb28baf452c1a96c546ba8/LICENSE",
+          "url": "https://raw.githubusercontent.com/TestableIO/System.IO.Abstractions/a091ac7f9655f61aeaeb28baf452c1a96c546ba8/LICENSE",
+          "sha256": "9b4f46dc8e65bb14714479eb4de76b7a1e2e7f9eff7ab1eb0e9dea712f19b1ed"
+        }
+      ],
+      "error": null
+    }
+  },
+  {
+    "package": "System.Reactive",
+    "version": "6.1.0",
+    "license": "MIT",
+    "license_type": "expression",
+    "license_url": "https://licenses.nuget.org/MIT",
+    "authors": ".NET Foundation and Contributors",
+    "copyright": "Copyright (c) .NET Foundation and Contributors.",
+    "project_url": "https://github.com/dotnet/reactive",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/dotnet/reactive",
+      "commit": "f4da16f15a3cde97f178396ea6e3489cc893651f"
+    },
+    "nuget_url": "https://www.nuget.org/packages/System.Reactive/6.1.0",
+    "nupkg_sha256": "cc0098a1998ac47a34a8a63c14e55aee322cc3b74ded68dd5dd45157de6a6366",
+    "nupkg_sha512": "L+vZt5F1IX6u4Uo5n/XEtKOhAErFkrDizvFiqFmTyQfTdtUhm3wCaXzcWhswJRsBawRqVRwzfb8hEV8mKPm7eA==",
+    "bundled_runtime_files": [
+      "System.Reactive.dll"
+    ],
+    "package_binary_comparison": [
+      {
+        "file": "Runtime/System.Reactive.dll",
+        "nuget_entry": "lib/net6.0/System.Reactive.dll",
+        "matches_nuget": true
+      }
+    ],
+    "package_notice_files": [],
+    "dependencies": {},
+    "reviewed_license_family": "MIT",
+    "upstream_license_evidence": {
+      "package": "System.Reactive",
+      "version": "6.1.0",
+      "repository": "dotnet/reactive",
+      "resolved_ref": "f4da16f15a3cde97f178396ea6e3489cc893651f",
+      "ref_is_package_pinned": true,
+      "files": [
+        {
+          "path": "Upstream-License-Evidence/dotnet__reactive/f4da16f15a3cde97f178396ea6e3489cc893651f/LICENSE",
+          "url": "https://raw.githubusercontent.com/dotnet/reactive/f4da16f15a3cde97f178396ea6e3489cc893651f/LICENSE",
+          "sha256": "cfc21f5e8bd655ae997eec916138b707b1d290b83272c02a95c9f821b8c87310"
+        }
+      ],
+      "error": null
+    }
+  },
+  {
+    "package": "TestableIO.System.IO.Abstractions.Wrappers",
+    "version": "22.1.1",
+    "license": "MIT",
+    "license_type": "expression",
+    "license_url": "https://licenses.nuget.org/MIT",
+    "authors": "Tatham Oddie & friends",
+    "copyright": "Copyright \u00a9 Tatham Oddie & friends 2010-2026",
+    "project_url": "https://github.com/TestableIO/System.IO.Abstractions",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/TestableIO/System.IO.Abstractions.git",
+      "commit": "a091ac7f9655f61aeaeb28baf452c1a96c546ba8"
+    },
+    "nuget_url": "https://www.nuget.org/packages/TestableIO.System.IO.Abstractions.Wrappers/22.1.1",
+    "nupkg_sha256": "d5d2c0199e9768a9715ac6258cd804b105c6f044f89ae6eb6312c136975e7ba2",
+    "nupkg_sha512": "kZc0Ww+GLhWA4sXBpGk5l5lCvGvBM0cRkqjhbhFO/xV4A/xPZFB3NB8Ur4pBh4r3yfIEgNVpSO97efGbkebIUg==",
+    "bundled_runtime_files": [
+      "TestableIO.System.IO.Abstractions.Wrappers.dll"
+    ],
+    "package_binary_comparison": [
+      {
+        "file": "Runtime/TestableIO.System.IO.Abstractions.Wrappers.dll",
+        "nuget_entry": "lib/net10.0/TestableIO.System.IO.Abstractions.Wrappers.dll",
+        "matches_nuget": true
+      }
+    ],
+    "package_notice_files": [],
+    "dependencies": {
+      "Testably.Abstractions.FileSystem.Interface": "10.1.0"
+    },
+    "reviewed_license_family": "MIT",
+    "upstream_license_evidence": {
+      "package": "TestableIO.System.IO.Abstractions.Wrappers",
+      "version": "22.1.1",
+      "repository": "TestableIO/System.IO.Abstractions",
+      "resolved_ref": "a091ac7f9655f61aeaeb28baf452c1a96c546ba8",
+      "ref_is_package_pinned": true,
+      "files": [
+        {
+          "path": "Upstream-License-Evidence/TestableIO__System.IO.Abstractions/a091ac7f9655f61aeaeb28baf452c1a96c546ba8/LICENSE",
+          "url": "https://raw.githubusercontent.com/TestableIO/System.IO.Abstractions/a091ac7f9655f61aeaeb28baf452c1a96c546ba8/LICENSE",
+          "sha256": "9b4f46dc8e65bb14714479eb4de76b7a1e2e7f9eff7ab1eb0e9dea712f19b1ed"
+        }
+      ],
+      "error": null
+    }
+  },
+  {
+    "package": "TestableIO.System.IO.Abstractions",
+    "version": "22.1.1",
+    "license": "MIT",
+    "license_type": "expression",
+    "license_url": "https://licenses.nuget.org/MIT",
+    "authors": "Tatham Oddie & friends",
+    "copyright": "Copyright \u00a9 Tatham Oddie & friends 2010-2026",
+    "project_url": "https://github.com/TestableIO/System.IO.Abstractions",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/TestableIO/System.IO.Abstractions.git",
+      "commit": "a091ac7f9655f61aeaeb28baf452c1a96c546ba8"
+    },
+    "nuget_url": "https://www.nuget.org/packages/TestableIO.System.IO.Abstractions/22.1.1",
+    "nupkg_sha256": "9c12cf6bfe11ee01e62a5b4adbad195fa7be68e2e5564c39fb692e86b685d9e7",
+    "nupkg_sha512": "0CFRFERq2SR86ywC0SHxfSoWJVbbXmOuKTKvQntgNwFlZvEAcNSCddlryuW+4gVmgprFci+tBKvYct80jGPTeQ==",
+    "bundled_runtime_files": [
+      "TestableIO.System.IO.Abstractions.dll"
+    ],
+    "package_binary_comparison": [
+      {
+        "file": "Runtime/TestableIO.System.IO.Abstractions.dll",
+        "nuget_entry": "lib/net10.0/TestableIO.System.IO.Abstractions.dll",
+        "matches_nuget": true
+      }
+    ],
+    "package_notice_files": [],
+    "dependencies": {
+      "Testably.Abstractions.FileSystem.Interface": "10.1.0"
+    },
+    "reviewed_license_family": "MIT",
+    "upstream_license_evidence": {
+      "package": "TestableIO.System.IO.Abstractions",
+      "version": "22.1.1",
+      "repository": "TestableIO/System.IO.Abstractions",
+      "resolved_ref": "a091ac7f9655f61aeaeb28baf452c1a96c546ba8",
+      "ref_is_package_pinned": true,
+      "files": [
+        {
+          "path": "Upstream-License-Evidence/TestableIO__System.IO.Abstractions/a091ac7f9655f61aeaeb28baf452c1a96c546ba8/LICENSE",
+          "url": "https://raw.githubusercontent.com/TestableIO/System.IO.Abstractions/a091ac7f9655f61aeaeb28baf452c1a96c546ba8/LICENSE",
+          "sha256": "9b4f46dc8e65bb14714479eb4de76b7a1e2e7f9eff7ab1eb0e9dea712f19b1ed"
+        }
+      ],
+      "error": null
+    }
+  },
+  {
+    "package": "Testably.Abstractions.FileSystem.Interface",
+    "version": "10.1.0",
+    "license": "MIT",
+    "license_type": "expression",
+    "license_url": "https://licenses.nuget.org/MIT",
+    "authors": "Testably",
+    "copyright": "Copyright (c) 2024- 2026 Testably",
+    "project_url": "https://github.com/Testably/Testably.Abstractions",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/Testably/Testably.Abstractions.git",
+      "commit": "1253c6bd6309cb15623fac09bd841e782bbca626"
+    },
+    "nuget_url": "https://www.nuget.org/packages/Testably.Abstractions.FileSystem.Interface/10.1.0",
+    "nupkg_sha256": "cd2e47009fa265b8ec8a2a8f134f8cfb43cc1b1387d41b269b7bdd3522a860f5",
+    "nupkg_sha512": "a6/GfFTxzHEcwLILX1YrBkTtwhlq5m7ufr28gok61HEPJVT8svaYdkI643JPdPBdTYQXyMtz9LH2Zez+WFmzlw==",
+    "bundled_runtime_files": [
+      "Testably.Abstractions.FileSystem.Interface.dll"
+    ],
+    "package_binary_comparison": [
+      {
+        "file": "Runtime/Testably.Abstractions.FileSystem.Interface.dll",
+        "nuget_entry": "lib/net10.0/Testably.Abstractions.FileSystem.Interface.dll",
+        "matches_nuget": true
+      }
+    ],
+    "package_notice_files": [],
+    "dependencies": {},
+    "reviewed_license_family": "MIT",
+    "upstream_license_evidence": {
+      "package": "Testably.Abstractions.FileSystem.Interface",
+      "version": "10.1.0",
+      "repository": "Testably/Testably.Abstractions",
+      "resolved_ref": "1253c6bd6309cb15623fac09bd841e782bbca626",
+      "ref_is_package_pinned": true,
+      "files": [
+        {
+          "path": "Upstream-License-Evidence/Testably__Testably.Abstractions/1253c6bd6309cb15623fac09bd841e782bbca626/LICENSE",
+          "url": "https://raw.githubusercontent.com/Testably/Testably.Abstractions/1253c6bd6309cb15623fac09bd841e782bbca626/LICENSE",
+          "sha256": "024f2e034ea52d1b47be884bda1bd9b776ceddbfb2a7cc4d49f79255c8ed483c"
+        }
+      ],
+      "error": null
+    }
+  },
+  {
+    "package": "TransparentValueObjects.Abstractions",
+    "version": "1.1.0",
+    "license": "",
+    "license_type": "",
+    "license_url": "",
+    "authors": "TransparentValueObjects.Abstractions",
+    "copyright": "",
+    "project_url": "",
+    "repository": {
+      "type": "git",
+      "branch": "v1.1.0",
+      "commit": "ff32127019b0f53480f5e9c1867924b14138999c"
+    },
+    "nuget_url": "https://www.nuget.org/packages/TransparentValueObjects.Abstractions/1.1.0",
+    "nupkg_sha256": "236341a264d313168485ff7f068a6505b0c9f41ed8312de750e43939de00fded",
+    "nupkg_sha512": "MDzTcZ6yZlSDRQcPyJVGPT01Bd1QWOO+BnNW4+fGkuRV9/Tkrez6XsMKPqwECq4GY2WTuD9nb7kaA6me2rFfQw==",
+    "bundled_runtime_files": [
+      "TransparentValueObjects.Abstractions.dll"
+    ],
+    "package_binary_comparison": [
+      {
+        "file": "Runtime/TransparentValueObjects.Abstractions.dll",
+        "nuget_entry": "lib/net9.0/TransparentValueObjects.Abstractions.dll",
+        "matches_nuget": true
+      }
+    ],
+    "package_notice_files": [],
+    "dependencies": {},
+    "reviewed_license_family": "MIT",
+    "upstream_license_evidence": {
+      "package": "TransparentValueObjects.Abstractions",
+      "version": "1.1.0",
+      "repository": "erri120/TransparentValueObjects",
+      "resolved_ref": "ff32127019b0f53480f5e9c1867924b14138999c",
+      "ref_is_package_pinned": true,
+      "files": [
+        {
+          "path": "Upstream-License-Evidence/erri120__TransparentValueObjects/ff32127019b0f53480f5e9c1867924b14138999c/LICENSE",
+          "url": "https://raw.githubusercontent.com/erri120/TransparentValueObjects/ff32127019b0f53480f5e9c1867924b14138999c/LICENSE",
+          "sha256": "7d8738a1cf782dd90e7dfb9d126f7e73a75d6bea65d89ee21d78b15a1c0397f8"
+        }
+      ],
+      "error": null
+    }
+  },
+  {
+    "package": "ValveKeyValue",
+    "version": "0.13.1.398",
+    "license": "MIT",
+    "license_type": "expression",
+    "license_url": "https://licenses.nuget.org/MIT",
+    "authors": "ValveKeyValue Contributors",
+    "copyright": "Copyright \u00a9 ValveKeyValue Contributors",
+    "project_url": "https://valveresourceformat.github.io/",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/ValveResourceFormat/ValveKeyValue",
+      "commit": "c7d0dcce45a32123e376c30c6fb9a016d6ebf294"
+    },
+    "nuget_url": "https://www.nuget.org/packages/ValveKeyValue/0.13.1.398",
+    "nupkg_sha256": "741a0453d11bd158730d61cb258ef8c5a9b3d98b76f37b6f7bef3523c988c497",
+    "nupkg_sha512": "F1BoTApHn6UP7aBfrF52vblgOupMuljn9Z/FecHNRBeqC6UMYjRe9qLgtQcV/VpqA1J6u8/2SJzmz3wI/QGJrQ==",
+    "bundled_runtime_files": [
+      "ValveKeyValue.dll"
+    ],
+    "package_binary_comparison": [
+      {
+        "file": "Runtime/ValveKeyValue.dll",
+        "nuget_entry": "lib/netstandard2.1/ValveKeyValue.dll",
+        "matches_nuget": true
+      }
+    ],
+    "package_notice_files": [],
+    "dependencies": {},
+    "reviewed_license_family": "MIT",
+    "upstream_license_evidence": {
+      "package": "ValveKeyValue",
+      "version": "0.13.1.398",
+      "repository": "ValveResourceFormat/ValveKeyValue",
+      "resolved_ref": "c7d0dcce45a32123e376c30c6fb9a016d6ebf294",
+      "ref_is_package_pinned": true,
+      "files": [
+        {
+          "path": "Upstream-License-Evidence/ValveResourceFormat__ValveKeyValue/c7d0dcce45a32123e376c30c6fb9a016d6ebf294/LICENSE",
+          "url": "https://raw.githubusercontent.com/ValveResourceFormat/ValveKeyValue/c7d0dcce45a32123e376c30c6fb9a016d6ebf294/LICENSE",
+          "sha256": "9b7097b8aeaea38ffe59e3e5de30879064332c9477384851e5df300825764958"
+        }
+      ],
+      "error": null
+    }
+  },
+  {
+    "package": "ini-parser-netstandard",
+    "version": "2.5.3",
+    "license": "MIT",
+    "license_type": "expression",
+    "license_url": "https://licenses.nuget.org/MIT",
+    "authors": "Ricardo Amores Hern\u00e1ndez",
+    "copyright": "",
+    "project_url": "https://github.com/rickyah/ini-parser",
+    "repository": {},
+    "nuget_url": "https://www.nuget.org/packages/ini-parser-netstandard/2.5.3",
+    "nupkg_sha256": "67f62dc416afb1118cf7c1cba2a9af233d91e936201339b551daeb0ca7bc1864",
+    "nupkg_sha512": "BoF82eQIcnWeCxHYJhPPh5PhtDIjdhj5tPxVN6TdRG2KTESyfLMdJBbXYGnO/K+/dRcPXnB46+iMjKJcBlZcKg==",
+    "bundled_runtime_files": [
+      "INIFileParser.dll"
+    ],
+    "package_binary_comparison": [
+      {
+        "file": "Runtime/INIFileParser.dll",
+        "nuget_entry": "lib/netstandard2.0/INIFileParser.dll",
+        "matches_nuget": true
+      }
+    ],
+    "package_notice_files": [],
+    "dependencies": {},
+    "reviewed_license_family": "MIT",
+    "upstream_license_evidence": {
+      "package": "ini-parser-netstandard",
+      "version": "2.5.3",
+      "repository": "rickyah/ini-parser",
+      "resolved_ref": "d300241a75bec4dcabc0751c8690f3b12b3eaf43",
+      "ref_is_package_pinned": false,
+      "files": [
+        {
+          "path": "Upstream-License-Evidence/rickyah__ini-parser/d300241a75bec4dcabc0751c8690f3b12b3eaf43/LICENSE",
+          "url": "https://raw.githubusercontent.com/rickyah/ini-parser/d300241a75bec4dcabc0751c8690f3b12b3eaf43/LICENSE",
+          "sha256": "fda26a0d6e53a13085976f4b8758c7e43dc7260c7cb548c1a3999860ec2245fa"
+        }
+      ],
+      "error": null
+    }
+  }
+]

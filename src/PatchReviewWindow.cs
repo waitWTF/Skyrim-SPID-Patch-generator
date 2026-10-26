@@ -11,7 +11,7 @@ public sealed class PatchReviewWindow : Window
         Func<DistributionTargetRule, PluginPatchOptions, int> countConflicts, Func<DistributionTargetRule, int> countInstalledConflicts, string framework, string? outputDirectory = null)
     {
         UiTheme.Apply(this);
-        Title = "Skyrim SPID Patch Generator · Review patch";
+        Title = Loc.T("Skyrim SPID Patch Generator · Review patch");
         Width = 1140; Height = 780; MinWidth = 940; MinHeight = 580;
         MaxHeight = Math.Max(580, SystemParameters.WorkArea.Height);
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
@@ -21,29 +21,29 @@ public sealed class PatchReviewWindow : Window
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition()); root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         var header = new StackPanel { Margin = new Thickness(0, 0, 0, 16) };
-        header.Children.Add(new TextBlock { Text = "03  /  REVIEW", Foreground = UiTheme.Brush("AccentBrush"), FontSize = 12, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 5) });
-        header.Children.Add(new TextBlock { Text = "Ready to generate?", FontSize = 26, FontWeight = FontWeights.SemiBold });
-        header.Children.Add(UiTheme.Caption("Review NPC recipients and trader stock. Select a row to inspect all its details."));
+        header.Children.Add(new TextBlock { Text = Loc.T("03  /  REVIEW"), Foreground = UiTheme.Brush("AccentBrush"), FontSize = 12, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 5) });
+        header.Children.Add(new TextBlock { Text = Loc.T("Ready to generate?"), FontSize = 26, FontWeight = FontWeights.SemiBold });
+        header.Children.Add(UiTheme.Caption(Loc.T("Review NPC recipients and trader stock. Select a row to inspect all its details.")));
         if (!string.IsNullOrWhiteSpace(outputDirectory))
         {
-            header.Children.Add(UiTheme.Caption("Output: " + outputDirectory));
-            header.Children.Add(UiTheme.Caption("Only the listed named outfits are updated. Other outfits are kept. Selected broken rules are rebuilt, and the complete output must validate before a backed-up update is installed."));
+            header.Children.Add(UiTheme.Caption(Loc.T("Output: ") + outputDirectory));
+            header.Children.Add(UiTheme.Caption(Loc.T("Only the listed named outfits are updated. Other outfits are kept. Selected broken rules are rebuilt, and the complete output must validate before a backed-up update is installed.")));
         }
         var stats = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
-        stats.Children.Add(Statistic(configs.Count.ToString(CultureInfo.InvariantCulture), "outfit setups"));
-        stats.Children.Add(Statistic(configs.Select(config => config.Source.Plugin).Distinct(StringComparer.OrdinalIgnoreCase).Count().ToString(CultureInfo.InvariantCulture), "source plugins"));
-        stats.Children.Add(Statistic(configs.Sum(config => config.Pieces.Count(piece => piece.Include)).ToString(CultureInfo.InvariantCulture), "included parts"));
-        stats.Children.Add(Statistic(rows.Count(row => row.HasNotes).ToString(CultureInfo.InvariantCulture), "audiences with notes"));
+        stats.Children.Add(Statistic(configs.Count.ToString(CultureInfo.InvariantCulture),Loc.T("outfit setups")));
+        stats.Children.Add(Statistic(configs.Select(config => config.Source.Plugin).Distinct(StringComparer.OrdinalIgnoreCase).Count().ToString(CultureInfo.InvariantCulture),Loc.T("source plugins")));
+        stats.Children.Add(Statistic(configs.Sum(config => config.Pieces.Count(piece => piece.Include)).ToString(CultureInfo.InvariantCulture),Loc.T("included parts")));
+        stats.Children.Add(Statistic(rows.Count(row => row.HasNotes).ToString(CultureInfo.InvariantCulture),Loc.T("audiences with notes")));
         header.Children.Add(stats); root.Children.Add(header);
 
         var body = new Grid(); body.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1.3, GridUnitType.Star) }); body.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star), MinHeight = 120 });
         var grid = new DataGrid { ItemsSource = rows, AutoGenerateColumns = false, IsReadOnly = true, SelectionMode = DataGridSelectionMode.Single, Margin = new Thickness(0, 0, 0, 12) };
-        grid.Columns.Add(new DataGridTextColumn { Header = "Outfit / plugin", Binding = new Binding(nameof(ReviewRow.Outfit)), Width = new DataGridLength(1.5, DataGridLengthUnitType.Star) });
-        grid.Columns.Add(new DataGridTextColumn { Header = "Parts", Binding = new Binding(nameof(ReviewRow.Pieces)), Width = 66 });
-        grid.Columns.Add(new DataGridTextColumn { Header = "Audience", Binding = new Binding(nameof(ReviewRow.Group)), Width = new DataGridLength(1, DataGridLengthUnitType.Star) });
-        grid.Columns.Add(new DataGridTextColumn { Header = "NPCs", Binding = new Binding(nameof(ReviewRow.Matches)), Width = 70 });
-        grid.Columns.Add(new DataGridTextColumn { Header = "Chance", Binding = new Binding(nameof(ReviewRow.Chance)), Width = 76 });
-        grid.Columns.Add(new DataGridTextColumn { Header = "Review notes", Binding = new Binding(nameof(ReviewRow.Status)), Width = new DataGridLength(1.4, DataGridLengthUnitType.Star) });
+        grid.Columns.Add(new DataGridTextColumn { Header = Loc.T("Outfit / plugin"), Binding = new Binding(nameof(ReviewRow.Outfit)), Width = new DataGridLength(1.5, DataGridLengthUnitType.Star) });
+        grid.Columns.Add(new DataGridTextColumn { Header = Loc.T("Parts"), Binding = new Binding(nameof(ReviewRow.Pieces)), Width = 66 });
+        grid.Columns.Add(new DataGridTextColumn { Header = Loc.T("Audience"), Binding = new Binding(nameof(ReviewRow.Group)), Width = new DataGridLength(1, DataGridLengthUnitType.Star) });
+        grid.Columns.Add(new DataGridTextColumn { Header = Loc.T("NPCs"), Binding = new Binding(nameof(ReviewRow.Matches)), Width = 70 });
+        grid.Columns.Add(new DataGridTextColumn { Header = Loc.T("Chance"), Binding = new Binding(nameof(ReviewRow.Chance)), Width = 76 });
+        grid.Columns.Add(new DataGridTextColumn { Header = Loc.T("Review notes"), Binding = new Binding(nameof(ReviewRow.Status)), Width = new DataGridLength(1.4, DataGridLengthUnitType.Star) });
         var detail = new TextBlock { TextWrapping = TextWrapping.Wrap, Foreground = UiTheme.Brush("MutedBrush"), Margin = new Thickness(0, 4, 0, 0) };
         var detailHeading = new TextBlock { FontSize = 16, FontWeight = FontWeights.SemiBold };
         var detailPanel = new StackPanel(); detailPanel.Children.Add(detailHeading); detailPanel.Children.Add(detail);
@@ -58,16 +58,16 @@ public sealed class PatchReviewWindow : Window
 
         var footer = new Grid { Margin = new Thickness(0, 18, 0, 0) }; footer.ColumnDefinitions.Add(new ColumnDefinition()); footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var notes = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 20, 0) };
-        notes.Children.Add(new TextBlock { Text = (configs.Any(config => config.DistributeToNpcs) ? framework + " NPC outfits" : "Shop stock only · SkyPatcher containers") + " · Merges with your existing patch.", FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap });
-        notes.Children.Add(UiTheme.Caption(configs.Any(config => config.DistributeToNpcs) ? "NPC counts are base-record estimates. Multiple spawned actors may use one record, and the game applies other installed distribution rules too." : "No NPC outfits are assigned by these setups. Shop stock requires SkyPatcher with container patching enabled."));
+        notes.Children.Add(new TextBlock { Text = (configs.Any(config => config.DistributeToNpcs) ? framework + Loc.T(" NPC outfits") : Loc.T("Shop stock only · SkyPatcher containers")) + Loc.T(" · Merges with your existing patch."), FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap });
+        notes.Children.Add(UiTheme.Caption(configs.Any(config => config.DistributeToNpcs) ? Loc.T("NPC counts are base-record estimates. Multiple spawned actors may use one record, and the game applies other installed distribution rules too.") : Loc.T("No NPC outfits are assigned by these setups. Shop stock requires SkyPatcher with container patching enabled.")));
         footer.Children.Add(notes);
         var actions = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-        var back = UiTheme.Button("← Back to setup"); back.IsCancel = true; back.Click += (_, _) => DialogResult = false;
-        var generate = UiTheme.Button("Generate patch", true); generate.IsDefault = true; generate.MinWidth = 140;
+        var back = UiTheme.Button(Loc.T("← Back to setup")); back.IsCancel = true; back.Click += (_, _) => DialogResult = false;
+        var generate = UiTheme.Button(Loc.T("Generate patch"),true); generate.IsDefault = true; generate.MinWidth = 140;
         var poolErrors = WardrobePools.ConfigurationErrors(configs, framework);
         if (poolErrors.Count > 0) notes.Children.Add(UiTheme.Caption(string.Join("\n", poolErrors)));
         generate.IsEnabled = poolErrors.Count == 0 && configs.Count > 0 && rows.Count > 0 && configs.All(config => config.Pieces.Any(piece => piece.Include) && (config.DistributeToNpcs ? config.TargetRules.Count > 0 : config.MerchantCategories.Count > 0)) && rows.All(row => !row.BlocksGeneration);
-        generate.ToolTip = generate.IsEnabled ? "Write the outfit plugin, distribution INI, and patch manifest." : "Return to setup and fix the audiences with no matches or missing parts.";
+        generate.ToolTip = generate.IsEnabled ? Loc.T("Write the outfit plugin, distribution INI, and patch manifest.") : Loc.T("Return to setup and fix the audiences with no matches or missing parts.");
         generate.Click += (_, _) => DialogResult = true;
         actions.Children.Add(back); actions.Children.Add(generate); Grid.SetColumn(actions, 1); footer.Children.Add(actions); Grid.SetRow(footer, 2); root.Children.Add(footer);
         Content = root;

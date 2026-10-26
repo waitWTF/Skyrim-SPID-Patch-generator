@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "approved_for_binary_distribution": false,
+  "reviewed_app_source_commit": "3acde78ee0f0b83f9ec39f58f17517cf3abe1a13",
+  "status": "HOLD: complete corresponding-source delivery and confirm release-specific provenance before creating another binary release.",
+  "remaining": [
+    "Confirm the combined GPL distribution notice and source-delivery method; original MIT grants remain intact.",
+    "Provide corresponding source and build information for bundled GPL components alongside the binary through a GPL-compliant distribution arrangement. A license text and a moving repository URL alone are insufficient.",
+    "Confirm version-specific source/license provenance for packages whose NuGet metadata omits a source commit: K4os packages and ini-parser-netstandard.",
+    "Review subcomponent notices in upstream source trees, including Reloaded.Memory MIT-covered components.",
+    "Run a current dependency advisory check and record the result before release.",
+    "Obtain Nexus staff clearance; do not redirect users around quarantine."
+  ]
+}

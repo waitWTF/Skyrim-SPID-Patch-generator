@@ -1,22 +1,20 @@
-# Skyrim SPID Patch Generator — v0.4.11
+> **v0.4.12 source preview.** The language update is available in source. A new downloadable binary release is on hold pending the existing dependency/source-distribution review. See [third-party notices](THIRD_PARTY_NOTICES.md), [review status](docs/DEPENDENCY_REVIEW.json) and [test results](docs/RELEASE_VERIFICATION_0412.md).
 
-## Download the Windows app
+# Skyrim SPID Patch Generator — v0.4.12 language source preview
 
-### [⬇ Download v0.4.11 for Windows — ZIP containing the EXE](https://github.com/waitWTF/Skyrim-SPID-Patch-generator/releases/download/v0.4.11-preview/Skyrim-SPID-Patch-Generator-v0.4.11-preview-Windows.zip)
+## Language preview — tested 26 October 2026
 
-Extract the **whole ZIP**, then run **SkyrimSPIDPatchGenerator.exe**. Keep **Runtime** and **Documentation** beside it. Requires **.NET 10 Desktop Runtime x64**. This is a development preview.
+The interface can now use the user's Windows display language automatically, with English fallback. Includes English, German, French, Spanish and Simplified Chinese (Mandarin readers), plus a manual selector under **Settings → Interface language**. Select a language and wait for the animated app icon. The interface changes and the preference saves automatically; no Save button or app restart is needed. Your current scan, checked outfits and unsaved settings stay in place.
 
-[Release details and all downloads](https://github.com/waitWTF/Skyrim-SPID-Patch-generator/releases/tag/v0.4.11-preview) · [All versions](https://github.com/waitWTF/Skyrim-SPID-Patch-generator/releases)
+Translations are editable JSON files in `src/Translations` (developer build: `Translations` beside the app; enclosing release layout: `Runtime/Translations`). Read [the translation/contributor guide](docs/TRANSLATING.md). Plugin names, rule identifiers and generated patch syntax remain invariant. Some detailed technical evidence and Windows-provided text remain English or follow Windows itself.
 
-You do not need the right-hand sidebar or GitHub's **Code → Download ZIP** to get the working app. The direct link above downloads the Windows program; **Source.zip** is for contributors.
+This is a source preview. Build it locally using the instructions below; there is no new v0.4.12 Windows ZIP yet. The existing dependency/source-distribution review hold remains in force. Keep a backup when installing a local preview over an earlier version.
 
-A Windows desktop tool for turning installed Skyrim SE/AE outfit mods into NPC outfits and/or trader merchandise, through a guided, scrollable setup.
-
-**Community project, MIT licensed, developed with substantial AI assistance.** Contributions, fixes and forks are welcome: [source code and downloads](https://github.com/waitWTF/Skyrim-SPID-Patch-generator/releases).
+Compile with a .NET 10 SDK using `dotnet build src/WearableDistributor.csproj -c Release`. The executable and companion files are under `src/bin/Release/net10.0-windows/`. The full regression run passed 190 assertions, including 65 localization checks; a separate live WPF workflow run passed 128 assertions. No game/MO2/Vortex compatibility check is claimed for this change. See [verification details and limitations](docs/RELEASE_VERIFICATION_0412.md).
 
 ## Install and start
 
-1. Extract the complete Windows download into a folder outside the game's Data folder. Keep the EXE, Runtime and Documentation folders together.
+1. For this source preview, build locally as described above and keep the EXE and its companion files together. For an existing packaged Windows download, extract the complete folder outside the game's Data folder and keep the EXE, Runtime and Documentation folders together.
 2. Install **Microsoft .NET 10 Desktop Runtime x64** if it is not already installed. Source builds require the .NET 10 SDK.
 3. Start **SkyrimSPIDPatchGenerator.exe**. In MO2, add this top-level EXE as a tool and use its folder as Start in. Launch through MO2 so the active profile's virtual Data is visible. For Vortex, use deployed game Data for the actual loadout.
 4. Review detected paths in Settings. The game Data folder must contain Skyrim.esm. A separate mod-staging or profile folder does not replace the game Data folder.

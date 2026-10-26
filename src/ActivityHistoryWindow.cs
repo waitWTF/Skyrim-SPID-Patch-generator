@@ -27,22 +27,22 @@ public sealed class ActivityHistoryWindow : Window
     private ActivityHistoryWindow()
     {
         UiTheme.Apply(this);
-        Title = "Skyrim SPID Patch Generator · Activity history";
+        Title = Loc.T("Skyrim SPID Patch Generator · Activity history");
         Width = 980; Height = 620; MinWidth = 650; MinHeight = 360;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         var root = new DockPanel { Margin = new Thickness(20) };
         var header = new StackPanel();
-        header.Children.Add(new TextBlock { Text = "Activity history", FontSize = 24, FontWeight = FontWeights.SemiBold });
-        header.Children.Add(UiTheme.Caption("Live activity for this app session · latest 1,000 entries. May show plugin names and local paths. Kept in memory only; never saved, uploaded or included in Error reports."));
+        header.Children.Add(new TextBlock { Text = Loc.T("Activity history"), FontSize = 24, FontWeight = FontWeights.SemiBold });
+        header.Children.Add(UiTheme.Caption(Loc.T("Live activity for this app session · latest 1,000 entries. May show plugin names and local paths. Kept in memory only; never saved, uploaded or included in Error reports.")));
         var tools = new WrapPanel { Margin = new Thickness(0, 10, 0, 12) };
-        var follow = new CheckBox { Content = "Follow latest activity", IsChecked = true, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 18, 0) };
-        var clear = UiTheme.Button("Clear history"); clear.Click += (_, _) => ActivityHistory.Clear();
+        var follow = new CheckBox { Content = Loc.T("Follow latest activity"), IsChecked = true, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 18, 0) };
+        var clear = UiTheme.Button(Loc.T("Clear history")); clear.Click += (_, _) => ActivityHistory.Clear();
         tools.Children.Add(follow); tools.Children.Add(clear); header.Children.Add(tools);
         DockPanel.SetDock(header, Dock.Top); root.Children.Add(header);
         var grid = new DataGrid { ItemsSource = ActivityHistory.Entries, AutoGenerateColumns = false, IsReadOnly = true, SelectionMode = DataGridSelectionMode.Single };
-        grid.Columns.Add(new DataGridTextColumn { Header = "TIME", Binding = new Binding(nameof(ActivityEntry.Time)), Width = 88 });
+        grid.Columns.Add(new DataGridTextColumn { Header = Loc.T("TIME"), Binding = new Binding(nameof(ActivityEntry.Time)), Width = 88 });
         var textStyle = new Style(typeof(TextBlock)); textStyle.Setters.Add(new Setter(TextBlock.TextWrappingProperty, TextWrapping.Wrap));
-        grid.Columns.Add(new DataGridTextColumn { Header = "ACTIVITY", Binding = new Binding(nameof(ActivityEntry.Action)), Width = new DataGridLength(1, DataGridLengthUnitType.Star), ElementStyle = textStyle });
+        grid.Columns.Add(new DataGridTextColumn { Header = Loc.T("ACTIVITY"), Binding = new Binding(nameof(ActivityEntry.Action)), Width = new DataGridLength(1, DataGridLengthUnitType.Star), ElementStyle = textStyle });
         void FollowLatest() { if (follow.IsChecked == true && ActivityHistory.Entries.Count > 0) grid.ScrollIntoView(ActivityHistory.Entries[^1]); }
         NotifyCollectionChangedEventHandler changed = (_, _) => { if (IsLoaded) FollowLatest(); };
         ((INotifyCollectionChanged)ActivityHistory.Entries).CollectionChanged += changed;

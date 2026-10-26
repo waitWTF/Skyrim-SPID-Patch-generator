@@ -43,17 +43,19 @@ public partial class MainWindow : Window
     private IReadOnlyDictionary<string, IReadOnlyList<string>>? requestedRepatchOutfits;
     private bool reuseSavedRepatch;
 
-    public MainWindow()
+    public MainWindow() : this(null) { }
+
+    private MainWindow(MainWindow? previous)
     {
         InitializeComponent();
         Title += " — " + BuildInfo.Label;
         BuildVersionText.Text = BuildInfo.Label;
-        ExperimentalHeaderText.Text = BuildInfo.Label + " · OUTFITS & MERCHANDISE";
+        ExperimentalHeaderText.Text = BuildInfo.Label + Loc.T(" · OUTFITS & MERCHANDISE");
         var statusDescriptor = DependencyPropertyDescriptor.FromProperty(TextBlock.TextProperty, typeof(TextBlock));
         EventHandler statusChanged = (_, _) => ActivityHistory.Add(StatusText.Text);
         statusDescriptor.AddValueChanged(StatusText, statusChanged);
         Closed += (_, _) => statusDescriptor.RemoveValueChanged(StatusText, statusChanged);
-        ActivityHistory.Add("App opened. Activity history is local to this session.");
+        if (previous is null) ActivityHistory.Add("App opened. Activity history is local to this session.");
         UiTheme.Apply(this);
         PluginsGrid.ItemsSource = visiblePlugins;
         PatchInventoryGrid.ItemsSource = inventoryRows;
@@ -66,7 +68,11 @@ public partial class MainWindow : Window
         PluginsGrid.CellEditEnding += (_, _) => Dispatcher.BeginInvoke(new Action(UpdateSelectionSummary));
         PluginsGrid.SelectionChanged += (_, _) => { contextPlugin = null; UpdateSelectionSummary(); };
         Closed += (_, _) => scanCancellation?.Cancel();
-        LoadPreferences();
+        if (previous is null) LoadPreferences();
+        else CopyLanguageSession(previous);
+        LanguageBox.ItemsSource = Loc.LanguagesFor(preferences.Language);
+        LanguageBox.SelectedValue = preferences.Language;
+        if (LanguageBox.SelectedIndex < 0) LanguageBox.SelectedValue = "auto";
         DataPathBox.Text = preferences.DataPath;
         BaseGameDataPathBox.Text = preferences.BaseGameDataPath;
         OutputPathBox.Text = preferences.OutputPath;
@@ -76,9 +82,12 @@ public partial class MainWindow : Window
         IncludeAccessoriesBox.IsChecked = preferences.IncludeAccessories;
         ExclusionsBox.Text = string.Join(Environment.NewLine, preferences.AdditionalExclusions);
         dataPath = preferences.DataPath;
-        ActivePathText.Text = string.IsNullOrWhiteSpace(dataPath) ? "Choose your Skyrim Data or mod staging folder in Settings." : dataPath;
+        ActivePathText.Text = string.IsNullOrWhiteSpace(dataPath) ? Loc.T("Choose your Skyrim Data or mod staging folder in Settings.") : dataPath;
         UpdateSelectionSummary();
-        ContentRendered += StartWorkspace;
+        if (previous is null) ContentRendered += StartWorkspace;
+        else RestoreLanguageWorkspace(previous);
+        LanguageBox.SelectionChanged += LanguageSelectionChanged;
+        Closing += (_, _) => languageWindowClosing = true;
     }
 
     private void StartWorkspace(object? sender, EventArgs e)
@@ -104,20 +113,21 @@ public partial class MainWindow : Window
             App.WriteDiagnostic(DiagnosticEvent.PreferencesLoadFailed, ex);
             preferences = new AppPreferences();
             settingsRecoveryRequired = true;
-            StatusText.Text = "Saved settings could not be read. The original file has been preserved. Import a backup or explicitly save new preferences.";
+            StatusText.Text = Loc.T("Saved settings could not be read. The original file has been preserved. Import a backup or explicitly save new preferences.");
             lastScanReport = $"Settings recovery required: {ex.Message}\nOriginal file: {preferencesFile}";
             ScanDiagnosticsBox.Text = lastScanReport;
         }
     }
 
-    private void SavePreferences()
+    private bool SavePreferences()
     {
-        if (settingsRecoveryRequired) return;
-        try { PreferencesService.Save(preferencesFile, preferences); }
+        if (settingsRecoveryRequired) return false;
+        try { PreferencesService.Save(preferencesFile, preferences); return true; }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             App.WriteDiagnostic(DiagnosticEvent.PreferencesSaveFailed, ex);
-            StatusText.Text = $"The app could not save settings: {ex.Message}";
+            StatusText.Text = Loc.F($"The app could not save settings: {ex.Message}");
+            return false;
         }
     }
 
@@ -154,31 +164,31 @@ public partial class MainWindow : Window
 
     private void BrowseData_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new OpenFolderDialog { Title = "Choose Skyrim Data or Vortex staging folder" };
+        var dialog = new OpenFolderDialog { Title = Loc.T("Choose Skyrim Data or Vortex staging folder") };
         if (dialog.ShowDialog() != true) return;
         DataPathBox.Text = dialog.FolderName;
     }
 
     private void BrowsePluginList_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new OpenFileDialog { Title = "Choose the active profile plugin list", Filter = "Plugin lists (plugins.txt;loadorder.txt)|plugins.txt;loadorder.txt|Text files (*.txt)|*.txt|All files (*.*)|*.*" };
+        var dialog = new OpenFileDialog { Title = Loc.T("Choose the active profile plugin list"), Filter = "Plugin lists (plugins.txt;loadorder.txt)|plugins.txt;loadorder.txt|Text files (*.txt)|*.txt|All files (*.*)|*.*" };
         if (dialog.ShowDialog(this) == true) PluginListPathBox.Text = dialog.FileName;
     }
 
     private void BrowseBaseGameData_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new OpenFolderDialog { Title = "Choose the game Data folder containing Skyrim.esm" };
+        var dialog = new OpenFolderDialog { Title = Loc.T("Choose the game Data folder containing Skyrim.esm") };
         if (dialog.ShowDialog(this) == true) BaseGameDataPathBox.Text = dialog.FolderName;
     }
 
     private void BrowseOutput_Click(object sender, RoutedEventArgs e)
     {
         if (scanCancellation != null || isGenerating || isPreparingSetup || isConfiguring) return;
-        var dialog = new OpenFolderDialog { Title = "Choose your generated mod folder", InitialDirectory = Directory.Exists(preferences.OutputPath) ? preferences.OutputPath : "" };
+        var dialog = new OpenFolderDialog { Title = Loc.T("Choose your generated mod folder"), InitialDirectory = Directory.Exists(preferences.OutputPath) ? preferences.OutputPath : "" };
         if (dialog.ShowDialog(this) != true) return;
         preferences.OutputPath = dialog.FolderName; OutputPathBox.Text = dialog.FolderName;
         SavePreferences(); RefreshInventory();
-        StatusText.Text = "Output folder selected. The patch library now shows generated outfits in this folder.";
+        StatusText.Text = Loc.T("Output folder selected. The patch library now shows generated outfits in this folder.");
     }
 
     private async void FindData_Click(object sender, RoutedEventArgs e)
@@ -187,7 +197,7 @@ public partial class MainWindow : Window
         isDiscoveringLocations = true;
         ScanButton.IsEnabled = false; GenerateButton.IsEnabled = false;
         ActionProgress.Visibility = Visibility.Visible; ActionProgress.IsIndeterminate = true;
-        StatusText.Text = "Finding MO2 instances, game Data and profile plugin visibility…";
+        StatusText.Text = Loc.T("Finding MO2 instances, game Data and profile plugin visibility…");
         ScanLocation? selected = null;
         try
         {
@@ -201,7 +211,7 @@ public partial class MainWindow : Window
             });
             var dialog = new ScanLocationWindow(locations) { Owner = this };
             if (dialog.ShowDialog() == true) selected = dialog.SelectedLocation;
-            if (selected == null) { StatusText.Text = "Folder detection canceled. You can still browse manually in Settings."; return; }
+            if (selected == null) { StatusText.Text = Loc.T("Folder detection canceled. You can still browse manually in Settings."); return; }
             DataPathBox.Text = preferences.DataPath = dataPath = selected.DataPath;
             // Use the game Data as the scan root, never an MO2 mods folder with ambiguous winners.
             BaseGameDataPathBox.Text = preferences.BaseGameDataPath = "";
@@ -213,7 +223,7 @@ public partial class MainWindow : Window
             lastScanReport = "Detected scan location:\n" + selected.Explanation;
             ScanDiagnosticsBox.Text = lastScanReport;
         }
-        catch (Exception ex) { App.WriteDiagnostic(DiagnosticEvent.FolderDiscoveryFailed, ex); StatusText.Text = "Folder detection failed: " + ex.Message + ". Browse manually in Settings."; }
+        catch (Exception ex) { App.WriteDiagnostic(DiagnosticEvent.FolderDiscoveryFailed, ex); StatusText.Text = Loc.T("Folder detection failed: ") + ex.Message + Loc.T(". Browse manually in Settings."); }
         finally
         {
             isDiscoveringLocations = false; ScanButton.IsEnabled = true;
@@ -237,8 +247,8 @@ public partial class MainWindow : Window
         preferences.DefaultChance = ChanceFromIndex(DefaultChanceBox.SelectedIndex);
         preferences.IncludeAccessories = IncludeAccessoriesBox.IsChecked == true;
         preferences.AdditionalExclusions = ExclusionsBox.Text.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
-        SavePreferences();
-        StatusText.Text = "Settings saved.";
+        if (!SavePreferences()) return;
+        StatusText.Text = Loc.T("Settings saved.");
         if (Directory.Exists(dataPath)) ScanFolder();
     }
 
@@ -251,7 +261,7 @@ public partial class MainWindow : Window
         if (!Directory.Exists(dataPath))
         {
             MainTabs.SelectedIndex = 2;
-            StatusText.Text = "Choose a valid Skyrim Data folder in Settings first.";
+            StatusText.Text = Loc.T("Choose a valid Skyrim Data folder in Settings first.");
             return;
         }
         preferences.DataPath = dataPath;
@@ -277,7 +287,7 @@ public partial class MainWindow : Window
             if (!ReferenceEquals(scanCancellation, cancellation)) return;
             ActionProgress.IsIndeterminate = state.Total == 0;
             ActionProgress.Value = state.Percent;
-            StatusText.Text = state.Total > 0 ? $"{state.Stage}… {state.Completed}/{state.Total} · {state.CurrentPlugin}" : state.Stage + "…";
+            StatusText.Text = state.Total > 0 ? Loc.F($"{state.Stage}… {state.Completed}/{state.Total} · {state.CurrentPlugin}") : state.Stage + "…";
         });
         try
         {
@@ -303,19 +313,19 @@ public partial class MainWindow : Window
             activePluginFilterApplied = result.HasProfileLoadOrder;
             lastScanReport = result.CreateReport(); ScanDiagnosticsBox.Text = lastScanReport;
             RefreshInventory(false); RefreshPluginList();
-            StatusText.Text = $"Scan complete: {result.Plugins.Count(item => !item.IsFiltered)} equipment-only candidates · {result.Npcs.Count(npc => npc.CanReceiveWearables)} eligible NPC bases · {result.Plugins.Count(item => item.IsFiltered)} mixed/hidden candidates." +
-                (result.Diagnostics.Any(line => line.StartsWith("Cannot") || line.StartsWith("Missing") || line.StartsWith("Duplicate")) ? " Review scan diagnostics in Settings." : "");
+            StatusText.Text = Loc.F($"Scan complete: {result.Plugins.Count(item => !item.IsFiltered)} equipment-only candidates · {result.Npcs.Count(npc => npc.CanReceiveWearables)} eligible NPC bases · {result.Plugins.Count(item => item.IsFiltered)} mixed/hidden candidates.") +
+                (result.Diagnostics.Any(line => line.StartsWith("Cannot") || line.StartsWith("Missing") || line.StartsWith("Duplicate")) ? Loc.T(" Review scan diagnostics in Settings.") : "");
         }
         catch (OperationCanceledException)
         {
-            StatusText.Text = "Scan canceled. Your previous scan results and patch are preserved.";
+            StatusText.Text = Loc.T("Scan canceled. Your previous scan results and patch are preserved.");
         }
         catch (Exception ex)
         {
             App.WriteDiagnostic(DiagnosticEvent.ScanFailed, ex);
             lastScanReport = $"Scan failed: {ex.Message}\nFolder: {requestedRoot}";
             ScanDiagnosticsBox.Text = lastScanReport;
-            StatusText.Text = $"Scan failed: {ex.Message}. Previous results are preserved.";
+            StatusText.Text = Loc.F($"Scan failed: {ex.Message}. Previous results are preserved.");
         }
         finally
         {
@@ -329,7 +339,7 @@ public partial class MainWindow : Window
     private void CancelScan_Click(object sender, RoutedEventArgs e)
     {
         scanCancellation?.Cancel();
-        StatusText.Text = "Canceling scan after the current plugin finishes…";
+        StatusText.Text = Loc.T("Canceling scan after the current plugin finishes…");
     }
     private void NavigateOutfits_Click(object sender, RoutedEventArgs e) { if (MainTabs != null) MainTabs.SelectedIndex = 0; }
     private void NavigateInventory_Click(object sender, RoutedEventArgs e) { if (MainTabs != null) MainTabs.SelectedIndex = 1; }
@@ -339,12 +349,12 @@ public partial class MainWindow : Window
         if (SelectionCountText == null) return;
         var count = scannedPlugins.Count(IsSelectedForPatch);
         var outsideView = scannedPlugins.Count(plugin => IsSelectedForPatch(plugin) && !visiblePlugins.Contains(plugin));
-        SelectionCountText.Text = $"{count} outfit{(count == 1 ? "" : "s")} checked" + (outsideView > 0 ? $" · {outsideView} outside this view" : "");
-        GenerateButton.Content = $"Configure checked ({count}) →";
-        GenerateButton.ToolTip = $"Open exactly {count} checked outfit plugin(s). Searching does not clear checks." +
-            (outsideView > 0 ? $" {outsideView} checked plugin(s) are outside the current search/tab." : "") +
-            " To open one outfit regardless of other checks, right-click its row → Configure this outfit.";
-        if (ActionTargetsText is not null) ActionTargetsText.Text = $"{GetActionTargets().Count} visible action targets";
+        SelectionCountText.Text = (count == 1 ? Loc.F($"{count} outfit checked") : Loc.F($"{count} outfits checked")) + (outsideView > 0 ? Loc.F($" · {outsideView} outside this view") : "");
+        GenerateButton.Content = Loc.F($"Configure checked ({count}) →");
+        GenerateButton.ToolTip = Loc.F($"Open exactly {count} checked outfit plugin(s). Searching does not clear checks.") +
+            (outsideView > 0 ? Loc.F($" {outsideView} checked plugin(s) are outside the current search/tab.") : "") +
+            Loc.T(" To open one outfit regardless of other checks, right-click its row → Configure this outfit.");
+        if (ActionTargetsText is not null) ActionTargetsText.Text = Loc.F($"{GetActionTargets().Count} visible action targets");
         GenerateButton.IsEnabled = scanCancellation == null && !isGenerating && !isPreparingSetup && !isConfiguring && !isDiscoveringLocations && count > 0;
     }
     private bool IsSelectedForPatch(PluginEntry plugin) => plugin.Selected && plugin.CanPatch && (editingPatchedOutfit ||
@@ -411,8 +421,8 @@ public partial class MainWindow : Window
     }
     private void RecordListAction(string action, IReadOnlyCollection<PluginEntry> targets)
     {
-        StatusText.Text = targets.Count == 0 ? "No matching action targets. Check a row or highlight it, then try again." :
-            $"{action} {targets.Count} outfit plugin(s): " + string.Join(", ", targets.Take(15).Select(plugin => plugin.Plugin)) + (targets.Count > 15 ? ", …" : "");
+        StatusText.Text = targets.Count == 0 ? Loc.T("No matching action targets. Check a row or highlight it, then try again.") :
+            Loc.F($"{action} {targets.Count} outfit plugin(s): ") + string.Join(", ", targets.Take(15).Select(plugin => plugin.Plugin)) + (targets.Count > 15 ? ", …" : "");
     }
 
     private void RefreshPluginList(object? sender = null, RoutedEventArgs? e = null)
@@ -436,12 +446,12 @@ public partial class MainWindow : Window
         foreach (var plugin in all.Where(item => view == 2 ? item.HasGeneratedPatch : view == 1 ? !Included(item) : item.SourceDetected && Included(item))
                      .Where(item => string.IsNullOrWhiteSpace(query) || item.Plugin.Contains(query, StringComparison.OrdinalIgnoreCase))
                      .OrderBy(item => item.Plugin, StringComparer.OrdinalIgnoreCase)) visiblePlugins.Add(plugin);
-        EquipmentViewTab.Header = $"Armor & clothing ({all.Count(item => item.SourceDetected && Included(item))})";
-        MixedViewTab.Header = $"Mixed / hidden ({all.Count(item => !Included(item))})";
-        PatchedViewTab.Header = $"Already patched ({all.Count(item => item.HasGeneratedPatch)})";
-        LibraryViewHint.Text = view == 2 ? "Source mods confirmed in discovered generated ESPs. The note shows each patch location; activation in a profile is not established." :
-            view == 1 ? "Mixed-content or manually hidden plugins. Use Enable selected / Unhide selected to include them; official Skyrim/DLC/Creation Club files are never selectable." :
-            "Armor/clothing plugins, their equipment support records and any bundled weapons. Already patched outfits remain visible here. Mixed mods you explicitly include also appear here.";
+        EquipmentViewTab.Header = Loc.F($"Armor & clothing ({all.Count(item => item.SourceDetected && Included(item))})");
+        MixedViewTab.Header = Loc.F($"Mixed / hidden ({all.Count(item => !Included(item))})");
+        PatchedViewTab.Header = Loc.F($"Already patched ({all.Count(item => item.HasGeneratedPatch)})");
+        LibraryViewHint.Text = view == 2 ? Loc.T("Source mods confirmed in discovered generated ESPs. The note shows each patch location; activation in a profile is not established.") :
+            view == 1 ? Loc.T("Mixed-content or manually hidden plugins. Use Enable selected / Unhide selected to include them; official Skyrim/DLC/Creation Club files are never selectable.") :
+            Loc.T("Armor/clothing plugins, their equipment support records and any bundled weapons. Already patched outfits remain visible here. Mixed mods you explicitly include also appear here.");
         UpdateSelectionSummary();
     }
 
@@ -560,7 +570,7 @@ public partial class MainWindow : Window
             loading.Show();
             // No WPF controls are created on the worker. Later outfits reuse these scan-owned lists.
             audiencePreparation = await Task.Run(() => new AudiencePreparation(keywords, population, progress));
-            StatusText.Text = "Audience lists ready · cached until the next successful scan.";
+            StatusText.Text = Loc.T("Audience lists ready · cached until the next successful scan.");
         }
         finally
         {
@@ -581,7 +591,7 @@ public partial class MainWindow : Window
     private async Task ConfigureAndGenerateAsync(List<PluginEntry> selected)
     {
         if (scanCancellation != null || isGenerating || isPreparingSetup || isConfiguring || isDiscoveringLocations) return;
-        if (selected.Count == 0) { StatusText.Text = "Tick outfit boxes for a batch, or right-click an available outfit → Configure this outfit."; return; }
+        if (selected.Count == 0) { StatusText.Text = Loc.T("Tick outfit boxes for a batch, or right-click an available outfit → Configure this outfit."); return; }
         isConfiguring = true;
         UpdateSelectionSummary();
         ActivityHistory.Add("Configuring only: " + string.Join(", ", selected.Select(plugin => plugin.Plugin)));
@@ -626,15 +636,15 @@ public partial class MainWindow : Window
             if (usingSavedSetup) dialog.Close();
             if (!usingSavedSetup && dialog.ShowDialog() != true)
             {
-                if (dialog.Options.Count == 0) StatusText.Text = "All outfits skipped. Your existing patch has not been changed.";
-                else StatusText.Text = $"Saved setup for {selected.Count} outfit plugin(s). Reopen Configure and choose Review & generate to build the patch.";
+                if (dialog.Options.Count == 0) StatusText.Text = Loc.T("All outfits skipped. Your existing patch has not been changed.");
+                else StatusText.Text = Loc.F($"Saved setup for {selected.Count} outfit plugin(s). Reopen Configure and choose Review & generate to build the patch.");
                 return;
             }
             if (string.IsNullOrWhiteSpace(outputDirectory))
             {
                 var outputPicker = new OpenFolderDialog
                 {
-                    Title = "Choose the output folder for your generated mod",
+                    Title = Loc.T("Choose the output folder for your generated mod"),
                     InitialDirectory = Directory.Exists(preferences.OutputPath) ? preferences.OutputPath : dataPath
                 };
                 if (outputPicker.ShowDialog(this) != true) return;
@@ -652,12 +662,12 @@ public partial class MainWindow : Window
         catch (Exception failure)
         {
             App.WriteDiagnostic(DiagnosticEvent.PatchSetupFailed, failure);
-            MessageBox.Show(this, "Patch setup could not be completed. Your existing patch was not changed.\n\n" + failure.Message +
-                "\n\nUse Error reports → Save report to share technical details (APP-1418).", "Patch setup failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(this,Loc.T("Patch setup could not be completed. Your existing patch was not changed.\n\n") + failure.Message +
+                Loc.T("\n\nUse Error reports → Save report to share technical details (APP-1418)."),Loc.T("Patch setup failed"),MessageBoxButton.OK,MessageBoxImage.Error);
             return;
         }
         if (Path.GetFullPath(outputDirectory).TrimEnd(Path.DirectorySeparatorChar).Equals(Path.GetFullPath(dataPath).TrimEnd(Path.DirectorySeparatorChar), StringComparison.OrdinalIgnoreCase) && File.Exists(Path.Combine(outputDirectory, "Skyrim.esm")) &&
-            MessageBox.Show(this, "This is Skyrim's Data folder. A separate Vortex staging mod folder or MO2 mod folder is safer: direct writes may be tracked as external changes by Vortex. Continue writing here?", "Output directly in Skyrim Data", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            MessageBox.Show(this,Loc.T("This is Skyrim's Data folder. A separate Vortex staging mod folder or MO2 mod folder is safer: direct writes may be tracked as external changes by Vortex. Continue writing here?"),Loc.T("Output directly in Skyrim Data"),MessageBoxButton.YesNo,MessageBoxImage.Warning) != MessageBoxResult.Yes)
             return;
 
         try
@@ -669,14 +679,14 @@ public partial class MainWindow : Window
             SavePreferences();
             ActionProgress.Visibility = Visibility.Visible;
             ActionProgress.IsIndeterminate = true;
-            StatusText.Text = $"Generating {framework} outfit records and NPC distributions…";
+            StatusText.Text = Loc.F($"Generating {framework} outfit records and NPC distributions…");
             var generationProgress = new Progress<string>(message => StatusText.Text = message);
             var result = await Task.Run(() => PatchGenerator.Generate(dialog.Options, outputDirectory, framework, dialog.SkippedOptions, generationProgress));
             preferences.BackupOutputPath = outputDirectory;
             SavePreferences();
             ActionProgress.IsIndeterminate = false;
             ActionProgress.Visibility = Visibility.Collapsed;
-            StatusText.Text = $"Updated {result.UpdatedOutfitCount} outfit(s), kept {result.PreservedOutfitCount} unchanged · {result.DistributionCount} NPC rule(s) · {result.MerchantDistributionCount} shop-stock rule(s) in the complete patch.";
+            StatusText.Text = Loc.F($"Updated {result.UpdatedOutfitCount} outfit(s), kept {result.PreservedOutfitCount} unchanged · {result.DistributionCount} NPC rule(s) · {result.MerchantDistributionCount} shop-stock rule(s) in the complete patch.");
             RefreshInventory();
             MainTabs.SelectedIndex = 1;
             var runtimeNote = !dialog.Options.Any(config => config.DistributeToNpcs) && result.DistributionCount == 0
@@ -688,15 +698,15 @@ public partial class MainWindow : Window
             var masters = result.Masters.Count > 0 ? $"\n\nRequired source plugins: {string.Join(", ", result.Masters)}" : "";
             var distributionDetails = result.DistributionCount == 0 ? "NPC assignment: none (shop-stock output)." : "NPC rules: " + result.DistributionPath;
             if (result.MerchantDistributionPath is not null) distributionDetails += "\nShop-stock rules: " + result.MerchantDistributionPath;
-            MessageBox.Show($"Patch generated and validated.\n\nPlugin: {result.PluginPath}\n{distributionDetails}{masters}\n\n{runtimeNote}\n\nFor Mod Organizer 2, install the selected output folder as a mod and enable it in the profile.", "Patch ready", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(Loc.F($"Patch generated and validated.\n\nPlugin: {result.PluginPath}\n{distributionDetails}{masters}\n\n{runtimeNote}\n\nFor Mod Organizer 2, install the selected output folder as a mod and enable it in the profile."),Loc.T("Patch ready"),MessageBoxButton.OK,MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
             App.WriteDiagnostic(DiagnosticEvent.PatchGenerationFailed, ex);
             ActionProgress.IsIndeterminate = false;
             ActionProgress.Visibility = Visibility.Collapsed;
-            StatusText.Text = "Patch generation failed; no validated patch was produced.";
-            MessageBox.Show($"Patch generation failed: {ex.Message}\n\nError APP-1400 was recorded. Use Error reports → Save report to send technical details without personal paths or mod lists.", "Patch generation failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            StatusText.Text = Loc.T("Patch generation failed; no validated patch was produced.");
+            MessageBox.Show(Loc.F($"Patch generation failed: {ex.Message}\n\nError APP-1400 was recorded. Use Error reports → Save report to send technical details without personal paths or mod lists."),Loc.T("Patch generation failed"),MessageBoxButton.OK,MessageBoxImage.Error);
         }
         finally { isGenerating = false; ScanButton.IsEnabled = true; UpdateSelectionSummary(); }
     }
@@ -733,12 +743,13 @@ public partial class MainWindow : Window
     private async void RefreshInventory(bool rediscover = true)
     {
         var refresh = ++inventoryRefreshVersion;
-        ScanSummaryText.Text = "Reading generated patch files across detected mod locations…";
+        ScanSummaryText.Text = Loc.T("Reading generated patch files across detected mod locations…");
         var roots = (rediscover ? patchSearchRoots.Append(dataPath) : discoveredPatchFiles).Concat(preferences.PatchSearchFiles).Append(preferences.OutputPath).Where(path => !string.IsNullOrWhiteSpace(path)).ToArray();
         var snapshot = PreferencesService.Clone(preferences);
         var scannedSnapshot = scannedPlugins.ToList();
         var ownProgress = scanCancellation is null && !isGenerating && !isPreparingSetup && !isDiscoveringLocations;
         if (ownProgress) { ActionProgress.Visibility = Visibility.Visible; ActionProgress.IsIndeterminate = true; }
+        activeInventoryReads++;
         try
         {
             var detected = await Task.Run(() => DetectedPatchReader.Read(PatchFileDiscovery.Find(rediscover ? roots.Concat(ScanLocationDiscovery.FindVortexStagingRoots(snapshot)) : roots), scannedSnapshot));
@@ -777,18 +788,21 @@ public partial class MainWindow : Window
             }
             PluginsGrid.Items.Refresh();
             var patchedCount = bySource.Count(pair => pair.Value.Any(item => item.PresentInPlugin) && !WearableFilterService.IsOfficialContent(pair.Key));
-            ScanSummaryText.Text = $"{scannedPlugins.Count} source plugin candidates · {patchedCount} source mods found in generated ESPs · {detected.Select(item => item.PatchPlugin).Distinct(StringComparer.OrdinalIgnoreCase).Count()} detected patch files";
-            InventoryDetailsBox.Text = detected.Count == 0 ? "No generated patch contents found in the scanned mod locations. Use Find patch files to add an ESP, _DISTR.ini or .patch.json from another profile/mod folder. The output destination does not control this list." :
-                "Select an entry to see its actual generated patch file and source equipment. The overview combines files from discovered mod locations and manually added patch files. Multiple profiles can contain the same source outfit; activation is not established.";
+            languagePatchedSourceCount = patchedCount;
+            languagePatchFileCount = detected.Select(item => item.PatchPlugin).Distinct(StringComparer.OrdinalIgnoreCase).Count();
+            RenderLanguageScanSummary();
+            InventoryDetailsBox.Text = detected.Count == 0 ? Loc.T("No generated patch contents found in the scanned mod locations. Use Find patch files to add an ESP, _DISTR.ini or .patch.json from another profile/mod folder. The output destination does not control this list.") :
+                Loc.T("Select an entry to see its actual generated patch file and source equipment. The overview combines files from discovered mod locations and manually added patch files. Multiple profiles can contain the same source outfit; activation is not established.");
             RefreshPluginList();
         }
         catch (Exception failure)
         {
             App.WriteDiagnostic(DiagnosticEvent.PatchLibraryReadFailed, failure);
-            if (refresh == inventoryRefreshVersion) InventoryDetailsBox.Text = "Patch discovery could not finish. Existing files were preserved. Use Error reports for technical details or Find patch files to inspect a specific output.";
+            if (refresh == inventoryRefreshVersion) InventoryDetailsBox.Text = Loc.T("Patch discovery could not finish. Existing files were preserved. Use Error reports for technical details or Find patch files to inspect a specific output.");
         }
         finally
         {
+            activeInventoryReads--;
             if (ownProgress && refresh == inventoryRefreshVersion && scanCancellation is null && !isGenerating && !isPreparingSetup && !isDiscoveringLocations)
             { ActionProgress.IsIndeterminate = false; ActionProgress.Visibility = Visibility.Collapsed; }
         }
@@ -796,7 +810,7 @@ public partial class MainWindow : Window
 
     private void FindPatchFiles_Click(object sender, RoutedEventArgs e)
     {
-        var picker = new OpenFileDialog { Title = "Select generated patch files from any profile/mod folder", Multiselect = true,
+        var picker = new OpenFileDialog { Title = Loc.T("Select generated patch files from any profile/mod folder"), Multiselect = true,
             Filter = "Generated patch files (*.esp;*_DISTR.ini;*.patch.json)|*.esp;*_DISTR.ini;*.patch.json" };
         if (picker.ShowDialog(this) != true) return;
         foreach (var file in picker.FileNames.Where(DetectedPatchReader.IsGeneratedFile)) preferences.PatchSearchFiles.Add(file);
@@ -808,7 +822,7 @@ public partial class MainWindow : Window
         if (PatchInventoryGrid.SelectedItem is not PatchInventoryRow row) return true;
         if (!row.CanManage)
         {
-            MessageBox.Show(this, "This experimental or recovered patch can be inspected, but cannot be edited safely by this release. Choose a managed release patch or generate into a new output folder.", "Read-only patch", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(this,Loc.T("This experimental or recovered patch can be inspected, but cannot be edited safely by this release. Choose a managed release patch or generate into a new output folder."),Loc.T("Read-only patch"),MessageBoxButton.OK,MessageBoxImage.Information);
             return false;
         }
         if (!preferences.OutputPath.Equals(row.OutputDirectory, StringComparison.OrdinalIgnoreCase))
@@ -824,19 +838,19 @@ public partial class MainWindow : Window
     private void OpenOutput_Click(object sender, RoutedEventArgs e)
     {
         var path = (PatchInventoryGrid.SelectedItem as PatchInventoryRow)?.OutputDirectory ?? preferences.OutputPath;
-        if (!Directory.Exists(path)) { MessageBox.Show(this, "Choose an output folder by generating a patch first.", "Output folder not set", MessageBoxButton.OK, MessageBoxImage.Information); return; }
+        if (!Directory.Exists(path)) { MessageBox.Show(this,Loc.T("Choose an output folder by generating a patch first."),Loc.T("Output folder not set"),MessageBoxButton.OK,MessageBoxImage.Information); return; }
         try { Process.Start(new ProcessStartInfo(path) { UseShellExecute = true }); }
-        catch (Exception ex) { App.WriteDiagnostic(DiagnosticEvent.OutputFolderOpenFailed, ex); MessageBox.Show(this, ex.Message, "Could not open output folder", MessageBoxButton.OK, MessageBoxImage.Error); }
+        catch (Exception ex) { App.WriteDiagnostic(DiagnosticEvent.OutputFolderOpenFailed, ex); MessageBox.Show(this,ex.Message,Loc.T("Could not open output folder"),MessageBoxButton.OK,MessageBoxImage.Error); }
     }
 
     private async void EditInventoryEntry_Click(object sender, RoutedEventArgs e)
     {
         if (!UseSelectedManagedLibrary()) return;
-        if (PatchInventoryGrid.SelectedItem is not PatchInventoryRow row) { MessageBox.Show(this, "Select a generated outfit first.", "No outfit selected", MessageBoxButton.OK, MessageBoxImage.Information); return; }
+        if (PatchInventoryGrid.SelectedItem is not PatchInventoryRow row) { MessageBox.Show(this,Loc.T("Select a generated outfit first."),Loc.T("No outfit selected"),MessageBoxButton.OK,MessageBoxImage.Information); return; }
         var plugin = scannedPlugins.FirstOrDefault(item => item.Plugin.Equals(row.Entry.SourcePlugin, StringComparison.OrdinalIgnoreCase));
         if (plugin is null)
         {
-            MessageBox.Show(this, "That source plugin is not in the current scan. Check the scan folder and optional active profile plugin list, then scan again.", "Source plugin not found", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(this,Loc.T("That source plugin is not in the current scan. Check the scan folder and optional active profile plugin list, then scan again."),Loc.T("Source plugin not found"),MessageBoxButton.OK,MessageBoxImage.Information);
             return;
         }
         foreach (var item in scannedPlugins) item.Selected = ReferenceEquals(item, plugin);
@@ -853,14 +867,14 @@ public partial class MainWindow : Window
     {
         if (!UseSelectedManagedLibrary()) return;
         if (scanCancellation != null || isGenerating || isPreparingSetup || isConfiguring) return;
-        if (inventoryRows.Count == 0) { StatusText.Text = "Choose an existing patch folder in Settings first."; return; }
+        if (inventoryRows.Count == 0) { StatusText.Text = Loc.T("Choose an existing patch folder in Settings first."); return; }
         var entries = inventoryRows.Where(row => row.CanManage && row.OutputDirectory.Equals(preferences.OutputPath, StringComparison.OrdinalIgnoreCase)).Select(row => row.Entry).ToList();
-        if (entries.Count == 0) { StatusText.Text = "Select an editable managed patch entry first."; return; }
+        if (entries.Count == 0) { StatusText.Text = Loc.T("Select an editable managed patch entry first."); return; }
         var sources = entries.Select(entry => entry.SourcePlugin).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var missing = sources.Where(source => !scannedPlugins.Any(plugin => plugin.CanPatch && plugin.Plugin.Equals(source, StringComparison.OrdinalIgnoreCase))).ToList();
         if (missing.Count > 0)
         {
-            MessageBox.Show(this, "Scan the correct profile and restore these source plugins before repatching everything:\n\n" + string.Join("\n", missing), "Source plugins unavailable", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(this,Loc.T("Scan the correct profile and restore these source plugins before repatching everything:\n\n") + string.Join("\n", missing),Loc.T("Source plugins unavailable"),MessageBoxButton.OK,MessageBoxImage.Information);
             return;
         }
         foreach (var plugin in scannedPlugins) plugin.Selected = sources.Contains(plugin.Plugin);
@@ -875,49 +889,49 @@ public partial class MainWindow : Window
     private void RemoveInventoryEntry_Click(object sender, RoutedEventArgs e)
     {
         if (!UseSelectedManagedLibrary()) return;
-        if (PatchInventoryGrid.SelectedItem is not PatchInventoryRow row) { MessageBox.Show(this, "Select a generated outfit first.", "No outfit selected", MessageBoxButton.OK, MessageBoxImage.Information); return; }
-        if (string.IsNullOrWhiteSpace(row.Entry.OutfitEditorId)) { MessageBox.Show(this, "This is a legacy patch without an inventory record. It can be inspected, but cannot be safely removed by source plugin.", "Legacy patch", MessageBoxButton.OK, MessageBoxImage.Information); return; }
-        if (MessageBox.Show(this, $"Remove {row.SourcePlugin} from the generated patch? A backup will be saved first.", "Remove generated outfit", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
-        try { PatchInventoryService.Remove(preferences.OutputPath, row.Entry); RefreshInventory(); StatusText.Text = $"Removed {row.SourcePlugin} from the generated patch."; }
-        catch (Exception ex) { App.WriteDiagnostic(DiagnosticEvent.PatchRemoveFailed, ex); MessageBox.Show(this, ex.Message, "Could not remove outfit", MessageBoxButton.OK, MessageBoxImage.Error); }
+        if (PatchInventoryGrid.SelectedItem is not PatchInventoryRow row) { MessageBox.Show(this,Loc.T("Select a generated outfit first."),Loc.T("No outfit selected"),MessageBoxButton.OK,MessageBoxImage.Information); return; }
+        if (string.IsNullOrWhiteSpace(row.Entry.OutfitEditorId)) { MessageBox.Show(this,Loc.T("This is a legacy patch without an inventory record. It can be inspected, but cannot be safely removed by source plugin."),Loc.T("Legacy patch"),MessageBoxButton.OK,MessageBoxImage.Information); return; }
+        if (MessageBox.Show(this,Loc.F($"Remove {row.SourcePlugin} from the generated patch? A backup will be saved first."),Loc.T("Remove generated outfit"),MessageBoxButton.YesNo,MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        try { PatchInventoryService.Remove(preferences.OutputPath, row.Entry); RefreshInventory(); StatusText.Text = Loc.F($"Removed {row.SourcePlugin} from the generated patch."); }
+        catch (Exception ex) { App.WriteDiagnostic(DiagnosticEvent.PatchRemoveFailed, ex); MessageBox.Show(this,ex.Message,Loc.T("Could not remove outfit"),MessageBoxButton.OK,MessageBoxImage.Error); }
     }
 
     private void RestoreBackup_Click(object sender, RoutedEventArgs e)
     {
         if (!UseSelectedManagedLibrary()) return;
-        if (string.IsNullOrWhiteSpace(preferences.OutputPath)) { MessageBox.Show(this, "No output folder has been selected yet.", "Backup unavailable", MessageBoxButton.OK, MessageBoxImage.Information); return; }
-        if (MessageBox.Show(this, "Restore the most recent saved patch files for this output folder? Current files will be replaced.", "Restore previous patch", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
-        try { PatchInventoryService.RestoreLastBackup(preferences.OutputPath); RefreshInventory(); StatusText.Text = "Previous generated patch restored from backup."; }
-        catch (Exception ex) { App.WriteDiagnostic(DiagnosticEvent.PatchRestoreFailed, ex); MessageBox.Show(this, ex.Message, "Could not restore backup", MessageBoxButton.OK, MessageBoxImage.Error); }
+        if (string.IsNullOrWhiteSpace(preferences.OutputPath)) { MessageBox.Show(this,Loc.T("No output folder has been selected yet."),Loc.T("Backup unavailable"),MessageBoxButton.OK,MessageBoxImage.Information); return; }
+        if (MessageBox.Show(this,Loc.T("Restore the most recent saved patch files for this output folder? Current files will be replaced."),Loc.T("Restore previous patch"),MessageBoxButton.YesNo,MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        try { PatchInventoryService.RestoreLastBackup(preferences.OutputPath); RefreshInventory(); StatusText.Text = Loc.T("Previous generated patch restored from backup."); }
+        catch (Exception ex) { App.WriteDiagnostic(DiagnosticEvent.PatchRestoreFailed, ex); MessageBox.Show(this,ex.Message,Loc.T("Could not restore backup"),MessageBoxButton.OK,MessageBoxImage.Error); }
     }
 
     private void ExportReport_Click(object sender, RoutedEventArgs e)
     {
         if (!UseSelectedManagedLibrary()) return;
-        if (string.IsNullOrWhiteSpace(preferences.OutputPath)) { MessageBox.Show(this, "Generate a patch first.", "Nothing to export", MessageBoxButton.OK, MessageBoxImage.Information); return; }
+        if (string.IsNullOrWhiteSpace(preferences.OutputPath)) { MessageBox.Show(this,Loc.T("Generate a patch first."),Loc.T("Nothing to export"),MessageBoxButton.OK,MessageBoxImage.Information); return; }
         var dialog = new SaveFileDialog { Filter = "JSON report (*.json)|*.json", FileName = "SkyrimSPIDPatchGenerator-patch-report.json" };
         if (dialog.ShowDialog(this) != true) return;
-        try { PatchInventoryService.ExportReport(preferences.OutputPath, dialog.FileName); StatusText.Text = "Patch report exported."; }
-        catch (Exception ex) { App.WriteDiagnostic(DiagnosticEvent.PatchReportExportFailed, ex); MessageBox.Show(this, ex.Message, "Export failed", MessageBoxButton.OK, MessageBoxImage.Error); }
+        try { PatchInventoryService.ExportReport(preferences.OutputPath, dialog.FileName); StatusText.Text = Loc.T("Patch report exported."); }
+        catch (Exception ex) { App.WriteDiagnostic(DiagnosticEvent.PatchReportExportFailed, ex); MessageBox.Show(this,ex.Message,Loc.T("Export failed"),MessageBoxButton.OK,MessageBoxImage.Error); }
     }
 
     private async void ExportModArchive_Click(object sender, RoutedEventArgs e)
     {
         if (!UseSelectedManagedLibrary()) return;
         if (scanCancellation != null || isGenerating || isPreparingSetup || isConfiguring) return;
-        if (!Directory.Exists(preferences.OutputPath)) { MessageBox.Show(this, "Choose a generated mod folder in Settings first.", "Output folder missing", MessageBoxButton.OK, MessageBoxImage.Information); return; }
+        if (!Directory.Exists(preferences.OutputPath)) { MessageBox.Show(this,Loc.T("Choose a generated mod folder in Settings first."),Loc.T("Output folder missing"),MessageBoxButton.OK,MessageBoxImage.Information); return; }
         var dialog = new SaveFileDialog { Filter = "Installable mod (*.zip)|*.zip", FileName = "SkyrimSPIDPatchGenerator-Generated-Mod.zip" };
         if (dialog.ShowDialog(this) != true) return;
         try
         {
             isGenerating = true; ScanButton.IsEnabled = false; GenerateButton.IsEnabled = false;
             ActionProgress.Visibility = Visibility.Visible; ActionProgress.IsIndeterminate = true;
-            StatusText.Text = "Validating and packaging your generated mod…";
+            StatusText.Text = Loc.T("Validating and packaging your generated mod…");
             var folder = preferences.OutputPath;
             await Task.Run(() => PatchPackageService.Export(folder, dialog.FileName));
-            StatusText.Text = "Installable mod ZIP ready. Install it through Vortex or MO2, enable the mod and its plugin, then deploy if using Vortex.";
+            StatusText.Text = Loc.T("Installable mod ZIP ready. Install it through Vortex or MO2, enable the mod and its plugin, then deploy if using Vortex.");
         }
-        catch (Exception ex) { App.WriteDiagnostic(DiagnosticEvent.PatchPackageFailed, ex); MessageBox.Show(this, ex.Message, "Could not package mod", MessageBoxButton.OK, MessageBoxImage.Error); StatusText.Text = "Mod packaging failed; your generated patch is unchanged."; }
+        catch (Exception ex) { App.WriteDiagnostic(DiagnosticEvent.PatchPackageFailed, ex); MessageBox.Show(this,ex.Message,Loc.T("Could not package mod"),MessageBoxButton.OK,MessageBoxImage.Error); StatusText.Text = Loc.T("Mod packaging failed; your generated patch is unchanged."); }
         finally { isGenerating = false; ScanButton.IsEnabled = true; ActionProgress.IsIndeterminate = false; ActionProgress.Visibility = Visibility.Collapsed; UpdateSelectionSummary(); }
     }
 
@@ -925,8 +939,8 @@ public partial class MainWindow : Window
     {
         var dialog = new SaveFileDialog { Filter = "Skyrim SPID Patch Generator settings (*.json)|*.json", FileName = "SkyrimSPIDPatchGenerator-settings.json" };
         if (dialog.ShowDialog(this) != true) return;
-        try { PreferencesService.Save(dialog.FileName, PreferencesService.Clone(preferences)); StatusText.Text = "Preferences and reusable presets exported."; }
-        catch (Exception ex) { App.WriteDiagnostic(DiagnosticEvent.PreferencesExportFailed, ex); MessageBox.Show(this, ex.Message, "Export failed", MessageBoxButton.OK, MessageBoxImage.Error); }
+        try { PreferencesService.Save(dialog.FileName, PreferencesService.Clone(preferences)); StatusText.Text = Loc.T("Preferences and reusable presets exported."); }
+        catch (Exception ex) { App.WriteDiagnostic(DiagnosticEvent.PreferencesExportFailed, ex); MessageBox.Show(this,ex.Message,Loc.T("Export failed"),MessageBoxButton.OK,MessageBoxImage.Error); }
     }
 
     private void ImportPreferences_Click(object sender, RoutedEventArgs e)
@@ -937,6 +951,14 @@ public partial class MainWindow : Window
         try
         {
             preferences = PreferencesService.Load(dialog.FileName);
+            suppressLanguageSelection = true;
+            try
+            {
+                LanguageBox.ItemsSource = Loc.LanguagesFor(preferences.Language);
+                LanguageBox.SelectedValue = preferences.Language;
+                if (LanguageBox.SelectedIndex < 0) LanguageBox.SelectedValue = "auto";
+            }
+            finally { suppressLanguageSelection = false; }
             settingsRecoveryRequired = false;
             DataPathBox.Text = preferences.DataPath; dataPath = preferences.DataPath;
             BaseGameDataPathBox.Text = preferences.BaseGameDataPath;
@@ -948,9 +970,10 @@ public partial class MainWindow : Window
             ExclusionsBox.Text = string.Join(Environment.NewLine, preferences.AdditionalExclusions ?? []);
             SavePreferences(); RefreshInventory();
             if (Directory.Exists(dataPath)) ScanFolder();
-            StatusText.Text = "Preferences and reusable presets imported.";
+            StatusText.Text = Loc.T("Preferences and reusable presets imported.");
+            if (preferences.Language != Loc.Preference) QueueLanguageChange(preferences.Language);
         }
-        catch (Exception ex) { App.WriteDiagnostic(DiagnosticEvent.PreferencesImportFailed, ex); MessageBox.Show(this, ex.Message, "Import failed", MessageBoxButton.OK, MessageBoxImage.Error); }
+        catch (Exception ex) { App.WriteDiagnostic(DiagnosticEvent.PreferencesImportFailed, ex); MessageBox.Show(this,ex.Message,Loc.T("Import failed"),MessageBoxButton.OK,MessageBoxImage.Error); }
     }
 
     private static int ChanceIndex(string value) => value switch { "100" => 0, "80" => 1, "50" => 2, "25" => 3, "10" => 4, "5" => 5, _ => 3 };

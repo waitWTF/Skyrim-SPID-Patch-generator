@@ -16,6 +16,7 @@ public static class PreferencesService
 
     public static AppPreferences Normalize(AppPreferences value)
     {
+        value.Language = Loc.NormalizePreference(value.Language);
         if (value.SchemaVersion > 7) throw new InvalidDataException("These settings were created by a newer app. Update Skyrim SPID Patch Generator before importing them.");
         value.SchemaVersion = 2;
         value.DataPath = (value.DataPath ?? "").Trim(); value.PluginListPath = (value.PluginListPath ?? "").Trim();

@@ -164,6 +164,7 @@ public sealed class NpcTargetVariant
 
 public sealed class AppPreferences
 {
+    public string Language { get; set; } = "auto";
     public int SchemaVersion { get; set; } = 2;
     public string DataPath { get; set; } = "";
     public string BaseGameDataPath { get; set; } = "";

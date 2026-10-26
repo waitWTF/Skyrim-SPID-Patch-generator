@@ -1,3 +1,17 @@
+# 0.4.12 language source preview — tested 2026-10-26 — NO NEW BINARY RELEASE
+
+- Added automatic language selection from the Windows display/UI culture, parent-language resolution and English fallback.
+- Added Settings → Interface language, native language names, an automatically saved additive preference and immediate interface updates with the animated app loading icon. No Save button or app restart is required. Missing custom/imported languages retain their selection and show the fallback rather than silently switching the saved preference.
+- Added English, German, French, Spanish and Simplified Chinese translation catalogs for the main workspace, setup, review, presets and common warnings. Initial AI-assisted translations need community terminology review; detailed technical evidence/native Windows text can still remain English or the Windows language.
+- Language changes reuse scanned records/NPC preparation and preserve checked outfits, search/tab selections, grid position, activity history and unsaved Settings fields. They wait for active work to finish and restore the original workspace if refreshing fails. A failed preference write still allows changing language for the session, with a clear warning.
+- Added editable UTF-8 JSON overlays with embedded fallback catalogs, placeholder validation, bounded local loading and contributor documentation. No runtime translation service or network dependency.
+- Translated visible enum/group/part-mode labels through display templates, keeping saved internal values, FormIDs, plugin names, core matching and patch generation unchanged. Preset search includes translated labels.
+- Added wrapping for translated workspace labels and long string button captions; widened the required/state columns. Fixed the settings-save action reporting success after a failed write.
+- Verification: zero-warning/error Release build; 190 assertions in the full regression run (including 65 localization checks), plus 128 live WPF workflow assertions. Fixture SPID and SkyPatcher ESP/INI files were byte-identical across all supported languages. Repeated switches, setup/review selections, busy queues, settings recovery and locked files were covered. No Skyrim/MO2/Vortex compatibility check was performed.
+- Fixed dark-card section headings rendering black and refreshed the empty scan-diagnostics message when switching language. Regression tests cover both.
+- Fixed the existing regression runner to fail when its counted regression suite reports failures.
+- Published as a source update only. No new binary ZIP or Nexus change; the existing dependency/source-distribution review hold remains enforced by the packaging script. Local installation may be updated separately at the owner’s request.
+
 # 0.4.11 preview — 2026-10-21
 
 - Added opt-in Random outfit pools: a shared overall NPC chance, 2–20 outfit members, weights 1–10 and live selection percentages. Equal weights provide equal complete-set odds rather than competing individual SPID rules.

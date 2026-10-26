@@ -13,6 +13,8 @@ Directory.CreateDirectory(root);
 Environment.SetEnvironmentVariable("LOCALAPPDATA", Path.Combine(root, "localapp"));
 Environment.SetEnvironmentVariable("WEARABLE_DISTRIBUTOR_SETTINGS_DIR", Path.Combine(root, "settings"));
 Console.WriteLine("Evidence: " + root);
+if (args.FirstOrDefault() == "localization") { LocalizationChecks.Run(root); return; }
+if (args.FirstOrDefault() is "language-ui" or "language-ui-preview") { LanguageWindowChecks.Run(root, args[0] == "language-ui-preview"); return; }
 if (args.FirstOrDefault() == "variant-installed") { InstalledVariantAudit.Run(args[1], args[2], args.Skip(3).ToArray()); return; }
 if (args.FirstOrDefault() == "mesh-audit") { MeshRepairAudit.Run(args[1], args[2]); return; }
 if (args.FirstOrDefault() == "visibility")
@@ -107,6 +109,8 @@ try
     VariantChecks.Run(root);
     WardrobeChecks.Run(root);
     CurrentRegressionChecks.Run(root);
+    if (CurrentRegressionChecks.Failed > 0) throw new InvalidOperationException("Current regression checks failed: " + CurrentRegressionChecks.Failed);
+    LocalizationChecks.Run(root);
     Console.WriteLine("All Wearable Distributor integration checks passed.");
 }
 finally

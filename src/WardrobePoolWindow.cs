@@ -26,39 +26,39 @@ public sealed class WardrobePoolWindow : Window
     }
     public WardrobePoolWindow(IReadOnlyList<PluginPatchOptions> options, PluginPatchOptions current)
     {
-        UiTheme.Apply(this); Title = "Random outfit pools";
+        UiTheme.Apply(this); Title = Loc.T("Random outfit pools");
         Width = 1000; Height = 740; MinWidth = 850; MinHeight = 580; MaxHeight = Math.Max(580, SystemParameters.WorkArea.Height);
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         var root = new Grid { Margin = new Thickness(22) };
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); root.RowDefinitions.Add(new RowDefinition()); root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         var header = new StackPanel();
-        header.Children.Add(new TextBlock { Text = "One wardrobe. One outfit per NPC.", FontSize = 24, FontWeight = FontWeights.SemiBold });
-        header.Children.Add(UiTheme.Caption("Choose 2–20 outfits. A single overall chance decides whether an eligible NPC receives a wardrobe outfit. Weights decide which complete set they get. Equal weights give equal chances, not exact NPC counts."));
-        header.Children.Add(UiTheme.Caption("Each set keeps its own matching colors and optional parts. This does not schedule daily clothes changes. Other installed outfit distributors can still compete."));
+        header.Children.Add(new TextBlock { Text = Loc.T("One wardrobe. One outfit per NPC."), FontSize = 24, FontWeight = FontWeights.SemiBold });
+        header.Children.Add(UiTheme.Caption(Loc.T("Choose 2–20 outfits. A single overall chance decides whether an eligible NPC receives a wardrobe outfit. Weights decide which complete set they get. Equal weights give equal chances, not exact NPC counts.")));
+        header.Children.Add(UiTheme.Caption(Loc.T("Each set keeps its own matching colors and optional parts. This does not schedule daily clothes changes. Other installed outfit distributors can still compete.")));
         var name = new TextBox { Text = current.WardrobeName, MaxLength = 80, MinWidth = 240, Margin = new Thickness(0, 4, 12, 8) };
-        AutomationProperties.SetName(name, "Wardrobe name");
+        AutomationProperties.SetName(name,Loc.T("Wardrobe name"));
         var existing = new ComboBox { MinWidth = 210, ItemsSource = options.Select(c => c.WardrobeName).Where(n => !string.IsNullOrWhiteSpace(n)).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase).Prepend("New wardrobe…").ToList(), SelectedIndex = 0, Margin = new Thickness(0, 4, 12, 8) };
-        AutomationProperties.SetName(existing, "Existing wardrobe");
+        AutomationProperties.SetName(existing,Loc.T("Existing wardrobe"));
         if (!string.IsNullOrEmpty(current.WardrobeName)) existing.SelectedItem = existing.Items.Cast<string>().FirstOrDefault(n => n.Equals(current.WardrobeName, StringComparison.OrdinalIgnoreCase));
         var audienceChoices = options.Select(c => new AudienceSource(c)).ToList();
         var source = new ComboBox { ItemsSource = audienceChoices, SelectedItem = audienceChoices.First(c => ReferenceEquals(c.Config, current)), DisplayMemberPath = nameof(AudienceSource.Label), MinWidth = 320, Margin = new Thickness(0, 4, 12, 8) };
-        AutomationProperties.SetName(source, "Use NPC groups and sex from");
+        AutomationProperties.SetName(source,Loc.T("Use NPC groups and sex from"));
         var chance = new ComboBox { IsEditable = true, ItemsSource = new[] { "100", "80", "75", "50", "25", "10", "5" }, Text = current.Chance, Width = 130, Margin = new Thickness(0, 4, 12, 8) };
-        AutomationProperties.SetName(chance, "Wardrobe overall chance percent");
-        var inputs = new WrapPanel(); inputs.Children.Add(Labeled("Wardrobe name", name)); inputs.Children.Add(Labeled("Load an existing pool", existing));
+        AutomationProperties.SetName(chance,Loc.T("Wardrobe overall chance percent"));
+        var inputs = new WrapPanel(); inputs.Children.Add(Labeled(Loc.T("Wardrobe name"),name)); inputs.Children.Add(Labeled(Loc.T("Load an existing pool"),existing));
         header.Children.Add(inputs);
-        var targets = new WrapPanel(); targets.Children.Add(Labeled("Use NPC groups and sex from", source)); targets.Children.Add(Labeled("Overall chance (%)", chance)); header.Children.Add(targets);
-        header.Children.Add(UiTheme.Caption("Applying copies the chosen NPC groups, sex and overall chance to all checked outfits. Parts and trader stock are preserved. Only outfits opened in this setup are listed; select existing pool members together to change its audience."));
+        var targets = new WrapPanel(); targets.Children.Add(Labeled(Loc.T("Use NPC groups and sex from"),source)); targets.Children.Add(Labeled(Loc.T("Overall chance (%)"),chance)); header.Children.Add(targets);
+        header.Children.Add(UiTheme.Caption(Loc.T("Applying copies the chosen NPC groups, sex and overall chance to all checked outfits. Parts and trader stock are preserved. Only outfits opened in this setup are listed; select existing pool members together to change its audience.")));
         root.Children.Add(header);
         var rows = options.Select(c => new Member { Config = c, Include = string.IsNullOrEmpty(current.WardrobeName) ? ReferenceEquals(c, current) : c.WardrobeName.Equals(current.WardrobeName, StringComparison.OrdinalIgnoreCase), Weight = c.WardrobeWeight }).ToList();
         var grid = new DataGrid { ItemsSource = rows, AutoGenerateColumns = false, SelectionMode = DataGridSelectionMode.Extended, Margin = new Thickness(0, 12, 0, 12), CanUserAddRows = false };
-        grid.Columns.Add(new DataGridCheckBoxColumn { Header = "Include", Binding = new Binding(nameof(Member.Include)) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged }, Width = 65 });
-        grid.Columns.Add(new DataGridTextColumn { Header = "Outfit", Binding = new Binding(nameof(Member.Outfit)), IsReadOnly = true, Width = new DataGridLength(1, DataGridLengthUnitType.Star) });
-        grid.Columns.Add(new DataGridTextColumn { Header = "Plugin", Binding = new Binding(nameof(Member.Plugin)), IsReadOnly = true, Width = new DataGridLength(1, DataGridLengthUnitType.Star) });
-        grid.Columns.Add(new DataGridComboBoxColumn { Header = "Weight (1–10)", ItemsSource = Enumerable.Range(1, 10).ToArray(), SelectedItemBinding = new Binding(nameof(Member.Weight)) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged }, Width = 115 });
-        grid.Columns.Add(new DataGridTextColumn { Header = "Share in pool", Binding = new Binding(nameof(Member.Share)), IsReadOnly = true, Width = 100 });
-        grid.Columns.Add(new DataGridTextColumn { Header = "Current pool", Binding = new Binding(nameof(Member.CurrentPool)), IsReadOnly = true, Width = new DataGridLength(1, DataGridLengthUnitType.Star) });
-        AutomationProperties.SetName(grid, "Outfits available for this wardrobe");
+        grid.Columns.Add(new DataGridCheckBoxColumn { Header = Loc.T("Include"), Binding = new Binding(nameof(Member.Include)) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged }, Width = 65 });
+        grid.Columns.Add(new DataGridTextColumn { Header = Loc.T("Outfit"), Binding = new Binding(nameof(Member.Outfit)), IsReadOnly = true, Width = new DataGridLength(1, DataGridLengthUnitType.Star) });
+        grid.Columns.Add(new DataGridTextColumn { Header = Loc.T("Plugin"), Binding = new Binding(nameof(Member.Plugin)), IsReadOnly = true, Width = new DataGridLength(1, DataGridLengthUnitType.Star) });
+        grid.Columns.Add(new DataGridComboBoxColumn { Header = Loc.T("Weight (1–10)"), ItemsSource = Enumerable.Range(1, 10).ToArray(), SelectedItemBinding = new Binding(nameof(Member.Weight)) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged }, Width = 115 });
+        grid.Columns.Add(new DataGridTextColumn { Header = Loc.T("Share in pool"), Binding = new Binding(nameof(Member.Share)), IsReadOnly = true, Width = 100 });
+        grid.Columns.Add(new DataGridTextColumn { Header = Loc.T("Current pool"), Binding = new Binding(nameof(Member.CurrentPool)), IsReadOnly = true, Width = new DataGridLength(1, DataGridLengthUnitType.Star) });
+        AutomationProperties.SetName(grid,Loc.T("Outfits available for this wardrobe"));
         Grid.SetRow(grid, 1); root.Children.Add(grid);
         void Commit() { grid.CommitEdit(DataGridEditingUnit.Cell, true); grid.CommitEdit(DataGridEditingUnit.Row, true); }
         existing.SelectionChanged += (_, _) =>
@@ -70,7 +70,7 @@ public sealed class WardrobePoolWindow : Window
         };
         var footer = new StackPanel();
         var feedback = UiTheme.Caption(""); feedback.Foreground = UiTheme.Brush("WarningBrush"); feedback.Visibility = Visibility.Collapsed; footer.Children.Add(feedback);
-        var estimate = UiTheme.Caption("Weight 2 is twice as likely as weight 1. Example: three outfits at weight 1 → about 33% each after the overall roll."); footer.Children.Add(estimate);
+        var estimate = UiTheme.Caption(Loc.T("Weight 2 is twice as likely as weight 1. Example: three outfits at weight 1 → about 33% each after the overall roll.")); footer.Children.Add(estimate);
         void RefreshShares()
         {
             var total = rows.Where(r => r.Include).Sum(r => r.Weight);
@@ -79,17 +79,17 @@ public sealed class WardrobePoolWindow : Window
         foreach (var row in rows) row.PropertyChanged += (_, change) => { if (change.PropertyName is nameof(Member.Include) or nameof(Member.Weight)) RefreshShares(); };
         RefreshShares();
         var actions = new WrapPanel { HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 8, 0, 0) };
-        var all = UiTheme.Button("Select all"); all.Click += (_, _) => { Commit(); foreach (var row in rows) row.Include = true; grid.Items.Refresh(); };
-        var none = UiTheme.Button("None"); none.Click += (_, _) => { Commit(); foreach (var row in rows) row.Include = false; grid.Items.Refresh(); };
-        var remove = UiTheme.Button("Remove checked from pools"); remove.Click += (_, _) =>
+        var all = UiTheme.Button(Loc.T("Select all")); all.Click += (_, _) => { Commit(); foreach (var row in rows) row.Include = true; grid.Items.Refresh(); };
+        var none = UiTheme.Button(Loc.T("None")); none.Click += (_, _) => { Commit(); foreach (var row in rows) row.Include = false; grid.Items.Refresh(); };
+        var remove = UiTheme.Button(Loc.T("Remove checked from pools")); remove.Click += (_, _) =>
         {
             Commit(); var selected = rows.Where(r => r.Include).ToList();
-            if (selected.Count == 0) { feedback.Text = "Check the outfits to remove from their wardrobes."; feedback.Visibility = Visibility.Visible; return; }
+            if (selected.Count == 0) { feedback.Text = Loc.T("Check the outfits to remove from their wardrobes."); feedback.Visibility = Visibility.Visible; return; }
             foreach (var row in selected) { row.Config.WardrobeName = ""; row.Config.WardrobeWeight = 1; }
             ActivityHistory.Add($"Removed {selected.Count} outfit(s) from random pools. Their NPC groups and individual chances are retained."); DialogResult = true;
         };
-        var cancel = UiTheme.Button("Cancel"); cancel.IsCancel = true; cancel.Click += (_, _) => DialogResult = false;
-        var apply = UiTheme.Button("Apply wardrobe", true); apply.IsDefault = true;
+        var cancel = UiTheme.Button(Loc.T("Cancel")); cancel.IsCancel = true; cancel.Click += (_, _) => DialogResult = false;
+        var apply = UiTheme.Button(Loc.T("Apply wardrobe"),true); apply.IsDefault = true;
         apply.Click += (_, _) =>
         {
             Commit();
@@ -125,7 +125,7 @@ public sealed class WardrobePoolWindow : Window
     }
     private sealed record AudienceSource(PluginPatchOptions Config)
     {
-        public string Label => Config.OutfitName + " · " + Config.Gender + " · " + Config.TargetRules.Count + " NPC group(s)";
+        public string Label => Config.OutfitName + " · " + Loc.T(Config.Gender) + " · " + Loc.F($"{Config.TargetRules.Count} NPC group(s)");
     }
     private static FrameworkElement Labeled(string text, FrameworkElement control)
     {

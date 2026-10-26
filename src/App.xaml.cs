@@ -15,9 +15,8 @@ public partial class App : Application
             if (!reportingFailure)
             {
                 reportingFailure = true;
-                MessageBox.Show("Skyrim SPID Patch Generator encountered an unexpected error and must close.\n\n" +
-                    "Error code: APP-1002" + (path is null ? "\n\nA log could not be saved to disk." : "\n\nA shareable log was saved automatically:\n" + path),
-                    "Skyrim SPID Patch Generator · Unexpected error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show(Loc.T("Skyrim SPID Patch Generator encountered an unexpected error and must close.\n\n") +
+                    Loc.T("Error code: APP-1002") + (path is null ? Loc.T("\n\nA log could not be saved to disk.") : Loc.T("\n\nA shareable log was saved automatically:\n") + path),Loc.T("Skyrim SPID Patch Generator · Unexpected error"),MessageBoxButton.OK,MessageBoxImage.Error);
             }
             // Preserve failure semantics. A corrupt application state must not continue generating patches.
             args.Handled = false;
@@ -31,6 +30,7 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        Loc.InitializeFromSettings();
         WriteDiagnostic(DiagnosticEvent.ApplicationStarted, level: DiagnosticLevel.Information);
         base.OnStartup(e);
         var splash = new StartupWindow();

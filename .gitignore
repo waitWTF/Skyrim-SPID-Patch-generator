@@ -1,5 +1,6 @@
 **/bin/
 **/obj/
+**/*_wpftmp.csproj
 test-results/
 artifacts/
 preview-settings/

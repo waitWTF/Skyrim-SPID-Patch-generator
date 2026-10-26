@@ -1,6 +1,10 @@
 namespace WearableDistributor;
 
-public sealed record QuickAudiencePreset(string Category, string Label, DistributionTargetRule Rule);
+public sealed record QuickAudiencePreset(string Category, string Label, DistributionTargetRule Rule)
+{
+    public string DisplayCategory => Loc.AudienceLabel(Category);
+    public string DisplayLabel => Loc.AudienceLabel(Label);
+}
 
 /// <summary>Presets are resolved from this scan; no downloaded INIs, guessed IDs or phantom mod targets.</summary>
 public sealed class DistributionPresetCatalog(NpcTargetingService targeting)

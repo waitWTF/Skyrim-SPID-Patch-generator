@@ -17,6 +17,7 @@ internal static class UiTheme
         window.SetResourceReference(Control.ForegroundProperty, "TextBrush");
         window.FontFamily = new FontFamily("Segoe UI");
         window.FontSize = 13;
+        window.Language = System.Windows.Markup.XmlLanguage.GetLanguage(Loc.Culture.IetfLanguageTag);
         window.UseLayoutRounding = true;
         window.SnapsToDevicePixels = true;
         window.SourceInitialized += (_, _) =>
@@ -38,7 +39,7 @@ internal static class UiTheme
 
     public static Button Button(string text, bool primary = false) => new()
     {
-        Content = text,
+        Content = Loc.T(text),
         Style = Application.Current?.TryFindResource(primary ? "PrimaryButtonStyle" : "SecondaryButtonStyle") as Style
     };
 

@@ -1,10 +1,20 @@
-param(
+﻿param(
     [string] $OutputDirectory = (Join-Path $PSScriptRoot '..\artifacts'),
     [switch] $SkipChecks
 )
 $ErrorActionPreference = 'Stop'
 $repoPath = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $outputPath = [System.IO.Path]::GetFullPath($OutputDirectory)
+$reviewPath = Join-Path $repoPath 'docs\DEPENDENCY_REVIEW.json'
+if (-not (Test-Path -LiteralPath $reviewPath)) { throw 'Dependency distribution review is missing. Do not create a binary release without license/source review.' }
+$distributionReview = Get-Content -LiteralPath $reviewPath -Raw | ConvertFrom-Json
+if ($distributionReview.approved_for_binary_distribution -ne $true) {
+    throw 'Binary release on hold: complete the license/corresponding-source work in docs/DEPENDENCY_REVIEW.json first. Ordinary source builds remain available.'
+}
+foreach ($requiredNotice in @('THIRD_PARTY_NOTICES.md','licenses\GPL-3.0.txt','docs\RESOLVED_DEPENDENCIES.json')) {
+    if (-not (Test-Path -LiteralPath (Join-Path $repoPath $requiredNotice))) { throw "Missing required distribution notice: $requiredNotice" }
+}
+
 [xml] $projectMetadata = Get-Content -LiteralPath (Join-Path $repoPath 'src\WearableDistributor.csproj') -Raw
 $version = $projectMetadata.Project.PropertyGroup.Version | Select-Object -First 1
 if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Expected a numeric application version in the project.' }
@@ -33,9 +43,9 @@ try {
         dotnet run --project tests\WearableDistributor.IntegrationChecks.csproj -c Release
         if ($LASTEXITCODE -ne 0) { throw 'Integration checks failed; no release was published.' }
     }
-    dotnet publish src\WearableDistributor.csproj -c Release -r win-x64 --self-contained false --ignore-failed-sources -p:NuGetAudit=false -o $runtimePath "-p:ReleaseLayoutRoot=$appPath" -v:minimal
+    dotnet publish src\WearableDistributor.csproj -c Release -r win-x64 --self-contained false -p:NuGetAudit=true -p:NuGetAuditMode=all -o $runtimePath "-p:ReleaseLayoutRoot=$appPath" -v:minimal
     if ($LASTEXITCODE -ne 0) { throw 'Application publish failed.' }
-    foreach ($file in @('README.md','RELEASE_NOTES.md','VERSION.txt','LICENSE','PROJECT.md','START-HERE.txt','.gitignore','.gitattributes')) {
+    foreach ($file in @('README.md','RELEASE_NOTES.md','VERSION.txt','LICENSE','PROJECT.md','THIRD_PARTY_NOTICES.md','START-HERE.txt','.gitignore','.gitattributes')) {
         if (Test-Path -LiteralPath (Join-Path $repoPath $file)) { Copy-Item -LiteralPath (Join-Path $repoPath $file) -Destination $bundlePath }
     }
     foreach ($folder in @('src','tests','tools','docs')) {
@@ -50,7 +60,9 @@ try {
             Copy-Item -LiteralPath $_.FullName -Destination $destination
         }
     }
-    foreach ($file in @('README.md','RELEASE_NOTES.md','LICENSE','VERSION.txt')) { Copy-Item -LiteralPath (Join-Path $repoPath $file) -Destination $documentationPath }
+    foreach ($file in @('README.md','RELEASE_NOTES.md','LICENSE','VERSION.txt','THIRD_PARTY_NOTICES.md')) { Copy-Item -LiteralPath (Join-Path $repoPath $file) -Destination $documentationPath }
+    Copy-Item -LiteralPath (Join-Path $repoPath 'licenses') -Destination (Join-Path $bundlePath 'licenses') -Recurse
+    Copy-Item -LiteralPath (Join-Path $repoPath 'licenses') -Destination (Join-Path $documentationPath 'licenses') -Recurse
     Copy-Item -LiteralPath (Join-Path $bundlePath 'docs') -Destination (Join-Path $documentationPath 'docs') -Recurse
     Copy-Item -LiteralPath (Join-Path $repoPath 'START-HERE.txt') -Destination $appPath
     $appZip = Join-Path $outputPath "SkyrimSPIDPatchGenerator-v$version-preview-win-x64-$timestamp.zip"

@@ -55,3 +55,7 @@ This reads plugin data and writes a report at the specified path. It does not ge
 
 This release task did not launch Skyrim. Do not describe unobserved in-game outcomes as verified.
 
+
+## Language preview 0.4.12
+
+Run the default integration suite for the non-desktop regression and localization checks. Run `dotnet run --project tests/WearableDistributor.IntegrationChecks.csproj -c Release -- language-ui` separately in an interactive Windows desktop session for repeated live language switching and translated setup/review selection checks. Test settings and outputs are isolated under `test-results/`. See [verification details](RELEASE_VERIFICATION_0412.md).

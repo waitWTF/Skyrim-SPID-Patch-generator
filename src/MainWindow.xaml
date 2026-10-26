@@ -71,35 +71,35 @@
               <TextBlock Text="PATCH GENERATOR" Foreground="{DynamicResource AccentBrush}" FontSize="11" FontWeight="SemiBold" />
             </StackPanel>
           </StackPanel>
-          <TextBlock Text="YOUR WORKSPACE" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource MutedBrush}" Margin="14,7,0,10" />
+          <TextBlock Text="{local:Tr Key=xaml.cd2d7f2c5c6988}" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource MutedBrush}" Margin="14,7,0,10" TextWrapping="Wrap" />
           <RadioButton x:Name="OutfitsNavButton" GroupName="MainNavigation" Style="{StaticResource SidebarChoice}" IsChecked="True" Click="NavigateOutfits_Click">
             <StackPanel>
-              <TextBlock Text="01   Outfit library" FontWeight="SemiBold" />
-              <TextBlock Text="Choose wearable mods" FontSize="10" Margin="23,4,0,0" />
+              <TextBlock Text="{local:Tr Key=xaml.8bc4050ae8fea9}" FontWeight="SemiBold" TextWrapping="Wrap" />
+              <TextBlock Text="{local:Tr Key=xaml.f79667f2938776}" FontSize="10" Margin="23,4,0,0" TextWrapping="Wrap" />
             </StackPanel>
           </RadioButton>
           <RadioButton x:Name="InventoryNavButton" GroupName="MainNavigation" Style="{StaticResource SidebarChoice}" Click="NavigateInventory_Click">
             <StackPanel>
-              <TextBlock Text="02   My patch" FontWeight="SemiBold" />
-              <TextBlock Text="Manage generated outfits" FontSize="10" Margin="23,4,0,0" />
+              <TextBlock Text="{local:Tr Key=xaml.b1df28d8616069}" FontWeight="SemiBold" TextWrapping="Wrap" />
+              <TextBlock Text="{local:Tr Key=xaml.c76207809bdb11}" FontSize="10" Margin="23,4,0,0" TextWrapping="Wrap" />
             </StackPanel>
           </RadioButton>
           <RadioButton x:Name="SettingsNavButton" GroupName="MainNavigation" Style="{StaticResource SidebarChoice}" Click="NavigateSettings_Click">
             <StackPanel>
-              <TextBlock Text="03   Settings" FontWeight="SemiBold" />
-              <TextBlock Text="Folders, defaults and diagnostics" FontSize="10" TextWrapping="Wrap" Margin="23,4,0,0" />
+              <TextBlock Text="{local:Tr Key=xaml.facde67b7fd2fa}" FontWeight="SemiBold" TextWrapping="Wrap" />
+              <TextBlock Text="{local:Tr Key=xaml.995b96f146ee91}" FontSize="10" TextWrapping="Wrap" Margin="23,4,0,0" />
             </StackPanel>
           </RadioButton>
         </StackPanel>
         <StackPanel DockPanel.Dock="Bottom">
           <Border Background="{DynamicResource RaisedBrush}" CornerRadius="8" Padding="14" Margin="0,0,0,18">
             <StackPanel>
-              <TextBlock x:Name="SelectionCountText" Text="0 outfits selected" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" TextWrapping="Wrap" />
-              <TextBlock Text="Choose your mods. Decide who wears them. Build one patch." Foreground="{DynamicResource MutedBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,8,0,0" />
+              <TextBlock x:Name="SelectionCountText" Text="{local:Tr Key=xaml.b9e555ce05f67d}" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" TextWrapping="Wrap" />
+              <TextBlock Text="{local:Tr Key=xaml.475a99184d114d}" Foreground="{DynamicResource MutedBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,8,0,0" />
             </StackPanel>
           </Border>
-          <TextBlock x:Name="BuildVersionText" Text="v0.4.11" FontSize="9" Foreground="{DynamicResource MutedBrush}" Margin="5,0,0,6" />
-          <TextBlock Text="Skyrim Special Edition / Anniversary" FontSize="10" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="5,0,0,0" />
+          <TextBlock x:Name="BuildVersionText" Text="{local:Tr Key=xaml.80a7138310e63c}" FontSize="9" Foreground="{DynamicResource MutedBrush}" Margin="5,0,0,6" TextWrapping="Wrap" />
+          <TextBlock Text="{local:Tr Key=xaml.1fa30546971eff}" FontSize="10" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="5,0,0,0" />
         </StackPanel>
       </DockPanel>
     </Border>
@@ -115,19 +115,19 @@
           <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
         <StackPanel VerticalAlignment="Center">
-          <TextBlock x:Name="ExperimentalHeaderText" Text="v0.4.11 · RANDOM OUTFIT POOLS" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" />
+          <TextBlock x:Name="ExperimentalHeaderText" Text="{local:Tr Key=xaml.b52fd3e56aaa07}" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" TextWrapping="Wrap" />
           <TextBlock Text="Skyrim SPID Patch Generator" FontSize="25" FontWeight="SemiBold" Margin="0,3,0,5" TextWrapping="Wrap" />
-          <TextBlock x:Name="ActivePathText" Text="Set up your Skyrim or mod staging folder in Settings." Foreground="{DynamicResource MutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
+          <TextBlock x:Name="ActivePathText" Text="{local:Tr Key=xaml.b154d1bec7da9b}" Foreground="{DynamicResource MutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" TextWrapping="Wrap" />
         </StackPanel>
         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="15,0,0,0">
-          <Button Content="Activity" Click="ShowActivity_Click" ToolTip="Live action history for this app session" />
-          <Button Content="Error reports" Click="ShowErrorReports_Click" ToolTip="Save a shareable error report without personal paths, usernames, settings or mod lists" />
-          <Button x:Name="CancelScanButton" Content="Cancel scan" Click="CancelScan_Click" Visibility="Collapsed" />
-          <Button x:Name="ScanButton" Content="Scan for outfits" Click="Scan_Click" Padding="17,10" ToolTip="Read installed plugins and discover outfits and NPC groups" />
+          <Button Content="{local:Tr Key=xaml.38da1505ca8373}" Click="ShowActivity_Click" ToolTip="{local:Tr Key=xaml.06c4c900b7ad5d}" />
+          <Button Content="{local:Tr Key=xaml.b93ffaa54c7bf4}" Click="ShowErrorReports_Click" ToolTip="{local:Tr Key=xaml.ffa5a88d6760c0}" />
+          <Button x:Name="CancelScanButton" Content="{local:Tr Key=xaml.298360e0b166f7}" Click="CancelScan_Click" Visibility="Collapsed" />
+          <Button x:Name="ScanButton" Content="{local:Tr Key=xaml.a51732a309f6d5}" Click="Scan_Click" Padding="17,10" ToolTip="{local:Tr Key=xaml.ef914db7dad762}" />
         </StackPanel>
       </Grid>
       <TabControl x:Name="MainTabs" Grid.Row="1" Style="{StaticResource HiddenHeaderTab}" SelectedIndex="0">
-        <TabItem Header="Outfit library">
+        <TabItem Header="{local:Tr Key=xaml.50e433759eec64}">
           <Grid>
             <Grid.RowDefinitions>
               <RowDefinition Height="Auto" />
@@ -135,17 +135,17 @@
               <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
             <StackPanel Margin="0,0,0,13">
-              <TextBlock Text="Outfit library" FontSize="20" FontWeight="SemiBold" />
-              <TextBlock Text="Right-click an outfit → Configure this outfit. To configure several, tick their boxes and use Configure checked below." Foreground="{DynamicResource MutedBrush}" Margin="0,5,0,10" TextWrapping="Wrap" />
-              <TextBlock Text="1  CHOOSE OUTFITS     →     2  CONFIGURE     →     3  REVIEW AND BUILD" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,14" />
+              <TextBlock Text="{local:Tr Key=xaml.50e433759eec64}" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap" />
+              <TextBlock Text="{local:Tr Key=xaml.93e3c2cadc5225}" Foreground="{DynamicResource MutedBrush}" Margin="0,5,0,10" TextWrapping="Wrap" />
+              <TextBlock Text="{local:Tr Key=xaml.1a4e54686f6e81}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,14" TextWrapping="Wrap" />
               <Grid>
                 <Grid.ColumnDefinitions>
                   <ColumnDefinition />
                   <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <Grid Margin="0,0,12,0">
-                  <TextBox x:Name="SearchBox" Padding="12,9" TextChanged="SearchBox_TextChanged" ToolTip="Search outfit plugin names" />
-                  <TextBlock Text="Search outfit plugins…" Margin="13,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource MutedBrush}" IsHitTestVisible="False">
+                  <TextBox x:Name="SearchBox" Padding="12,9" TextChanged="SearchBox_TextChanged" ToolTip="{local:Tr Key=xaml.d10b42d355b784}" />
+                  <TextBlock Text="{local:Tr Key=xaml.d47e32a510011f}" Margin="13,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource MutedBrush}" IsHitTestVisible="False">
                     <TextBlock.Style>
                       <Style TargetType="TextBlock">
                         <Setter Property="Visibility" Value="Collapsed" />
@@ -159,32 +159,32 @@
                   </TextBlock>
                 </Grid>
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
-                  <Button Content="Select all" Style="{StaticResource QuietAction}" Click="SelectAll_Click" />
-                  <Button Content="None" Style="{StaticResource QuietAction}" Click="SelectNone_Click" />
-                  <Button Content="Invert" Style="{StaticResource QuietAction}" Click="InvertSelection_Click" />
+                  <Button Content="{local:Tr Key=xaml.1fc9a387654d41}" Style="{StaticResource QuietAction}" Click="SelectAll_Click" />
+                  <Button Content="{local:Tr Key=xaml.dc937b59892604}" Style="{StaticResource QuietAction}" Click="SelectNone_Click" />
+                  <Button Content="{local:Tr Key=xaml.7e04f2ffb9334e}" Style="{StaticResource QuietAction}" Click="InvertSelection_Click" />
                 </StackPanel>
               </Grid>
               <WrapPanel Margin="0,9,0,0">
-                <Button Content="Enable selected" Style="{StaticResource QuietAction}" Click="EnableSelected_Click" ToolTip="Include action targets in patch setup. Does not activate game plugins." />
-                <Button Content="Disable selected" Style="{StaticResource QuietAction}" Click="DisableSelected_Click" ToolTip="Leave action targets out of patch setup. Does not deactivate game plugins." />
-                <Button Content="Hide selected" Style="{StaticResource QuietAction}" Click="IgnorePlugin_Click" ToolTip="Remember these plugins as hidden until you restore them." />
-                <Button Content="Unhide selected" Style="{StaticResource QuietAction}" Click="RestorePlugin_Click" />
+                <Button Content="{local:Tr Key=xaml.67380402574270}" Style="{StaticResource QuietAction}" Click="EnableSelected_Click" ToolTip="{local:Tr Key=xaml.c230918051b840}" />
+                <Button Content="{local:Tr Key=xaml.369711b52078d9}" Style="{StaticResource QuietAction}" Click="DisableSelected_Click" ToolTip="{local:Tr Key=xaml.e06d4f6cffe449}" />
+                <Button Content="{local:Tr Key=xaml.b97b15080b50af}" Style="{StaticResource QuietAction}" Click="IgnorePlugin_Click" ToolTip="{local:Tr Key=xaml.73cb9315b6a99c}" />
+                <Button Content="{local:Tr Key=xaml.95a761d6d2e22a}" Style="{StaticResource QuietAction}" Click="RestorePlugin_Click" />
               </WrapPanel>
               <WrapPanel Margin="0,7,0,0">
-                <TextBlock Text="Actions apply to:" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="{DynamicResource MutedBrush}" />
+                <TextBlock Text="{local:Tr Key=xaml.db203110773b4f}" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" />
                 <ComboBox x:Name="ActionScopeBox" Width="225" SelectedIndex="0" SelectionChanged="ActionScopeChanged">
-                  <ComboBoxItem Content="Checked or highlighted rows" />
-                  <ComboBoxItem Content="Checked rows only" />
-                  <ComboBoxItem Content="Highlighted rows only" />
+                  <ComboBoxItem Content="{local:Tr Key=xaml.92a99886ffabd6}" />
+                  <ComboBoxItem Content="{local:Tr Key=xaml.843fe6d04f18a5}" />
+                  <ComboBoxItem Content="{local:Tr Key=xaml.a6513b85955f3b}" />
                 </ComboBox>
                 <TextBlock x:Name="ActionTargetsText" VerticalAlignment="Center" Margin="12,0,0,0" Foreground="{DynamicResource MutedBrush}" />
               </WrapPanel>
               <TabControl x:Name="LibraryViews" Margin="0,12,0,0" Height="42" SelectedIndex="0" SelectionChanged="LibraryViewChanged">
-                <TabItem x:Name="EquipmentViewTab" Header="Armor &amp; clothing" />
-                <TabItem x:Name="MixedViewTab" Header="Mixed / hidden" />
-                <TabItem x:Name="PatchedViewTab" Header="Already patched" />
+                <TabItem x:Name="EquipmentViewTab" Header="{local:Tr Key=xaml.b04f4958b36522}" />
+                <TabItem x:Name="MixedViewTab" Header="{local:Tr Key=xaml.a9573f43c81041}" />
+                <TabItem x:Name="PatchedViewTab" Header="{local:Tr Key=xaml.2b6ecb64d886ed}" />
               </TabControl>
-              <TextBlock x:Name="LibraryViewHint" Text="Armor/clothing plugins stay in this list even after patching. Mixed-content mods can be included from the next tab." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" FontSize="11" Margin="0,6,0,0" />
+              <TextBlock x:Name="LibraryViewHint" Text="{local:Tr Key=xaml.c34157d9cfb42b}" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" FontSize="11" Margin="0,6,0,0" />
 
             </StackPanel>
             <Grid Grid.Row="1">
@@ -226,28 +226,28 @@
                         </Setter>
                       </Style>
                     </ContextMenu.Resources>
-                    <MenuItem Header="Configure this outfit…" Click="ConfigureContext_Click" />
+                    <MenuItem Header="{local:Tr Key=xaml.e46d423c230f9b}" Click="ConfigureContext_Click" />
                     <Separator />
-                    <MenuItem Header="Enable selected for patch" Click="EnableSelected_Click" />
-                    <MenuItem Header="Disable selected for patch" Click="DisableSelected_Click" />
+                    <MenuItem Header="{local:Tr Key=xaml.358d582a4858b8}" Click="EnableSelected_Click" />
+                    <MenuItem Header="{local:Tr Key=xaml.e3bad84c885dc2}" Click="DisableSelected_Click" />
                     <Separator />
-                    <MenuItem Header="Hide selected" Click="IgnorePlugin_Click" />
-                    <MenuItem Header="Unhide selected" Click="RestorePlugin_Click" />
-                    <MenuItem Header="Include filtered candidate" Click="IncludeFiltered_Click" />
+                    <MenuItem Header="{local:Tr Key=xaml.b97b15080b50af}" Click="IgnorePlugin_Click" />
+                    <MenuItem Header="{local:Tr Key=xaml.95a761d6d2e22a}" Click="RestorePlugin_Click" />
+                    <MenuItem Header="{local:Tr Key=xaml.5cd9fc934c9afe}" Click="IncludeFiltered_Click" />
                   </ContextMenu>
                 </DataGrid.ContextMenu>
                 <DataGrid.Columns>
-                  <DataGridTemplateColumn Header="Batch" Width="58">
+                  <DataGridTemplateColumn Header="{local:Tr Key=xaml.320b5d80f8cfd1}" Width="58">
                     <DataGridTemplateColumn.CellTemplate>
                       <DataTemplate>
                         <CheckBox IsChecked="{Binding Selected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding CanPatch}" ToolTip="{Binding ValidationIssue}" AutomationProperties.Name="{Binding Plugin}" HorizontalAlignment="Center" Click="PluginSelectionChanged" />
                       </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                   </DataGridTemplateColumn>
-                  <DataGridTextColumn Header="OUTFIT / PLUGIN" Binding="{Binding Plugin}" Width="2*" IsReadOnly="True" />
-                  <DataGridTextColumn Header="PIECES" Binding="{Binding PieceCount}" Width="65" IsReadOnly="True" />
-                  <DataGridTextColumn Header="PATCH STATUS" Binding="{Binding PatchStatus}" Width="110" IsReadOnly="True" />
-                  <DataGridTextColumn Header="FILTER NOTE" Binding="{Binding LibraryNote}" Width="*" IsReadOnly="True" />
+                  <DataGridTextColumn Header="{local:Tr Key=xaml.b04c4ecb1dcec4}" Binding="{Binding Plugin}" Width="2*" IsReadOnly="True" />
+                  <DataGridTextColumn Header="{local:Tr Key=xaml.65d0413293f1c7}" Binding="{Binding PieceCount}" Width="65" IsReadOnly="True" />
+                  <DataGridTextColumn Header="{local:Tr Key=xaml.186fbf67f4233b}" Binding="{Binding PatchStatus, Converter={x:Static local:Loc.ChoiceTextConverter}}" Width="110" IsReadOnly="True" />
+                  <DataGridTextColumn Header="{local:Tr Key=xaml.07416cee840c35}" Binding="{Binding LibraryNote}" Width="*" IsReadOnly="True" />
                 </DataGrid.Columns>
               </DataGrid>
               <Border Background="{DynamicResource SurfaceBrush}" Margin="1,43,1,1" Padding="14">
@@ -262,16 +262,16 @@
                   </Style>
                 </Border.Style>
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="480">
-                  <TextBlock Text="No outfits match this view" FontSize="20" FontWeight="SemiBold" HorizontalAlignment="Center" />
-                  <TextBlock Text="Clear the search, check the other library tabs, or scan your deployed Data / installed mod staging folder. Official content is excluded from these lists." Foreground="{DynamicResource MutedBrush}" TextAlignment="Center" TextWrapping="Wrap" Margin="0,7,0,10" />
-                  <Button Content="Choose folders in Settings" Click="NavigateSettings_Click" HorizontalAlignment="Center" />
+                  <TextBlock Text="{local:Tr Key=xaml.28f1b61e697465}" FontSize="20" FontWeight="SemiBold" HorizontalAlignment="Center" TextWrapping="Wrap" />
+                  <TextBlock Text="{local:Tr Key=xaml.71054c5aa9730b}" Foreground="{DynamicResource MutedBrush}" TextAlignment="Center" TextWrapping="Wrap" Margin="0,7,0,10" />
+                  <Button Content="{local:Tr Key=xaml.591341f45ab393}" Click="NavigateSettings_Click" HorizontalAlignment="Center" />
                 </StackPanel>
               </Border>
             </Grid>
-            <TextBlock x:Name="ScanSummaryText" Grid.Row="2" Text="Your scan and patch summary will appear here." Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,10,0,0" FontSize="11" />
+            <TextBlock x:Name="ScanSummaryText" Grid.Row="2" Text="{local:Tr Key=xaml.4b1e26be686ed0}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,10,0,0" FontSize="11" />
           </Grid>
         </TabItem>
-        <TabItem Header="My patch">
+        <TabItem Header="{local:Tr Key=xaml.90cee7ce57f904}">
           <Grid>
             <Grid.RowDefinitions>
               <RowDefinition Height="Auto" />
@@ -280,51 +280,59 @@
               <RowDefinition Height="0.85*" />
             </Grid.RowDefinitions>
             <StackPanel Margin="0,0,0,12">
-              <TextBlock Text="My patch" FontSize="20" FontWeight="SemiBold" />
-              <TextBlock Text="Generated files discovered across your mod locations. Each entry shows its patch location; profile activation is not inferred." Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,5,0,10" />
+              <TextBlock Text="{local:Tr Key=xaml.90cee7ce57f904}" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap" />
+              <TextBlock Text="{local:Tr Key=xaml.fa07defd5f86c5}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,5,0,10" />
               <WrapPanel>
-                <Button Content="Refresh" Click="RefreshInventory_Click" />
-                <Button Content="Find patch files…" Click="FindPatchFiles_Click" ToolTip="Add generated ESP, INI or manifest files from other mod folders/profiles. Multiple files can be selected." />
-                <Button Content="Open folder" Click="OpenOutput_Click" />
-                <Button Content="Edit / repatch selected" Click="EditInventoryEntry_Click" />
-                <Button Content="Repatch all" Click="RepatchAll_Click" ToolTip="Refresh all saved outfits with this scan. Go straight to review when saved choices are valid, or open setup at an outfit needing attention." />
-                <Button Content="Remove outfit" Click="RemoveInventoryEntry_Click" />
-                <Button Content="Restore backup" Click="RestoreBackup_Click" />
-                <Button Content="Installable ZIP…" Click="ExportModArchive_Click" />
-                <Button Content="Export patch contents" Click="ExportReport_Click" ToolTip="Exports outfit/plugin details. Use Error reports for privacy-safe technical support." />
+                <Button Content="{local:Tr Key=xaml.0e91610117029a}" Click="RefreshInventory_Click" />
+                <Button Content="{local:Tr Key=xaml.c57e22a78207e9}" Click="FindPatchFiles_Click" ToolTip="{local:Tr Key=xaml.9d3ec4d91a1737}" />
+                <Button Content="{local:Tr Key=xaml.6a9084025c4bf3}" Click="OpenOutput_Click" />
+                <Button Content="{local:Tr Key=xaml.90d15d3885300e}" Click="EditInventoryEntry_Click" />
+                <Button Content="{local:Tr Key=xaml.7af8251230467a}" Click="RepatchAll_Click" ToolTip="{local:Tr Key=xaml.6e2b46ec563dd2}" />
+                <Button Content="{local:Tr Key=xaml.044e6925c04fb3}" Click="RemoveInventoryEntry_Click" />
+                <Button Content="{local:Tr Key=xaml.6da1c554212cfc}" Click="RestoreBackup_Click" />
+                <Button Content="{local:Tr Key=xaml.0531da8220b44d}" Click="ExportModArchive_Click" />
+                <Button Content="{local:Tr Key=xaml.3cca982dab474c}" Click="ExportReport_Click" ToolTip="{local:Tr Key=xaml.11e982305676c4}" />
               </WrapPanel>
             </StackPanel>
             <DataGrid x:Name="PatchInventoryGrid" Grid.Row="1" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" SelectionMode="Single" SelectionChanged="InventorySelectionChanged">
               <DataGrid.Columns>
-                <DataGridTextColumn Header="OUTFIT / PLUGIN" Binding="{Binding SourcePlugin}" Width="2*" />
-                <DataGridTextColumn Header="PIECES" Binding="{Binding IncludedPieces}" Width="65" />
-                <DataGridTextColumn Header="PATCH LOCATION" Binding="{Binding OutputDirectory}" Width="1.5*" />
-                <DataGridTextColumn Header="ENGINE" Binding="{Binding Entry.Framework}" Width="90" />
-                  <DataGridTextColumn Header="HEALTH" Binding="{Binding Health}" Width="115" />
-                <DataGridTextColumn Header="CHANCE" Binding="{Binding Chance}" Width="75" />
-                <DataGridTextColumn Header="SEX" Binding="{Binding Gender}" Width="65" />
-                <DataGridTextColumn Header="RECIPIENTS / SHOPS" Binding="{Binding Audiences}" Width="2*" />
+                <DataGridTextColumn Header="{local:Tr Key=xaml.b04c4ecb1dcec4}" Binding="{Binding SourcePlugin}" Width="2*" />
+                <DataGridTextColumn Header="{local:Tr Key=xaml.65d0413293f1c7}" Binding="{Binding IncludedPieces}" Width="65" />
+                <DataGridTextColumn Header="{local:Tr Key=xaml.fa902175d6870d}" Binding="{Binding OutputDirectory}" Width="1.5*" />
+                <DataGridTextColumn Header="{local:Tr Key=xaml.8215b59ccb2880}" Binding="{Binding Entry.Framework}" Width="90" />
+                  <DataGridTextColumn Header="{local:Tr Key=xaml.e5b73ae3b90bdb}" Binding="{Binding Health}" Width="115" />
+                <DataGridTextColumn Header="{local:Tr Key=xaml.836f8b413d2a7d}" Binding="{Binding Chance}" Width="75" />
+                <DataGridTextColumn Header="{local:Tr Key=xaml.b4bed028f83ea7}" Binding="{Binding Gender}" Width="65" />
+                <DataGridTextColumn Header="{local:Tr Key=xaml.3a86a2afef9660}" Binding="{Binding Audiences}" Width="2*" />
               </DataGrid.Columns>
             </DataGrid>
             <GridSplitter Grid.Row="2" Height="6" HorizontalAlignment="Stretch" Background="Transparent" />
             <Border Grid.Row="3" Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="15" Margin="0,10,0,0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
               <DockPanel>
-                <TextBlock DockPanel.Dock="Top" Text="OUTFIT DETAILS" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,9" />
-                <TextBox x:Name="InventoryDetailsBox" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Background="Transparent" BorderThickness="0" Padding="0" Text="Select an outfit above to see its pieces, audience, required plugins and generated files." />
+                <TextBlock DockPanel.Dock="Top" Text="{local:Tr Key=xaml.10abf69c7a1b00}" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,9" TextWrapping="Wrap" />
+                <TextBox x:Name="InventoryDetailsBox" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Background="Transparent" BorderThickness="0" Padding="0" Text="{local:Tr Key=xaml.032cb81bc7b1a3}" />
               </DockPanel>
             </Border>
           </Grid>
         </TabItem>
-        <TabItem Header="Settings">
+        <TabItem Header="{local:Tr Key=xaml.74a883a037bc22}">
           <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,0,10,0">
             <StackPanel>
-              <TextBlock Text="Settings" FontSize="20" FontWeight="SemiBold" />
-              <TextBlock Text="Set up once. Reuse your folders, preferences and audience presets." Foreground="{DynamicResource MutedBrush}" Margin="0,5,0,18" />
+              <TextBlock Text="{local:Tr Key=xaml.74a883a037bc22}" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap" />
+              <Border Style="{StaticResource CardStyle}" Margin="0,14,0,14">
+                <StackPanel>
+                  <TextBlock Text="{local:Tr Key=xaml.8027f432a7fb7c}" Style="{StaticResource SectionHeaderStyle}" TextWrapping="Wrap" />
+                  <ComboBox x:Name="LanguageBox" MinWidth="240" MaxWidth="440" HorizontalAlignment="Left" Margin="0,10,0,7" DisplayMemberPath="Name" SelectedValuePath="Code" />
+                  <TextBlock Text="{local:Tr Key=xaml.960931f993b16a}" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" />
+                  <TextBlock Text="{local:Tr Key=xaml.54cbd70a191030}" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,7,0,0" />
+                </StackPanel>
+              </Border>
+              <TextBlock Text="{local:Tr Key=xaml.3f4104f04d38a5}" Foreground="{DynamicResource MutedBrush}" Margin="0,5,0,18" TextWrapping="Wrap" />
               <Border Style="{StaticResource CardStyle}" Margin="0,0,0,14">
                 <StackPanel>
-                  <TextBlock Text="01  Where your mods live" Style="{StaticResource SectionHeaderStyle}" />
-                  <TextBlock Text="Scan the game's deployed Data folder, or the staging folder containing your installed mods. Launch through MO2 to use its virtual Data folder." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,7,0,12" />
-                  <TextBlock Text="Plugin scan folder" FontWeight="SemiBold" />
+                  <TextBlock Text="{local:Tr Key=xaml.46124ee2856063}" Style="{StaticResource SectionHeaderStyle}" TextWrapping="Wrap" />
+                  <TextBlock Text="{local:Tr Key=xaml.f96548abb0fd2c}" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,7,0,12" />
+                  <TextBlock Text="{local:Tr Key=xaml.07f097f6ae8cc5}" FontWeight="SemiBold" TextWrapping="Wrap" />
                   <Grid Margin="0,6,0,14">
                     <Grid.ColumnDefinitions>
                       <ColumnDefinition />
@@ -332,57 +340,57 @@
                       <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <TextBox x:Name="DataPathBox" MinWidth="120" Padding="10,8" VerticalAlignment="Center" />
-                    <Button Grid.Column="1" Content="Smart detect…" Click="FindData_Click" ToolTip="Find MO2 instances, game Data and configured profile lists" />
-                    <Button Grid.Column="2" Content="Browse…" Click="BrowseData_Click" />
+                    <Button Grid.Column="1" Content="{local:Tr Key=xaml.4c0c34974d6aff}" Click="FindData_Click" ToolTip="{local:Tr Key=xaml.def89977cdcc36}" />
+                    <Button Grid.Column="2" Content="{local:Tr Key=xaml.93c6b664dce6c2}" Click="BrowseData_Click" />
                   </Grid>
-                  <TextBlock Text="Game Data folder override (optional)" FontWeight="SemiBold" />
-                  <TextBlock Text="If scanning a mods folder, choose the game's Data folder containing Skyrim.esm here. Leave blank for automatic detection. For MO2, launch through MO2 and use the Data folder for that instance's game." Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,5,0,7" />
+                  <TextBlock Text="{local:Tr Key=xaml.73475c4d360f74}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                  <TextBlock Text="{local:Tr Key=xaml.1992b66b0e9b3d}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,5,0,7" />
                   <Grid Margin="0,0,0,14">
                     <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                     <TextBox x:Name="BaseGameDataPathBox" MinWidth="120" Padding="10,8" VerticalAlignment="Center" />
-                    <Button Grid.Column="1" Content="Browse…" Click="BrowseBaseGameData_Click" />
+                    <Button Grid.Column="1" Content="{local:Tr Key=xaml.93c6b664dce6c2}" Click="BrowseBaseGameData_Click" />
                   </Grid>
-                  <TextBlock Text="Active profile list (optional)" FontWeight="SemiBold" />
-                  <TextBlock Text="Choose plugins.txt to use enabled plugins and profile order. A loadorder.txt supplies order but does not identify disabled plugins." Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,5,0,7" />
+                  <TextBlock Text="{local:Tr Key=xaml.a89f9e9af6a723}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                  <TextBlock Text="{local:Tr Key=xaml.dcd884195a98b7}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,5,0,7" />
                   <Grid>
                     <Grid.ColumnDefinitions>
                       <ColumnDefinition />
                       <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <TextBox x:Name="PluginListPathBox" MinWidth="120" Padding="10,8" VerticalAlignment="Center" />
-                    <Button Grid.Column="1" Content="Browse…" Click="BrowsePluginList_Click" />
+                    <Button Grid.Column="1" Content="{local:Tr Key=xaml.93c6b664dce6c2}" Click="BrowsePluginList_Click" />
                   </Grid>
                 </StackPanel>
               </Border>
               <Border Style="{StaticResource CardStyle}" Margin="0,0,0,14">
                 <StackPanel>
-                  <TextBlock Text="Your generated mod folder" Style="{StaticResource SectionHeaderStyle}" />
-                  <TextBlock Text="Choose a separate output mod folder, or reopen an existing patch to manage it in My patch. Generation merges outfits into this folder." Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,5,0,8" />
+                  <TextBlock Text="{local:Tr Key=xaml.5643ff762d696d}" Style="{StaticResource SectionHeaderStyle}" TextWrapping="Wrap" />
+                  <TextBlock Text="{local:Tr Key=xaml.46f5b4b294b436}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,5,0,8" />
                   <Grid>
                     <Grid.ColumnDefinitions>
                       <ColumnDefinition />
                       <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <TextBox x:Name="OutputPathBox" MinWidth="120" Padding="10,8" VerticalAlignment="Center" />
-                    <Button Grid.Column="1" Content="Browse…" Click="BrowseOutput_Click" />
+                    <Button Grid.Column="1" Content="{local:Tr Key=xaml.93c6b664dce6c2}" Click="BrowseOutput_Click" />
                   </Grid>
                 </StackPanel>
               </Border>
               <Border Style="{StaticResource CardStyle}" Margin="0,0,0,14">
                 <StackPanel>
-                  <TextBlock Text="02  Distribution defaults" Style="{StaticResource SectionHeaderStyle}" />
+                  <TextBlock Text="{local:Tr Key=xaml.c99caea3b6f27c}" Style="{StaticResource SectionHeaderStyle}" TextWrapping="Wrap" />
                   <WrapPanel Margin="0,12,0,14">
                     <StackPanel Margin="0,0,20,0">
-                      <TextBlock Text="Distribution engine" FontWeight="SemiBold" />
+                      <TextBlock Text="{local:Tr Key=xaml.5a9c44c8a81785}" FontWeight="SemiBold" TextWrapping="Wrap" />
                       <ComboBox x:Name="DefaultFrameworkBox" Width="180" Margin="0,6,0,0">
                         <ComboBoxItem Content="SPID" />
                         <ComboBoxItem Content="SkyPatcher" />
                       </ComboBox>
                     </StackPanel>
                     <StackPanel>
-                      <TextBlock Text="Default chance" FontWeight="SemiBold" />
+                      <TextBlock Text="{local:Tr Key=xaml.6a397755093c03}" FontWeight="SemiBold" TextWrapping="Wrap" />
                       <ComboBox x:Name="DefaultChanceBox" Width="240" Margin="0,6,0,0">
-                        <ComboBoxItem Content="100% — every matching NPC" />
+                        <ComboBoxItem Content="{local:Tr Key=xaml.9bbfb68f9790fc}" />
                         <ComboBoxItem Content="80%" />
                         <ComboBoxItem Content="50%" />
                         <ComboBoxItem Content="25%" />
@@ -391,30 +399,30 @@
                       </ComboBox>
                     </StackPanel>
                   </WrapPanel>
-                  <TextBlock Text="SPID rolls the chosen chance for matching NPCs. SkyPatcher uses 100% assignment. Choose settings per outfit in the wizard." Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" />
+                  <TextBlock Text="{local:Tr Key=xaml.85a4a5ef7e9555}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" />
                 </StackPanel>
               </Border>
               <Border Style="{StaticResource CardStyle}" Margin="0,0,0,14">
                 <StackPanel>
-                  <TextBlock Text="03  Smart filtering" Style="{StaticResource SectionHeaderStyle}" />
-                  <CheckBox x:Name="IncludeAccessoriesBox" Content="Include accessory-only plugins (rings, earrings, amulets, horns)" Margin="0,13,0,12" />
-                  <TextBlock Text="Additional plugin-name exclusions" FontWeight="SemiBold" />
-                  <TextBlock Text="One word or phrase per line. Excluded candidates remain available through the library's filter tools." Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,5,0,6" />
+                  <TextBlock Text="{local:Tr Key=xaml.1ebef93b585d7c}" Style="{StaticResource SectionHeaderStyle}" TextWrapping="Wrap" />
+                  <CheckBox x:Name="IncludeAccessoriesBox" Content="{local:Tr Key=xaml.19260f7b555229}" Margin="0,13,0,12" />
+                  <TextBlock Text="{local:Tr Key=xaml.1a3845777c596f}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                  <TextBlock Text="{local:Tr Key=xaml.fc0d47e25393c5}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,5,0,6" />
                   <TextBox x:Name="ExclusionsBox" Height="85" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" />
                 </StackPanel>
               </Border>
               <WrapPanel Margin="0,0,0,20">
-                <Button Content="Save settings" Style="{StaticResource PrimaryButtonStyle}" Click="SavePreferences_Click" />
-                <Button Content="Export settings and presets…" Click="ExportPreferences_Click" />
-                <Button Content="Import settings and presets…" Click="ImportPreferences_Click" />
+                <Button Content="{local:Tr Key=xaml.7f3a3b14281458}" Style="{StaticResource PrimaryButtonStyle}" Click="SavePreferences_Click" />
+                <Button Content="{local:Tr Key=xaml.fa12d77cbc1c42}" Click="ExportPreferences_Click" />
+                <Button Content="{local:Tr Key=xaml.afb7f6dbb31eea}" Click="ImportPreferences_Click" />
               </WrapPanel>
               <Border Style="{StaticResource CardStyle}" Margin="0,0,0,14">
                 <StackPanel>
-                  <TextBlock Text="Scan diagnostics" Style="{StaticResource SectionHeaderStyle}" />
-                  <TextBlock Text="Review missing masters, unreadable plugins and load-order notes here before generating a patch." Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,7,0,10" />
-                  <TextBox x:Name="ScanDiagnosticsBox" Text="No scan report yet." Height="140" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" />
-                  <Button Content="Shareable error report…" Click="ExportScanReport_Click" HorizontalAlignment="Left" Margin="0,10,0,0" />
-                  <TextBlock Text="Local scan details stay on screen. Shared error reports exclude paths and installed plugin names." Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,7,0,0" />
+                  <TextBlock Text="{local:Tr Key=xaml.7c866f702acd5b}" Style="{StaticResource SectionHeaderStyle}" TextWrapping="Wrap" />
+                  <TextBlock Text="{local:Tr Key=xaml.6fc971cbffb8c0}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,7,0,10" />
+                  <TextBox x:Name="ScanDiagnosticsBox" Text="{local:Tr Key=xaml.66cf7ad63d4f1d}" Height="140" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" />
+                  <Button Content="{local:Tr Key=xaml.4b5a15ea7b7e4c}" Click="ExportScanReport_Click" HorizontalAlignment="Left" Margin="0,10,0,0" />
+                  <TextBlock Text="{local:Tr Key=xaml.505be02b809ade}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,7,0,0" />
                 </StackPanel>
               </Border>
             </StackPanel>
@@ -430,11 +438,11 @@
           <DockPanel VerticalAlignment="Center">
             <local:LoadingIcon Width="38" Height="38" Margin="0,0,12,0" Visibility="{Binding Visibility, ElementName=ActionProgress}" />
             <StackPanel VerticalAlignment="Center">
-            <TextBlock x:Name="StatusText" Text="Choose your mod folder in Settings, then scan for outfits." TextWrapping="Wrap" Margin="0,0,16,0" FontSize="12" />
+            <TextBlock x:Name="StatusText" Text="{local:Tr Key=xaml.63048251133196}" TextWrapping="Wrap" Margin="0,0,16,0" FontSize="12" />
             <ProgressBar x:Name="ActionProgress" Height="5" Margin="0,9,20,0" Minimum="0" Maximum="100" Visibility="Collapsed" />
             </StackPanel>
           </DockPanel>
-          <Button x:Name="GenerateButton" Grid.Column="1" Content="Configure checked (0) →" Click="Generate_Click" Style="{StaticResource PrimaryButtonStyle}" Padding="20,12" VerticalAlignment="Center" ToolTip="Configure the checked batch. For one outfit, right-click its row and choose Configure this outfit." />
+          <Button x:Name="GenerateButton" Grid.Column="1" Content="{local:Tr Key=xaml.d79f8ce5ec7fdb}" Click="Generate_Click" Style="{StaticResource PrimaryButtonStyle}" Padding="20,12" VerticalAlignment="Center" ToolTip="{local:Tr Key=xaml.91936122709057}" />
         </Grid>
       </Border>
     </Grid>
